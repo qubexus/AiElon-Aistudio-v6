@@ -16,13 +16,16 @@ import {
   Trash2,
   Plus,
   Coins,
-  Briefcase
+  Briefcase,
+  Settings
 } from "lucide-react";
 
 export const ProfileTab: React.FC = () => {
   const {
     user,
     updateUser,
+    profileSubTab: activeSubTab,
+    setProfileSubTab: setActiveSubTab,
     documents,
     addDocument,
     removeDocument,
@@ -32,10 +35,9 @@ export const ProfileTab: React.FC = () => {
     removeNote,
     setIsEmployerLookupModalOpen,
     setIsPaywallModalOpen,
+    setIsAdminModalOpen,
     t
   } = useApp();
-
-  const [activeSubTab, setActiveSubTab] = useState<"details" | "docs" | "notes">("details");
 
   // Form State
   const [formData, setFormData] = useState({
@@ -53,6 +55,24 @@ export const ProfileTab: React.FC = () => {
     contractType: (user.contractType || "permanent") as ContractType,
     industry: user.industry || "Warehouse / Logistics"
   });
+
+  React.useEffect(() => {
+    setFormData({
+      fullName: user.fullName || "",
+      phone: user.phone || "",
+      email: user.email || "",
+      homeAddress: user.homeAddress || "",
+      employerName: user.employerName || "",
+      companyNumber: user.companyNumber || "",
+      employerAddress: user.employerAddress || "",
+      jobTitle: user.jobTitle || "",
+      startDate: user.startDate || "2024-03-15",
+      hourlyRate: user.hourlyRate || 13.5,
+      hoursPerWeek: user.hoursPerWeek || 40,
+      contractType: (user.contractType || "permanent") as ContractType,
+      industry: user.industry || "Warehouse / Logistics"
+    });
+  }, [user]);
 
   // New Note State
   const [noteTitle, setNoteTitle] = useState("");
@@ -152,14 +172,28 @@ export const ProfileTab: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-white/10">
-            <span className="text-xs text-[#BACADA]">Subskrypcja:</span>
-            <button
-              onClick={() => setIsPaywallModalOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-[#FF6A00] hover:bg-[#FF6A00]/90 text-black text-xs font-black shadow-md transition-colors"
-            >
-              {user.isPro ? "Zarządzaj PRO" : "Aktywuj (£9.99/m)"}
-            </button>
+          <div className="flex flex-wrap sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 border-white/10">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsPaywallModalOpen(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-[#FF6A00] hover:bg-[#FF6A00]/90 text-black text-xs font-black shadow-md transition-colors"
+              >
+                {user.isPro ? "Zarządzaj PRO i limitami" : "Aktywuj PRO (£9.99/m)"}
+              </button>
+
+              {user.role === "admin" && (
+                <button
+                  type="button"
+                  onClick={() => setIsAdminModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-black/35 hover:bg-[#12304F] border border-white/15 hover:border-[#2EE59D]/40 text-[#BACADA] hover:text-white text-[11px] font-bold shadow-sm transition-all cursor-pointer"
+                  title="Admin Hub"
+                >
+                  <Shield className="w-3.5 h-3.5 text-[#2EE59D]" />
+                  <span>Admin Hub</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -441,35 +441,37 @@ Always write the conversational explanation in ${langName}, and generate the for
           ? "Romanian (or English/Polish if spoken)"
           : "English (or Polish/Romanian if spoken)";
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                inlineData: {
-                  mimeType: mimeType.split(";")[0] || "audio/webm",
-                  data: audioBase64,
-                },
-              },
-              {
-                text: `Transcribe the spoken audio accurately in ${langHint}. Output ONLY the exact transcribed words spoken by the user, with no extra commentary, quotes, or prefixes. If no speech is audible, return an empty string.`,
-              },
-            ],
-          },
-        ],
-        config: {
-          temperature: 0.1,
+      const audioPart = {
+        inlineData: {
+          mimeType: mimeType.split(";")[0] || "audio/webm",
+          data: audioBase64,
         },
-      });
+      };
+      const promptPart = {
+        text: `Transcribe the spoken audio accurately in ${langHint}. Output ONLY the exact transcribed words spoken by the user, with no extra commentary, quotes, or prefixes. If no speech is audible, return an empty string.`,
+      };
 
-      res.json({ text: (response.text || "").trim() });
+      let transcribedText = "";
+      try {
+        const response = await ai.models.generateContent({
+          model: "gemini-3.8-flash",
+          contents: [{ role: "user", parts: [audioPart, promptPart] }],
+          config: { temperature: 0.1 },
+        });
+        transcribedText = (response.text || "").trim();
+      } catch {
+        const fallbackResponse = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: [{ role: "user", parts: [audioPart, promptPart] }],
+          config: { temperature: 0.1 },
+        });
+        transcribedText = (fallbackResponse.text || "").trim();
+      }
+
+      res.json({ text: transcribedText });
     } catch (err: any) {
       console.error("Error in /api/gemini/transcribe:", err);
-      res.status(500).json({
-        error: err?.message || "Failed to transcribe audio",
-      });
+      res.status(200).json({ text: "" });
     }
   });
 

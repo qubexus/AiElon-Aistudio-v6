@@ -1,4 +1,15 @@
-import { UserProfile, WorkplaceCase, ForumPost, UserDocument, WorkplaceNote, BroadcastMessage, SentLetter } from "../types";
+import {
+  UserProfile,
+  WorkplaceCase,
+  ForumPost,
+  UserDocument,
+  WorkplaceNote,
+  BroadcastMessage,
+  SentLetter,
+  AdminManagedUser,
+  PromoCodeItem,
+  MarketingPopupConfig
+} from "../types";
 
 export const initialUserProfile: UserProfile = {
   id: "user_elon_001",
@@ -7,6 +18,8 @@ export const initialUserProfile: UserProfile = {
   email: "artur.kowalski@example.co.uk",
   phone: "+44 7700 900342",
   homeAddress: "42 Victoria Road, Dartford, DA1 5DJ",
+  city: "Dartford, Kent",
+  registeredAt: "2026-03-15",
   employerName: "Amazon Fulfilment LCY2",
   companyNumber: "03223028",
   employerAddress: "London Distribution Park, Windrush Drive, Tilbury RM18 7AN",
@@ -17,8 +30,16 @@ export const initialUserProfile: UserProfile = {
   contractType: "permanent",
   industry: "Warehouse / Logistics",
   isPro: true,
-  role: "user",
-  onboarded: true
+  free_access: false,
+  subscriptionStatus: "active_pro",
+  role: "admin",
+  onboarded: true,
+  sessionsToday: 4,
+  sessionsLast7Days: 19,
+  sessionsTotal: 86,
+  dailyQueriesCount: 6,
+  chatQueriesCount: 28,
+  formalCasesCount: 3
 };
 
 export const initialCases: WorkplaceCase[] = [
@@ -227,10 +248,112 @@ export const initialBroadcastMessages: BroadcastMessage[] = [
 export const initialSentLetters: SentLetter[] = [
   {
     id: "sent_init_1",
-    templateId: "formal_grievance",
-    title: "Formal Written Grievance (ACAS Code of Practice No. 1)",
+    templateId: "settlement_agreement",
+    title: "Pismo do HR – niewypłacony ekwiwalent za urlop (Holiday Pay)",
+    titlePl: "Pismo do HR – niewypłacony ekwiwalent za urlop (Holiday Pay)",
+    categoryLabelPl: "PISMO O URLOP",
+    caseSummaryPl: "Sprawa: Agencja nie zapłaciła mi za 3 dni urlopu (£486)",
+    recipient: "Greencore Group",
+    date: "23.10.2026",
+    primaryTag: "Settlement",
+    tags: ["Settlement", "Wages", "Contract"],
+    statutoryReference: "Reg. 14 Working Time Regulations 1998 · s.13 ERA 1996",
+    content: `PRIVATE & CONFIDENTIAL — FORMAL STATUTORY NOTICE
+====================================================================
+FROM (EMPLOYEE / WORKER):
+Full Name:          Artur Kowalski
+Home Address:       42 Victoria Road, Dartford, DA1 5DJ
+Telephone:          +44 7700 900342
+Email Address:      artur.kowalski@example.co.uk
+Employee / Case ID: #ELON-89241
+
+TO (EMPLOYER / RESPONDENT):
+Employer Name:      Greencore Group
+Department:         Human Resources & Payroll Department
+Date of Notice:     23 October 2026
+Statutory Basis:    Regulation 14 Working Time Regulations 1998 & Section 13 ERA 1996
+====================================================================
+
+SUBJECT: FORMAL DEMAND FOR ACCRUED STATUTORY HOLIDAY PAY IN LIEU (£486.00)
+
+Dear Human Resources and Payroll Department,
+
+I write pursuant to Regulation 14 of the Working Time Regulations 1998 and Section 13 of the Employment Rights Act 1996 regarding the non-payment of my accrued statutory annual leave entitlement (Holiday Pay) amounting to £486.00.
+
+1. STATUTORY ENTITLEMENT:
+Under Regulation 13 and 13A of the Working Time Regulations 1998, every worker in the United Kingdom is legally entitled to 5.6 weeks of paid annual leave per leave year. Upon termination or transfer of assignment, the employer is under an absolute statutory obligation to pay compensation in lieu of all untaken accrued holiday.
+
+2. REQUIRED REMEDY WITHIN 7 DAYS:
+Please process the outstanding payment of £486.00 to my nominated bank account within seven (7) calendar days and provide an itemised payslip confirming the calculation prior to ACAS Early Conciliation.
+
+Yours sincerely,
+
+Artur Kowalski
+Residential Address: 42 Victoria Road, Dartford, DA1 5DJ
+Telephone: +44 7700 900342
+Email: artur.kowalski@example.co.uk`
+  },
+  {
+    id: "sent_init_2",
+    templateId: "unpaid_wages",
+    title: "Pismo do HR – niewypłacone nadgodziny",
+    titlePl: "Pismo do HR – niewypłacone nadgodziny",
+    categoryLabelPl: "WEZWANIE DO ZAPŁATY",
+    caseSummaryPl: "Sprawa: Brak 12 nadgodzin ze zmiany nocnej i potrącenie PPE",
     recipient: "Amazon Fulfilment LCY2",
-    date: "21 Oct 2026",
+    date: "23.10.2026",
+    primaryTag: "Wages",
+    tags: ["Wages", "Contract"],
+    statutoryReference: "Section 13 Employment Rights Act 1996 · Health & Safety Act 1974 s.9",
+    content: `PRIVATE & CONFIDENTIAL — FORMAL STATUTORY NOTICE
+====================================================================
+FROM (EMPLOYEE / WORKER):
+Full Name:          Artur Kowalski
+Home Address:       42 Victoria Road, Dartford, DA1 5DJ
+Telephone:          +44 7700 900342
+Email Address:      artur.kowalski@example.co.uk
+Job Title:          Warehouse Operative (Inbound)
+Contract & Rate:    PERMANENT (£13.50/hr · 40 hrs/wk)
+Start Date:         2024-03-15
+Employee / Case ID: #ELON-89241
+
+TO (EMPLOYER / RESPONDENT):
+Employer Name:      Amazon Fulfilment LCY2
+Company Reg. No:    03223028
+Employer Address:   London Distribution Park, Windrush Drive, Tilbury RM18 7AN
+Department:         Human Resources & Payroll Department
+
+Date of Notice:     23 October 2026
+Statutory Basis:    Section 13 Employment Rights Act 1996 · s.9 HSWA 1974
+====================================================================
+
+SUBJECT: FORMAL NOTICE OF UNLAWFUL DEDUCTION FROM WAGES & UNPAID OVERTIME (£227.00)
+
+Dear Human Resources and Payroll Department,
+
+I write pursuant to my permanent contract of employment (40 hours per week at £13.50/hr, commenced 2024-03-15) and Section 13 of the Employment Rights Act 1996 regarding:
+1. Omission of 12 contracted night-shift overtime hours (£162.00) worked on 14 September 2026;
+2. Unauthorised deduction of £65.00 for safety footwear (PPE) in breach of Section 9 of the Health and Safety at Work etc. Act 1974.
+
+Please process the total contractual reimbursement of £227.00 within seven (7) calendar days.
+
+Yours sincerely,
+
+Artur Kowalski
+Warehouse Operative (Inbound)
+Residential Address: 42 Victoria Road, Dartford, DA1 5DJ
+Telephone: +44 7700 900342
+Email: artur.kowalski@example.co.uk`
+  },
+  {
+    id: "sent_init_3",
+    templateId: "formal_grievance",
+    title: "Pismo do HR – oficjalna skarga pracownicza (Formal Grievance)",
+    titlePl: "Pismo do HR – oficjalna skarga pracownicza (Formal Grievance)",
+    categoryLabelPl: "SKARGA DO HR (GRIEVANCE)",
+    caseSummaryPl: "Sprawa: Odmowa 20-minutowej przerwy i grafik zmianowy",
+    recipient: "Amazon Fulfilment LCY2",
+    date: "21.10.2026",
     primaryTag: "Grievance",
     tags: ["Grievance", "Contract"],
     statutoryReference: "ACAS Code No. 1 · s.199 TULRCA 1992 · s.10 ERA 1999",
@@ -275,97 +398,233 @@ Warehouse Operative (Inbound)
 Residential Address: 42 Victoria Road, Dartford, DA1 5DJ
 Telephone: +44 7700 900342
 Email: artur.kowalski@example.co.uk`
-  },
-  {
-    id: "sent_init_2",
-    templateId: "settlement_agreement",
-    title: "Protected Settlement & ACAS Early Conciliation Proposal (s.111A ERA 1996)",
-    recipient: "Greencore Group",
-    date: "19 Oct 2026",
-    primaryTag: "Settlement",
-    tags: ["Settlement", "Wages", "Contract"],
-    statutoryReference: "Section 111A & Section 203(3) Employment Rights Act 1996",
-    content: `WITHOUT PREJUDICE AND SUBJECT TO CONTRACT
-PROTECTED CONVERSATION PURSUANT TO SECTION 111A EMPLOYMENT RIGHTS ACT 1996
-====================================================================
-FROM (EMPLOYEE / WORKER):
-Full Name:          Artur Kowalski
-Home Address:       42 Victoria Road, Dartford, DA1 5DJ
-Telephone:          +44 7700 900342
-Email Address:      artur.kowalski@example.co.uk
-Employee / Case ID: #ELON-89241
-
-TO (EMPLOYER / RESPONDENT):
-Employer Name:      Greencore Group
-Department:         Human Resources Director & Legal Department
-Date of Notice:     19 October 2026
-Statutory Basis:    Section 111A & Section 203(3) Employment Rights Act 1996
-====================================================================
-
-SUBJECT: FORMAL SETTLEMENT PROPOSAL PRIOR TO ACAS EARLY CONCILIATION & EMPLOYMENT TRIBUNAL CLAIM
-
-Dear Sir or Madam,
-
-I write on a "Without Prejudice" basis and pursuant to Section 111A of the Employment Rights Act 1996 with a view to achieving an amicable, commercial settlement to the dispute concerning my accrued statutory holiday pay (£486.00) and termination terms under the Working Time Regulations 1998.
-
-1. PROPOSED SETTLEMENT TERMS:
-In full and final settlement of my prospective Employment Tribunal claim, I propose immediate payment of £486.00 representing 5 days of accrued statutory holiday entitlement together with written confirmation of settlement within 7 calendar days.
-
-Yours faithfully,
-
-Artur Kowalski
-Residential Address: 42 Victoria Road, Dartford, DA1 5DJ
-Telephone: +44 7700 900342
-Email: artur.kowalski@example.co.uk`
-  },
-  {
-    id: "sent_init_3",
-    templateId: "flexible_working",
-    title: "Statutory Notice: Contract Terms, Working Time & Unlawful Deduction (s.13 & s.80F ERA 1996)",
-    recipient: "Amazon Fulfilment LCY2",
-    date: "18 Oct 2026",
-    primaryTag: "Contract",
-    tags: ["Contract", "Wages"],
-    statutoryReference: "Section 13 & Section 80F ERA 1996 · Working Time Regulations 1998",
-    content: `PRIVATE & CONFIDENTIAL — FORMAL STATUTORY NOTICE
-====================================================================
-FROM (EMPLOYEE / WORKER):
-Full Name:          Artur Kowalski
-Home Address:       42 Victoria Road, Dartford, DA1 5DJ
-Telephone:          +44 7700 900342
-Email Address:      artur.kowalski@example.co.uk
-Job Title:          Warehouse Operative (Inbound)
-Contract & Rate:    PERMANENT (£13.50/hr · 40 hrs/wk)
-Start Date:         2024-03-15
-Employee / Case ID: #ELON-89241
-
-TO (EMPLOYER / RESPONDENT):
-Employer Name:      Amazon Fulfilment LCY2
-Company Reg. No:    03223028
-Employer Address:   London Distribution Park, Windrush Drive, Tilbury RM18 7AN
-Department:         Human Resources & Payroll Department
-
-Date of Notice:     18 October 2026
-Statutory Basis:    Section 13 & Section 80F ERA 1996 · Working Time Regulations 1998
-====================================================================
-
-SUBJECT: FORMAL NOTICE OF CONTRACTUAL HOURS ENFORCEMENT & UNLAWFUL DEDUCTION (£227.00)
-
-Dear Human Resources and Payroll Department,
-
-I write pursuant to my permanent contract of employment (40 hours per week at £13.50/hr, commenced 2024-03-15) and Section 13 of the Employment Rights Act 1996 regarding:
-1. Unauthorised deduction of £65.00 for safety footwear (PPE) in breach of Section 9 of the Health and Safety at Work etc. Act 1974;
-2. Omission of 12 contracted night-shift overtime hours (£162.00) worked on 14 September 2026.
-
-Please process the total contractual reimbursement of £227.00 within seven (7) calendar days.
-
-Yours sincerely,
-
-Artur Kowalski
-Warehouse Operative (Inbound)
-Residential Address: 42 Victoria Road, Dartford, DA1 5DJ
-Telephone: +44 7700 900342
-Email: artur.kowalski@example.co.uk`
   }
 ];
+
+export const initialAdminUsers: AdminManagedUser[] = [
+  {
+    id: "user_elon_001",
+    accountId: "ELON-89241",
+    fullName: "Artur Kowalski",
+    email: "artur.kowalski@example.co.uk",
+    phone: "+44 7700 900342",
+    homeAddress: "42 Victoria Road, Dartford, DA1 5DJ",
+    city: "Dartford, Kent",
+    registeredAt: "2026-03-15",
+    employerName: "Amazon Fulfilment LCY2",
+    companyNumber: "03223028",
+    employerAddress: "London Distribution Park, Windrush Drive, Tilbury RM18 7AN",
+    jobTitle: "Warehouse Operative (Inbound)",
+    startDate: "2024-03-15",
+    hourlyRate: 13.50,
+    hoursPerWeek: 40,
+    contractType: "permanent",
+    industry: "Warehouse / Logistics",
+    isPro: true,
+    free_access: false,
+    subscriptionStatus: "active_pro",
+    role: "admin",
+    onboarded: true,
+    sessionsToday: 4,
+    sessionsLast7Days: 19,
+    sessionsTotal: 86,
+    dailyQueriesCount: 6,
+    chatQueriesCount: 28,
+    formalCasesCount: 3
+  },
+  {
+    id: "user_elon_002",
+    accountId: "AK 2610 9990 3 T",
+    fullName: "Anna Kowalska",
+    email: "anna.kowalska@gmail.com",
+    phone: "+44 7456 218904",
+    homeAddress: "18 King Street, Slough, SL1 2B",
+    city: "Slough, Berkshire",
+    registeredAt: "2026-06-10",
+    employerName: "DHL Supply Chain Heathrow",
+    companyNumber: "00528867",
+    employerAddress: "Unit 4 Heathrow South Cargo Centre, Hounslow TW6 3LW",
+    jobTitle: "Order Picker / Packer",
+    startDate: "2025-01-12",
+    hourlyRate: 12.80,
+    hoursPerWeek: 37.5,
+    contractType: "agency",
+    industry: "Warehouse / Logistics",
+    isPro: false,
+    free_access: false,
+    subscriptionStatus: "free",
+    role: "user",
+    onboarded: true,
+    sessionsToday: 2,
+    sessionsLast7Days: 11,
+    sessionsTotal: 42,
+    dailyQueriesCount: 3,
+    chatQueriesCount: 19,
+    formalCasesCount: 2
+  },
+  {
+    id: "user_elon_003",
+    accountId: "ELON-44109",
+    fullName: "Marek Nowak",
+    email: "marek.nowak.uk@wp.pl",
+    phone: "+44 7811 452090",
+    homeAddress: "74 Salford Quays Rd, Manchester, M50 3AB",
+    city: "Manchester",
+    registeredAt: "2026-04-22",
+    employerName: "XPO Logistics Trafford",
+    companyNumber: "01862105",
+    employerAddress: "Trafford Park Road, Manchester M17 1HG",
+    jobTitle: "Forklift Reach Driver",
+    startDate: "2023-09-01",
+    hourlyRate: 14.90,
+    hoursPerWeek: 42,
+    contractType: "permanent",
+    industry: "Warehouse / Logistics",
+    isPro: true,
+    free_access: true,
+    subscriptionStatus: "free_access",
+    role: "user",
+    onboarded: true,
+    sessionsToday: 5,
+    sessionsLast7Days: 24,
+    sessionsTotal: 118,
+    dailyQueriesCount: 8,
+    chatQueriesCount: 54,
+    formalCasesCount: 5
+  },
+  {
+    id: "user_elon_004",
+    accountId: "ELON-61032",
+    fullName: "Elena Radu",
+    email: "elena.radu88@yahoo.co.uk",
+    phone: "+44 7922 331780",
+    homeAddress: "12 Highfield Lane, Birmingham, B15 2TT",
+    city: "Birmingham",
+    registeredAt: "2026-07-04",
+    employerName: "Bupa Care Services UK",
+    companyNumber: "01289903",
+    employerAddress: "Edgbaston Road, Birmingham B15 1NW",
+    jobTitle: "Senior Care Assistant",
+    startDate: "2022-11-20",
+    hourlyRate: 13.10,
+    hoursPerWeek: 36,
+    contractType: "permanent",
+    industry: "Healthcare / Care Homes",
+    isPro: true,
+    free_access: false,
+    subscriptionStatus: "active_pro",
+    role: "user",
+    onboarded: true,
+    sessionsToday: 1,
+    sessionsLast7Days: 9,
+    sessionsTotal: 37,
+    dailyQueriesCount: 2,
+    chatQueriesCount: 16,
+    formalCasesCount: 2
+  },
+  {
+    id: "user_elon_005",
+    accountId: "ELON-72918",
+    fullName: "Piotr Wiśniewski",
+    email: "p.wisniewski@outlook.com",
+    phone: "+44 7530 889120",
+    homeAddress: "95 Armley Road, Leeds, LS12 2QN",
+    city: "Leeds, West Yorkshire",
+    registeredAt: "2026-08-19",
+    employerName: "Greencore Prepared Meals",
+    companyNumber: "02569012",
+    employerAddress: "unslet Road, Leeds LS10 1JZ",
+    jobTitle: "Production Line Operator",
+    startDate: "2025-05-03",
+    hourlyRate: 11.44,
+    hoursPerWeek: 40,
+    contractType: "zero_hours",
+    industry: "Food Processing",
+    isPro: false,
+    free_access: false,
+    subscriptionStatus: "free",
+    role: "user",
+    onboarded: true,
+    sessionsToday: 3,
+    sessionsLast7Days: 14,
+    sessionsTotal: 29,
+    dailyQueriesCount: 5,
+    chatQueriesCount: 22,
+    formalCasesCount: 1
+  },
+  {
+    id: "user_elon_006",
+    accountId: "ELON-90415",
+    fullName: "Katarzyna Zielińska",
+    email: "kasia.zielinska@onet.pl",
+    phone: "+44 7719 604312",
+    homeAddress: "29 Docklands Way, London, E14 9SG",
+    city: "London (Canary Wharf)",
+    registeredAt: "2026-09-02",
+    employerName: "Mitie Facilities Management",
+    companyNumber: "01902341",
+    employerAddress: "The Shard, 32 London Bridge St, London SE1 9SG",
+    jobTitle: "Commercial Supervisor",
+    startDate: "2024-01-10",
+    hourlyRate: 14.20,
+    hoursPerWeek: 35,
+    contractType: "permanent",
+    industry: "Cleaning & Facilities",
+    isPro: true,
+    free_access: true,
+    subscriptionStatus: "free_access",
+    role: "admin",
+    onboarded: true,
+    sessionsToday: 2,
+    sessionsLast7Days: 15,
+    sessionsTotal: 64,
+    dailyQueriesCount: 4,
+    chatQueriesCount: 31,
+    formalCasesCount: 4
+  }
+];
+
+export const initialPromoCodes: PromoCodeItem[] = [
+  {
+    id: "promo_1",
+    code: "ELON3M",
+    discountType: "percentage",
+    discountValue: 100,
+    expiresAt: "2027-12-31",
+    description: "100% rabatu (3 miesiące PRO za darmo)",
+    usedCount: 124,
+    createdAt: "2026-03-01"
+  },
+  {
+    id: "promo_2",
+    code: "SOLIDARITY",
+    discountType: "percentage",
+    discountValue: 50,
+    expiresAt: "2027-06-30",
+    description: "Rabat -50% na subskrypcję (£4.99/mies.)",
+    usedCount: 86,
+    createdAt: "2026-04-15"
+  },
+  {
+    id: "promo_3",
+    code: "UNITE",
+    discountType: "fixed",
+    discountValue: 4.00,
+    expiresAt: "2027-09-30",
+    description: "Zniżka kwotowa -£4.00 dla członków związków (£5.99/mies.)",
+    usedCount: 219,
+    createdAt: "2026-05-10"
+  }
+];
+
+export const initialMarketingPopupConfig: MarketingPopupConfig = {
+  isActive: false,
+  title: "Odzyskaj swoje pieniądze z ask Elon PRO!",
+  content:
+    "Sprawdź swój payslip, wygeneruj oficjalne pismo Section 13 ERA 1996 po angielsku w 10 sekund i nie pozwól agencji ani szefowi na bezprawne potrącenia. Użyj kodu SOLIDARITY, aby odebrać -50% zniżki!",
+  mediaUrl: "/assets/aistudio/grok_video_2026-10-24-04-59-56_1fc97f08.mp4",
+  ctaText: "Odbierz rabat PRO",
+  updatedAt: "2026-10-25 12:00"
+};
+
 

@@ -12,7 +12,14 @@ import {
   SentLetterCategoryTag,
   BroadcastMessage,
   NetworkStatus,
-  SavedLetterDraft
+  SavedLetterDraft,
+  RecentUnsavedChat,
+  AdminManagedUser,
+  PromoCodeItem,
+  MarketingPopupConfig,
+  AdminChatDeliveryLog,
+  PendingSyncAction,
+  OfflineSettingsConfig
 } from "../types";
 import {
   defaultTemplates,
@@ -25,10 +32,13 @@ import { askElonAI, askElonAIStream } from "../services/geminiService";
 import { getTranslation } from "../i18n/translations";
 
 export type TabType = "chat" | "cases" | "templates" | "forum" | "profile";
+export type ProfileSubTab = "details" | "docs" | "notes";
 
 interface AppContextType {
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
+  profileSubTab: ProfileSubTab;
+  setProfileSubTab: (subTab: ProfileSubTab) => void;
   locale: Locale;
   setLocale: (locale: Locale) => void;
   t: (key: string) => string;
@@ -50,6 +60,13 @@ interface AppContextType {
   saveCurrentLetterDraft: (draft: SavedLetterDraft | null) => void;
   queuedMessagesCount: number;
   retryQueuedMessages: () => Promise<void>;
+  offlineSettings: OfflineSettingsConfig;
+  updateOfflineSettings: (updates: Partial<OfflineSettingsConfig>) => void;
+  pendingSyncActions: PendingSyncAction[];
+  removePendingSyncAction: (id: string) => void;
+  removeQueuedChatMessage: (messageId: string) => void;
+  syncPendingActionsNow: () => Promise<void>;
+  enqueueSampleOfflineAction: () => void;
 
   // Cases
   cases: WorkplaceCase[];
@@ -92,6 +109,11 @@ interface AppContextType {
   sendChatMessage: (text: string) => Promise<void>;
   clearChatMessages: () => void;
   saveCurrentChatAsCase: () => void;
+  recentUnsavedChats: RecentUnsavedChat[];
+  activeUnsavedChatId: string;
+  restoreUnsavedChat: (id: string) => void;
+  removeUnsavedChat: (id: string) => void;
+  saveUnsavedChatAsCase: (id: string) => void;
 
   // Modals & Drawers
   isNewCaseModalOpen: boolean;
@@ -117,6 +139,42 @@ interface AppContextType {
   toastMessage: string | null;
   showToast: (msg: string) => void;
 
+  // Admin Hub & Marketing
+  adminUsers: AdminManagedUser[];
+  updateAdminUser: (userId: string, updates: Partial<AdminManagedUser>) => void;
+  resetAdminUserPassword: (userId: string) => {
+    token: string;
+    resetLink: string;
+    tempPassword: string;
+    email: string;
+  };
+  promoCodes: PromoCodeItem[];
+  addPromoCode: (item: Omit<PromoCodeItem, "id" | "usedCount" | "createdAt">) => void;
+  removePromoCode: (id: string) => void;
+  validatePromoCode: (codeStr: string) => {
+    valid: boolean;
+    promo?: PromoCodeItem;
+    discountedPrice?: number;
+    errorReason?: string;
+  };
+  redeemPromoCode: (codeStr: string) => {
+    valid: boolean;
+    promo?: PromoCodeItem;
+    discountedPrice?: number;
+    errorReason?: string;
+  };
+  marketingPopupConfig: MarketingPopupConfig;
+  updateMarketingPopupConfig: (updates: Partial<MarketingPopupConfig>) => void;
+  isMarketingPopupVisible: boolean;
+  setIsMarketingPopupVisible: (visible: boolean) => void;
+  adminChatDeliveryLogs: AdminChatDeliveryLog[];
+  sendAdminSystemChatMessage: (payload: {
+    targetType: "broadcast" | "direct";
+    targetUserId?: string;
+    title: string;
+    message: string;
+  }) => void;
+
   // Global reset
   resetAll: () => void;
 }
@@ -125,6 +183,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [activeTab, setActiveTab] = useState<TabType>("chat");
+  const [profileSubTab, setProfileSubTab] = useState<ProfileSubTab>("details");
   const [locale, setLocaleState] = useState<Locale>(storage.loadLocale);
   const [user, setUserState] = useState<UserProfile>(storage.loadUserProfile);
   const [cases, setCasesState] = useState<WorkplaceCase[]>(storage.loadCases);
@@ -148,6 +207,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     ];
   });
+  const [recentUnsavedChats, setRecentUnsavedChatsState] = useState<RecentUnsavedChat[]>(
+    storage.loadRecentUnsavedChats
+  );
+  const [activeUnsavedChatId, setActiveUnsavedChatId] = useState<string>(
+    () => `unsaved_${Date.now()}`
+  );
+  const isCurrentChatSavedAsCaseRef = useRef<boolean>(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [broadcastMessages, setBroadcastMessagesState] = useState<BroadcastMessage[]>(storage.loadBroadcastMessages);
 
@@ -163,6 +229,75 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [chatDraft, setChatDraftState] = useState<string>(storage.loadChatDraft);
   const [savedLetterDraft, setSavedLetterDraftState] = useState<SavedLetterDraft | null>(storage.loadLetterDraft);
 
+  // Offline Settings & Pending Actions Queue State
+  const [offlineSettings, setOfflineSettingsState] = useState<OfflineSettingsConfig>(() => {
+    try {
+      const raw = localStorage.getItem("ask_elon_offline_settings");
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return {
+      backgroundSyncEnabled: true,
+      autoCacheTemplatesAndLetters: true,
+      syncOnMeteredConnection: true,
+      lastSyncedAt: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }),
+    };
+  });
+
+  const [pendingSyncActions, setPendingSyncActionsState] = useState<PendingSyncAction[]>(() => {
+    try {
+      const raw = localStorage.getItem("ask_elon_pending_sync_actions");
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return [
+      {
+        id: "sync_init_1",
+        type: "letter_save",
+        title: "Kopia zapasowa pisma: Unpaid Holiday Pay (Reg. 14 WTR 1998)",
+        subtitle: "Pisma Elona · Chmura dokumentów (4,1 GB / 5 GB)",
+        createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        status: "queued",
+      },
+      {
+        id: "sync_init_2",
+        type: "note_save",
+        title: "Synchronizacja dowodu: Notatka ze spotkania z HR",
+        subtitle: "Notatnik i dowody · Szyfrowana kopia offline",
+        createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        status: "queued",
+      },
+    ];
+  });
+
+  const savePendingSyncActions = useCallback((items: PendingSyncAction[]) => {
+    setPendingSyncActionsState(items);
+    try {
+      localStorage.setItem("ask_elon_pending_sync_actions", JSON.stringify(items));
+    } catch {}
+  }, []);
+
+  const appendPendingSyncAction = useCallback(
+    (action: Omit<PendingSyncAction, "id" | "createdAt" | "status">) => {
+      setPendingSyncActionsState((prev) => {
+        const created: PendingSyncAction = {
+          ...action,
+          id: `sync_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          status: "queued",
+        };
+        const next = [created, ...prev];
+        try {
+          localStorage.setItem("ask_elon_pending_sync_actions", JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    },
+    []
+  );
+
   // Modals
   const [isNewCaseModalOpen, setIsNewCaseModalOpen] = useState(false);
   const [isNewPostModalOpen, setIsNewPostModalOpen] = useState(false);
@@ -173,6 +308,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isMessagesModalOpen, setIsMessagesModalOpen] = useState(false);
   const [isSentLettersModalOpen, setIsSentLettersModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Admin Hub & Marketing State
+  const [adminUsers, setAdminUsersState] = useState<AdminManagedUser[]>(storage.loadAdminUsers);
+  const [promoCodes, setPromoCodesState] = useState<PromoCodeItem[]>(storage.loadPromoCodes);
+  const [marketingPopupConfig, setMarketingPopupConfigState] = useState<MarketingPopupConfig>(
+    storage.loadMarketingPopupConfig
+  );
+  const [isMarketingPopupVisible, setIsMarketingPopupVisible] = useState<boolean>(() => {
+    const cfg = storage.loadMarketingPopupConfig();
+    return Boolean(cfg.isActive);
+  });
+  const [adminChatDeliveryLogs, setAdminChatDeliveryLogsState] = useState<AdminChatDeliveryLog[]>(
+    storage.loadAdminChatDeliveryLogs
+  );
 
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFlushingQueueRef = useRef<boolean>(false);
@@ -205,9 +354,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     storage.saveLetterDraft(draft);
   }, []);
 
-  const queuedMessagesCount = chatMessages.filter(
+  const queuedChatMessagesCount = chatMessages.filter(
     (m) => m.role === "user" && (m.status === "queued" || m.status === "sending")
   ).length;
+
+  const queuedMessagesCount = queuedChatMessagesCount + pendingSyncActions.length;
 
   const isOnline = networkStatus === "online" && !isSimulatedOffline;
 
@@ -409,25 +560,256 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [chatMessages, locale, user.fullName, user.employerName, user.jobTitle, user.hourlyRate]);
 
-  // Watch networkStatus transitions for restoration alerts and queue flushing
+  // Remove a single pending sync action from the queue
+  const removePendingSyncAction = useCallback(
+    (id: string) => {
+      setPendingSyncActionsState((prev) => {
+        const next = prev.filter((item) => item.id !== id);
+        try {
+          localStorage.setItem("ask_elon_pending_sync_actions", JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      showToast(
+        locale === "pl"
+          ? "Usunięto operację z kolejki synchronizacji."
+          : locale === "ro"
+          ? "Acțiune eliminată din coada de sincronizare."
+          : "Removed action from sync queue."
+      );
+    },
+    [locale, showToast]
+  );
+
+  // Remove a single queued chat message
+  const removeQueuedChatMessage = useCallback(
+    (messageId: string) => {
+      setChatMessagesState((prev) => {
+        const next = prev.filter((m) => m.id !== messageId);
+        storage.saveChatHistory(next);
+        return next;
+      });
+      showToast(
+        locale === "pl"
+          ? "Usunięto oczekującą wiadomość z kolejki."
+          : locale === "ro"
+          ? "Mesaj în așteptare eliminat din coadă."
+          : "Removed queued chat message."
+      );
+    },
+    [locale, showToast]
+  );
+
+  // Flush both queued chat messages and pendingSyncActions
+  const syncPendingActionsNow = useCallback(async () => {
+    if (isSimulatedOffline) {
+      setIsSimulatedOfflineState(false);
+      setNetworkStatus("online");
+    }
+
+    const connected = isSimulatedOffline ? true : await checkConnectionNow();
+    if (!connected) {
+      showToast(
+        locale === "pl"
+          ? "Brak połączenia. Akcje pozostają bezpiecznie w kolejce do czasu powrotu sieci."
+          : locale === "ro"
+          ? "Fără conexiune. Acțiunile rămân în coadă până la revenirea rețelei."
+          : "Offline. Actions remain safely queued until connection is restored."
+      );
+      return;
+    }
+
+    // Mark pending actions as syncing briefly
+    if (pendingSyncActions.length > 0) {
+      setPendingSyncActionsState((prev) =>
+        prev.map((item) => ({ ...item, status: "syncing" as const }))
+      );
+    }
+
+    await retryQueuedMessages();
+
+    const nowTime = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
+    savePendingSyncActions([]);
+    setOfflineSettingsState((prev) => {
+      const next = { ...prev, lastSyncedAt: nowTime };
+      try {
+        localStorage.setItem("ask_elon_offline_settings", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    showToast(
+      locale === "pl"
+        ? "Zsynchronizowano wszystkie oczekujące operacje z chmurą ask Elon!"
+        : locale === "ro"
+        ? "Toate acțiunile în așteptare au fost sincronizate!"
+        : "All pending actions synced successfully!"
+    );
+  }, [
+    isSimulatedOffline,
+    checkConnectionNow,
+    pendingSyncActions.length,
+    retryQueuedMessages,
+    savePendingSyncActions,
+    locale,
+    showToast,
+  ]);
+
+  const updateOfflineSettings = useCallback(
+    (updates: Partial<OfflineSettingsConfig>) => {
+      setOfflineSettingsState((prev) => {
+        const next: OfflineSettingsConfig = { ...prev, ...updates };
+        try {
+          localStorage.setItem("ask_elon_offline_settings", JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      if (updates.backgroundSyncEnabled !== undefined) {
+        showToast(
+          updates.backgroundSyncEnabled
+            ? locale === "pl"
+              ? "Synchronizacja w tle włączona — kolejka wyśle się automatycznie po odzyskaniu sieci."
+              : locale === "ro"
+              ? "Sincronizare în fundal activată."
+              : "Background sync enabled — queued actions will auto-sync when online."
+            : locale === "pl"
+            ? "Synchronizacja w tle wstrzymana — operacje czekają w kolejce na ręczne zatwierdzenie."
+            : locale === "ro"
+            ? "Sincronizare în fundal întreruptă."
+            : "Background sync paused — actions will stay queued until manually synced."
+        );
+      }
+    },
+    [locale, showToast]
+  );
+
+  // Enqueue a realistic offline action so user can test queue management in MenuDrawer
+  const enqueueSampleOfflineAction = useCallback(() => {
+    const sampleOptions: Omit<PendingSyncAction, "id" | "createdAt" | "status">[] = [
+      {
+        type: "letter_save",
+        title: `Pismo do HR: Section 13 ERA 1996 (${user.employerName || "UK Employer"})`,
+        subtitle: "Pisma Elona · Oczekuje na wysyłkę po przywróceniu połączenia",
+      },
+      {
+        type: "case_create",
+        title: `Aktualizacja akt sprawy: Niewypłacone nadgodziny i urlop`,
+        subtitle: "Sprawy · Zapisano lokalnie w pamięci urządzenia",
+      },
+      {
+        type: "note_save",
+        title: "Notatka służbowa: Potwierdzenie godzin zmiany z przełożonym",
+        subtitle: "Notatnik i dowody · Oczekuje na synchronizację w tle",
+      },
+      {
+        type: "profile_sync",
+        title: `Aktualizacja danych pracodawcy (${user.employerName || "Warehouse UK"})`,
+        subtitle: "Profil użytkownika · Gotowe do synchronizacji",
+      },
+    ];
+    const picked = sampleOptions[pendingSyncActions.length % sampleOptions.length];
+    appendPendingSyncAction(picked);
+    showToast(
+      locale === "pl"
+        ? "Dodano operację do kolejki oczekującej na synchronizację!"
+        : locale === "ro"
+        ? "Acțiune adăugată în coada de sincronizare!"
+        : "Added action to pending sync queue!"
+    );
+  }, [appendPendingSyncAction, pendingSyncActions.length, user.employerName, locale, showToast]);
+
+  // Watch networkStatus transitions for restoration alerts and automatic queue flushing
   useEffect(() => {
     const prev = prevNetworkStatusRef.current;
     if (prev !== "online" && networkStatus === "online" && !isSimulatedOffline) {
-      const hasQueued = chatMessages.some((m) => m.role === "user" && m.status === "queued");
-      if (hasQueued) {
-        showToast(getTranslation("netRestoredWithQueueToast", locale));
-        retryQueuedMessages();
+      const hasQueuedChat = chatMessages.some((m) => m.role === "user" && m.status === "queued");
+      const hasPendingActions = pendingSyncActions.length > 0;
+
+      if (hasQueuedChat || hasPendingActions) {
+        if (offlineSettings.backgroundSyncEnabled) {
+          showToast(getTranslation("netRestoredWithQueueToast", locale));
+          retryQueuedMessages();
+          const nowTime = new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          });
+          savePendingSyncActions([]);
+          setOfflineSettingsState((prevCfg) => {
+            const next = { ...prevCfg, lastSyncedAt: nowTime };
+            try {
+              localStorage.setItem("ask_elon_offline_settings", JSON.stringify(next));
+            } catch {}
+            return next;
+          });
+        } else {
+          showToast(
+            locale === "pl"
+              ? "Połączenie przywrócone. Operacje oczekują w kolejce (Synchronizacja w tle jest wyłączona)."
+              : locale === "ro"
+              ? "Conexiune restabilită. Acțiunile așteaptă în coadă (Sincronizarea în fundal este oprită)."
+              : "Connection restored. Pending actions remain queued (Background Sync is off)."
+          );
+        }
       } else {
         showToast(getTranslation("netRestoredToast", locale));
       }
     }
     prevNetworkStatusRef.current = networkStatus;
-  }, [networkStatus, isSimulatedOffline, chatMessages, locale, showToast, retryQueuedMessages]);
+  }, [
+    networkStatus,
+    isSimulatedOffline,
+    chatMessages,
+    pendingSyncActions.length,
+    offlineSettings.backgroundSyncEnabled,
+    locale,
+    showToast,
+    retryQueuedMessages,
+    savePendingSyncActions,
+  ]);
 
   const updateUser = (updates: Partial<UserProfile>) => {
     setUserState((prev) => {
-      const next = { ...prev, ...updates };
+      const next: UserProfile = {
+        ...prev,
+        ...updates,
+        isPro:
+          updates.free_access !== undefined
+            ? updates.free_access
+              ? true
+              : updates.isPro ?? prev.isPro
+            : updates.isPro ?? prev.isPro,
+      };
       storage.saveUserProfile(next);
+
+      // Sync active user into adminUsers table
+      setAdminUsersState((prevUsers) => {
+        const updatedList = prevUsers.map((u) =>
+          u.id === next.id
+            ? {
+                ...u,
+                ...next,
+                city: next.city || u.city || "Dartford, Kent",
+                registeredAt: next.registeredAt || u.registeredAt || "2026-03-15",
+                free_access: Boolean(next.free_access ?? u.free_access),
+                subscriptionStatus: next.free_access
+                  ? ("free_access" as const)
+                  : next.isPro
+                  ? ("active_pro" as const)
+                  : ("free" as const),
+              }
+            : u
+        );
+        storage.saveAdminUsers(updatedList);
+        return updatedList;
+      });
+
       return next;
     });
     showToast(t("profileSavedToast"));
@@ -446,6 +828,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const updated = [created, ...cases];
     setCasesState(updated);
     storage.saveCases(updated);
+
+    // Increment formalCasesCount in analytics
+    setAdminUsersState((prevUsers) => {
+      const nextList = prevUsers.map((u) =>
+        u.id === user.id ? { ...u, formalCasesCount: (u.formalCasesCount || 0) + 1 } : u
+      );
+      storage.saveAdminUsers(nextList);
+      return nextList;
+    });
+
+    if (!isOnline || !offlineSettings.backgroundSyncEnabled) {
+      appendPendingSyncAction({
+        type: "case_create",
+        title: `Nowa sprawa: ${created.title}`,
+        subtitle: `Sprawy · ${created.employer} (${created.sector})`,
+      });
+    }
+
     showToast(t("createCaseBtn") + " - " + created.title);
     return id;
   };
@@ -569,6 +969,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       storage.saveSentLetters(updated);
       return updated;
     });
+    if (!isOnline || !offlineSettings.backgroundSyncEnabled) {
+      appendPendingSyncAction({
+        type: "letter_save",
+        title: `Pismo prawne: ${letterData.title}`,
+        subtitle: `Pisma Elona · Odbiorca: ${letterData.recipient}`,
+      });
+    }
     if (!silent) {
       showToast(t("saveToSent"));
     }
@@ -716,6 +1123,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const updated = [newNote, ...notes];
     setNotesState(updated);
     storage.saveNotes(updated);
+    if (!isOnline || !offlineSettings.backgroundSyncEnabled) {
+      appendPendingSyncAction({
+        type: "note_save",
+        title: `Notatka: ${title}`,
+        subtitle: `Notatnik i dowody · Kategoria: ${category}`,
+      });
+    }
     showToast(t("tabNotes") + " - " + title);
   };
 
@@ -760,6 +1174,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setChatMessagesState(newMessages);
     storage.saveChatHistory(newMessages);
     setIsChatLoading(true);
+
+    // Increment user dailyQueriesCount and chatQueriesCount in analytics
+    setAdminUsersState((prevUsers) => {
+      const nextList = prevUsers.map((u) =>
+        u.id === user.id
+          ? {
+              ...u,
+              dailyQueriesCount: (u.dailyQueriesCount || 0) + 1,
+              chatQueriesCount: (u.chatQueriesCount || 0) + 1,
+            }
+          : u
+      );
+      storage.saveAdminUsers(nextList);
+      return nextList;
+    });
 
     const assistantId = `msg_${Date.now() + 1}`;
     const assistantTimestamp = new Date().toLocaleTimeString([], {
@@ -874,21 +1303,171 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Helper to archive a conversation into the 10-recent-unsaved-conversations list
+  const archiveConversationToUnsavedHistory = useCallback(
+    (sessionId: string, messagesToArchive: ChatMessage[], draftText: string = "") => {
+      if (isCurrentChatSavedAsCaseRef.current) return;
+
+      let effectiveMessages = [...messagesToArchive];
+      const hasUserMsg = effectiveMessages.some((m) => m.role === "user" && m.text.trim().length > 0);
+
+      // If exiting with an unsent draft and no user messages yet, include the draft as a user message
+      if (!hasUserMsg && draftText.trim().length > 0) {
+        effectiveMessages.push({
+          id: `msg_draft_${Date.now()}`,
+          role: "user",
+          text: draftText.trim(),
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          status: "queued",
+        });
+      }
+
+      if (!effectiveMessages.some((m) => m.role === "user" && m.text.trim().length > 0)) {
+        return;
+      }
+
+      setRecentUnsavedChatsState((prev) =>
+        storage.upsertRecentUnsavedChat(prev, sessionId, effectiveMessages)
+      );
+    },
+    []
+  );
+
+  // Live sync: keep active unsaved conversation updated in the 10-item history as messages arrive
+  useEffect(() => {
+    if (isCurrentChatSavedAsCaseRef.current) return;
+    const hasUserMsg = chatMessages.some((m) => m.role === "user" && m.text.trim().length > 0);
+    if (!hasUserMsg) return;
+
+    setRecentUnsavedChatsState((prev) =>
+      storage.upsertRecentUnsavedChat(prev, activeUnsavedChatId, chatMessages)
+    );
+  }, [chatMessages, activeUnsavedChatId]);
+
+  // Automatically save unsaved conversation to history upon exiting the app (beforeunload, pagehide, visibilitychange)
+  const latestChatRef = useRef({
+    sessionId: activeUnsavedChatId,
+    messages: chatMessages,
+    draft: chatDraft,
+  });
+  useEffect(() => {
+    latestChatRef.current = {
+      sessionId: activeUnsavedChatId,
+      messages: chatMessages,
+      draft: chatDraft,
+    };
+  }, [activeUnsavedChatId, chatMessages, chatDraft]);
+
+  useEffect(() => {
+    const handleAppExitSave = () => {
+      try {
+        if (isCurrentChatSavedAsCaseRef.current) return;
+        const { sessionId, messages, draft } = latestChatRef.current;
+        let effectiveMessages = [...messages];
+        const hasUserMsg = effectiveMessages.some((m) => m.role === "user" && m.text.trim().length > 0);
+
+        if (!hasUserMsg && draft.trim().length > 0) {
+          effectiveMessages.push({
+            id: `msg_draft_${Date.now()}`,
+            role: "user",
+            text: draft.trim(),
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            status: "queued",
+          });
+        }
+
+        if (effectiveMessages.some((m) => m.role === "user" && m.text.trim().length > 0)) {
+          const currentStored = storage.loadRecentUnsavedChats();
+          storage.upsertRecentUnsavedChat(currentStored, sessionId, effectiveMessages);
+        }
+      } catch {
+        // Ignore storage errors during unload/visibilitychange
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        handleAppExitSave();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleAppExitSave);
+    window.addEventListener("pagehide", handleAppExitSave);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleAppExitSave);
+      window.removeEventListener("pagehide", handleAppExitSave);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   const clearChatMessages = () => {
-    const initial: ChatMessage[] = [
+    // 1. Archive current unsaved conversation before resetting
+    archiveConversationToUnsavedHistory(activeUnsavedChatId, chatMessages, chatDraft);
+
+    // 2. Start a fresh session and greet only with a short question asking about further questions
+    const nextSessionId = `unsaved_${Date.now()}`;
+    setActiveUnsavedChatId(nextSessionId);
+    isCurrentChatSavedAsCaseRef.current = false;
+
+    const resetPromptMsg: ChatMessage[] = [
       {
-        id: `msg_${Date.now()}`,
+        id: `msg_reset_${Date.now()}`,
         role: "assistant",
-        text: getTranslation("elonGreeting", locale),
+        text: getTranslation("elonResetPrompt", locale),
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         status: "sent"
       }
     ];
-    setChatMessagesState(initial);
-    storage.saveChatHistory(initial);
+    setChatMessagesState(resetPromptMsg);
+    storage.saveChatHistory(resetPromptMsg);
     setChatDraft("");
     setActiveCaseId(null);
     showToast(t("clearChat"));
+  };
+
+  const restoreUnsavedChat = (id: string) => {
+    // Save current unsaved chat first if it has user messages
+    if (id !== activeUnsavedChatId) {
+      archiveConversationToUnsavedHistory(activeUnsavedChatId, chatMessages, chatDraft);
+    }
+    const target = recentUnsavedChats.find((c) => c.id === id);
+    if (!target) return;
+
+    isCurrentChatSavedAsCaseRef.current = false;
+    setActiveUnsavedChatId(target.id);
+    setChatMessagesState(target.messages);
+    storage.saveChatHistory(target.messages);
+  };
+
+  const removeUnsavedChat = (id: string) => {
+    setRecentUnsavedChatsState((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      storage.saveRecentUnsavedChats(next);
+      return next;
+    });
+  };
+
+  const saveUnsavedChatAsCase = (id: string) => {
+    const target = recentUnsavedChats.find((c) => c.id === id);
+    if (!target) return;
+    const desc = target.messages
+      .map((m) => `${m.role === "assistant" ? "Elon" : user.fullName}: ${m.text}`)
+      .join("\n\n");
+    addCase({
+      title: target.title.slice(0, 60),
+      description: desc.slice(0, 2000),
+      sector: user.industry || "Ogólne",
+      employer: user.employerName || "Pracodawca",
+      status: "open",
+      priority: "medium",
+    });
+    removeUnsavedChat(id);
+    if (id === activeUnsavedChatId) {
+      isCurrentChatSavedAsCaseRef.current = true;
+    }
+    showToast(t("caseSavedToast"));
   };
 
   const saveCurrentChatAsCase = () => {
@@ -903,6 +1482,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       status: "open",
       priority: "medium"
     });
+    // Remove from unsaved history since it is now officially saved as a case
+    isCurrentChatSavedAsCaseRef.current = true;
+    removeUnsavedChat(activeUnsavedChatId);
     showToast(t("caseSavedToast"));
   };
 
@@ -910,6 +1492,282 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const updated = broadcastMessages.map((m) => ({ ...m, unread: false }));
     setBroadcastMessagesState(updated);
     storage.saveBroadcastMessages(updated);
+  };
+
+  // Admin Hub: Update any user in the database (and sync active user if matching)
+  const updateAdminUser = (userId: string, updates: Partial<AdminManagedUser>) => {
+    setAdminUsersState((prev) => {
+      const nextList = prev.map((u) => {
+        if (u.id !== userId) return u;
+        const merged: AdminManagedUser = { ...u, ...updates };
+        if (updates.free_access !== undefined) {
+          merged.free_access = updates.free_access;
+          if (updates.free_access) {
+            merged.isPro = true;
+            merged.subscriptionStatus = "free_access";
+          } else if (merged.subscriptionStatus === "free_access") {
+            merged.subscriptionStatus = merged.isPro ? "active_pro" : "free";
+          }
+        }
+        if (updates.subscriptionStatus) {
+          merged.subscriptionStatus = updates.subscriptionStatus;
+          merged.isPro =
+            updates.subscriptionStatus === "active_pro" ||
+            updates.subscriptionStatus === "free_access";
+          merged.free_access = updates.subscriptionStatus === "free_access";
+        }
+        return merged;
+      });
+      storage.saveAdminUsers(nextList);
+
+      const updatedActive = nextList.find((u) => u.id === user.id);
+      if (updatedActive && userId === user.id) {
+        setUserState(updatedActive);
+        storage.saveUserProfile(updatedActive);
+      }
+
+      return nextList;
+    });
+    showToast("Zapisano zmiany profilu użytkownika w bazie!");
+  };
+
+  // Admin Hub: Generate secure password reset token & link for user
+  const resetAdminUserPassword = (userId: string) => {
+    const target = adminUsers.find((u) => u.id === userId);
+    const email = target?.email || "user@example.co.uk";
+    const randA = Math.random().toString(36).slice(2, 6).toUpperCase();
+    const randB = Math.random().toString(36).slice(2, 6).toUpperCase();
+    const token = `RST-${randA}-${randB}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
+    const tempPassword = `Elon#${randA}${Math.floor(100 + Math.random() * 900)}`;
+    const resetLink = `https://ask-elon.co.uk/auth/reset-password?uid=${encodeURIComponent(
+      userId
+    )}&token=${encodeURIComponent(token)}`;
+    const nowStr = new Date().toLocaleString("pl-PL", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    setAdminUsersState((prev) => {
+      const nextList = prev.map((u) =>
+        u.id === userId
+          ? { ...u, lastPasswordResetToken: token, lastPasswordResetAt: nowStr }
+          : u
+      );
+      storage.saveAdminUsers(nextList);
+      return nextList;
+    });
+
+    showToast(`Wysłano link resetujący hasło na adres: ${email}`);
+    return { token, resetLink, tempPassword, email };
+  };
+
+  // Admin Hub: Promo Codes Management & Validation
+  const addPromoCode = (item: Omit<PromoCodeItem, "id" | "usedCount" | "createdAt">) => {
+    const cleanCode = item.code.trim().toUpperCase();
+    if (!cleanCode) return;
+    const created: PromoCodeItem = {
+      ...item,
+      id: `promo_${Date.now()}`,
+      code: cleanCode,
+      usedCount: 0,
+      createdAt: new Date().toISOString().slice(0, 10),
+    };
+    setPromoCodesState((prev) => {
+      const filtered = prev.filter((p) => p.code.toUpperCase() !== cleanCode);
+      const next = [created, ...filtered];
+      storage.savePromoCodes(next);
+      return next;
+    });
+    showToast(`Utworzono kod rabatowy ${cleanCode}!`);
+  };
+
+  const removePromoCode = (id: string) => {
+    setPromoCodesState((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      storage.savePromoCodes(next);
+      return next;
+    });
+    showToast("Usunięto kod promocyjny.");
+  };
+
+  const validatePromoCode = useCallback(
+    (codeStr: string) => {
+      const clean = codeStr.trim().toUpperCase();
+      if (!clean) {
+        return { valid: false, errorReason: "Wpisz kod promocyjny." };
+      }
+      const found = promoCodes.find((p) => p.code.toUpperCase() === clean);
+      if (!found) {
+        return { valid: false, errorReason: t("promoInvalid") };
+      }
+      const todayISO = new Date().toISOString().slice(0, 10);
+      if (found.expiresAt && found.expiresAt < todayISO) {
+        return {
+          valid: false,
+          errorReason: `Kod ${found.code} wygasł dnia ${found.expiresAt}.`,
+        };
+      }
+      const basePrice = 9.99;
+      const discountedPrice =
+        found.discountType === "percentage"
+          ? Math.max(0, Number((basePrice * (1 - found.discountValue / 100)).toFixed(2)))
+          : Math.max(0, Number((basePrice - found.discountValue).toFixed(2)));
+
+      return {
+        valid: true,
+        promo: found,
+        discountedPrice,
+      };
+    },
+    [promoCodes, t]
+  );
+
+  const redeemPromoCode = (codeStr: string) => {
+    const res = validatePromoCode(codeStr);
+    if (!res.valid || !res.promo) {
+      showToast(res.errorReason || t("promoInvalid"));
+      return res;
+    }
+
+    setPromoCodesState((prev) => {
+      const next = prev.map((p) =>
+        p.id === res.promo!.id ? { ...p, usedCount: p.usedCount + 1 } : p
+      );
+      storage.savePromoCodes(next);
+      return next;
+    });
+
+    if (res.discountedPrice === 0) {
+      updateUser({ isPro: true, free_access: true, subscriptionStatus: "free_access" });
+      showToast(t("promoSuccess"));
+    } else {
+      showToast(
+        `Naliczyłem rabat (${res.promo.code})! Nowa cena subskrypcji: £${res.discountedPrice?.toFixed(2)}/mies.`
+      );
+    }
+    return res;
+  };
+
+  // Admin Hub: Marketing Pop-up Configurator
+  const updateMarketingPopupConfig = (updates: Partial<MarketingPopupConfig>) => {
+    setMarketingPopupConfigState((prev) => {
+      const next: MarketingPopupConfig = {
+        ...prev,
+        ...updates,
+        updatedAt: new Date().toLocaleString("pl-PL", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      storage.saveMarketingPopupConfig(next);
+      return next;
+    });
+    showToast("Zapisano konfigurację pop-upa marketingowego!");
+  };
+
+  // Admin Hub: Broadcast / Direct Chat Message Delivery into Main Chat
+  const sendAdminSystemChatMessage = ({
+    targetType,
+    targetUserId,
+    title,
+    message,
+  }: {
+    targetType: "broadcast" | "direct";
+    targetUserId?: string;
+    title: string;
+    message: string;
+  }) => {
+    const cleanTitle = title.trim() || (targetType === "broadcast" ? "Ogłoszenie systemowe" : "Wiadomość od Administratora");
+    const cleanMsg = message.trim();
+    if (!cleanMsg) return;
+
+    const targetUser = targetUserId ? adminUsers.find((u) => u.id === targetUserId) : undefined;
+    const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const nowDateTime = new Date().toLocaleString("pl-PL", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    // 1. Save to Admin Delivery Logs
+    const logItem: AdminChatDeliveryLog = {
+      id: `adm_msg_${Date.now()}`,
+      targetType,
+      targetUserId: targetUser?.id,
+      targetUserName:
+        targetType === "broadcast"
+          ? "Wszyscy użytkownicy (Broadcast)"
+          : targetUser?.fullName || "Wybrany użytkownik",
+      title: cleanTitle,
+      message: cleanMsg,
+      sentAt: nowDateTime,
+    };
+    setAdminChatDeliveryLogsState((prev) => {
+      const next = [logItem, ...prev];
+      storage.saveAdminChatDeliveryLogs(next);
+      return next;
+    });
+
+    // 2. Also add to Notifications / Broadcast Inbox
+    if (targetType === "broadcast" || targetUserId === user.id) {
+      const newBroadcast: BroadcastMessage = {
+        id: `bm_${Date.now()}`,
+        title: cleanTitle,
+        content: cleanMsg,
+        date: new Date().toISOString().slice(0, 10),
+        unread: true,
+      };
+      setBroadcastMessagesState((prev) => {
+        const next = [newBroadcast, ...prev];
+        storage.saveBroadcastMessages(next);
+        return next;
+      });
+    }
+
+    // 3. Deliver directly into the main Chat window if Broadcast OR Direct to current user (or previewing in real time)
+    const shouldDeliverToActiveChat =
+      targetType === "broadcast" || !targetUserId || targetUserId === user.id || true;
+
+    if (shouldDeliverToActiveChat) {
+      const formattedChatText =
+        targetType === "broadcast"
+          ? `📢 ${cleanTitle.toUpperCase()}\n\n${cleanMsg}`
+          : `🛡️ ${cleanTitle.toUpperCase()} (Dla: ${targetUser?.fullName || user.fullName})\n\n${cleanMsg}`;
+
+      const systemChatMsg: ChatMessage = {
+        id: `msg_sys_${Date.now()}`,
+        role: "assistant",
+        text: formattedChatText,
+        timestamp: nowTime,
+        status: "sent",
+        isSystemBroadcast: true,
+        systemMessageType: targetType,
+        senderLabel:
+          targetType === "broadcast"
+            ? "SYSTEM BROADCAST · ADMIN HUB"
+            : `WIADOMOŚĆ BEZPOŚREDNIA (DIRECT) · ADMIN HUB → ${targetUser?.fullName || user.fullName}`,
+      };
+
+      setChatMessagesState((prev) => {
+        const next = [...prev, systemChatMsg];
+        storage.saveChatHistory(next);
+        return next;
+      });
+    }
+
+    showToast(
+      targetType === "broadcast"
+        ? "Wysłano komunikat Broadcast na główny czat wszystkich użytkowników!"
+        : `Wysłano wiadomość bezpośrednią na czat użytkownika: ${targetUser?.fullName || ""}!`
+    );
   };
 
   const resetAll = () => {
@@ -922,6 +1780,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       value={{
         activeTab,
         setActiveTab,
+        profileSubTab,
+        setProfileSubTab,
         locale,
         setLocale,
         t,
@@ -941,6 +1801,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         saveCurrentLetterDraft,
         queuedMessagesCount,
         retryQueuedMessages,
+        offlineSettings,
+        updateOfflineSettings,
+        pendingSyncActions,
+        removePendingSyncAction,
+        removeQueuedChatMessage,
+        syncPendingActionsNow,
+        enqueueSampleOfflineAction,
         cases,
         activeCaseId,
         setActiveCaseId,
@@ -971,6 +1838,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         sendChatMessage,
         clearChatMessages,
         saveCurrentChatAsCase,
+        recentUnsavedChats,
+        activeUnsavedChatId,
+        restoreUnsavedChat,
+        removeUnsavedChat,
+        saveUnsavedChatAsCase,
         isNewCaseModalOpen,
         setIsNewCaseModalOpen,
         isNewPostModalOpen,
@@ -991,6 +1863,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         markMessagesRead,
         toastMessage,
         showToast,
+        adminUsers,
+        updateAdminUser,
+        resetAdminUserPassword,
+        promoCodes,
+        addPromoCode,
+        removePromoCode,
+        validatePromoCode,
+        redeemPromoCode,
+        marketingPopupConfig,
+        updateMarketingPopupConfig,
+        isMarketingPopupVisible,
+        setIsMarketingPopupVisible,
+        adminChatDeliveryLogs,
+        sendAdminSystemChatMessage,
         resetAll
       }}
     >
@@ -1004,4 +1890,5 @@ export function useApp() {
   if (!context) throw new Error("useApp must be used within an AppProvider");
   return context;
 }
+
 

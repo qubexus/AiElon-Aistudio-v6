@@ -1,6 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useApp } from "../context/AppContext";
-import { Locale, ConversationLegalSummary } from "../types";
+import {
+  Locale,
+  ConversationLegalSummary,
+  UnsavedChatIconType,
+  RecentUnsavedChat,
+} from "../types";
 import {
   extractInstantLegalSummary,
   fetchConversationLegalSummaryAI,
@@ -31,6 +36,7 @@ import {
   Scale,
   CalendarClock,
   ShieldCheck,
+  ShieldAlert,
   FileText,
   ChevronRight,
   ChevronDown,
@@ -42,6 +48,13 @@ import {
   PanelRightOpen,
   X,
   AlertTriangle,
+  History,
+  Banknote,
+  HeartPulse,
+  Briefcase,
+  Database,
+  MessageSquare,
+  Calendar,
 } from "lucide-react";
 
 const SPEECH_RATES = [0.9, 1.05, 1.25] as const;
@@ -318,6 +331,11 @@ export const ChatTab: React.FC = () => {
     setActiveTemplateId,
     setActiveTab,
     saveSentLetter,
+    recentUnsavedChats,
+    activeUnsavedChatId,
+    restoreUnsavedChat,
+    removeUnsavedChat,
+    saveUnsavedChatAsCase,
   } = useApp();
 
   const [isDictating, setIsDictating] = useState(false);
@@ -1080,13 +1098,62 @@ export const ChatTab: React.FC = () => {
     }
   }, [chatMessages, isChatLoading, autoReadAloud, enqueueAvailableSegments, speakActiveSegment]);
 
+  const liveTranscribeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isLiveTranscribingRef = useRef<boolean>(false);
+  const lastTranscribedChunkCountRef = useRef<number>(0);
+  const sendAfterTranscribeRef = useRef<boolean>(false);
+
+  const blobToBase64 = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const res = String(reader.result || "");
+        const base64 = res.includes(",") ? res.split(",")[1] : res;
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
+  const transcribeAudioBlob = useCallback(
+    async (blob: Blob, mimeType: string): Promise<string> => {
+      if (blob.size < 300) return "";
+      try {
+        const base64Audio = await blobToBase64(blob);
+        const resp = await fetch("/api/gemini/transcribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            audioBase64: base64Audio,
+            mimeType,
+            locale,
+          }),
+        });
+        if (!resp.ok) return "";
+        const data = await resp.json();
+        return String(data?.text || "").trim();
+      } catch {
+        return "";
+      }
+    },
+    [locale]
+  );
+
   const stopMediaStreams = useCallback(() => {
     if (recordingTimerRef.current) {
       clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = null;
     }
+    if (liveTranscribeTimerRef.current) {
+      clearInterval(liveTranscribeTimerRef.current);
+      liveTranscribeTimerRef.current = null;
+    }
     if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      try {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      } catch {
+        // ignore
+      }
       mediaStreamRef.current = null;
     }
   }, []);
@@ -1108,12 +1175,18 @@ export const ChatTab: React.FC = () => {
       clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = null;
     }
-    try {
-      recognitionRef.current?.stop();
-    } catch {
-      // ignore
+    if (liveTranscribeTimerRef.current) {
+      clearInterval(liveTranscribeTimerRef.current);
+      liveTranscribeTimerRef.current = null;
     }
-    recognitionRef.current = null;
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore
+      }
+      recognitionRef.current = null;
+    }
 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try {
@@ -1128,7 +1201,10 @@ export const ChatTab: React.FC = () => {
 
   const handleSend = () => {
     if (isDictating) {
+      // If the user taps Send while actively recording, stop recording and auto-send once final transcription completes
+      sendAfterTranscribeRef.current = true;
       stopDictationSession();
+      return;
     }
     if (!chatDraft.trim() || isChatLoading) return;
     isAutoScrollPinnedRef.current = true;
@@ -1144,27 +1220,35 @@ export const ChatTab: React.FC = () => {
     }
   };
 
-  // Dual-Engine Voice Recording: Web Speech Recognition (live streaming words) + MediaRecorder (/api/gemini/transcribe fallback)
+  // Safe, iframe-friendly Voice Recording:
+  // Uses pure in-browser MediaRecorder + /api/gemini/transcribe (without triggering OS SpeechRecognition overlays/conflicts that steal iframe focus on mobile)
   const toggleDictation = async () => {
     if (isDictating) {
+      sendAfterTranscribeRef.current = false;
       stopDictationSession();
       return;
     }
 
     // Stop Elon's TTS if he is currently speaking so the mic records the user cleanly
     if (speakingMsgId) {
-      handleStopSpeech();
+      try {
+        handleStopSpeech();
+      } catch {
+        // ignore
+      }
     }
+
+    const canRecordMedia =
+      typeof navigator !== "undefined" &&
+      Boolean(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) &&
+      typeof MediaRecorder !== "undefined";
 
     const SpeechRecognition =
       typeof window !== "undefined"
         ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
         : null;
-    const canRecordMedia =
-      typeof navigator !== "undefined" &&
-      Boolean(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
-    if (!SpeechRecognition && !canRecordMedia) {
+    if (!canRecordMedia && !SpeechRecognition) {
       showToast(
         locale === "pl"
           ? "Twoja przeglądarka nie wspiera nagrywania głosu."
@@ -1177,88 +1261,35 @@ export const ChatTab: React.FC = () => {
 
     dictationBaseDraftRef.current = chatDraft.trim();
     speechProducedTextRef.current = false;
-    setRecordingSeconds(0);
-    setIsDictating(true);
+    lastTranscribedChunkCountRef.current = 0;
+    sendAfterTranscribeRef.current = false;
 
-    recordingTimerRef.current = setInterval(() => {
-      setRecordingSeconds((prev) => prev + 1);
-    }, 1000);
-
-    let startedAnyEngine = false;
-
-    // 1. Start Web Speech API for instant live word-by-word transcription in the input box
-    if (SpeechRecognition) {
-      try {
-        const recognition = new SpeechRecognition();
-        recognition.lang = locale === "pl" ? "pl-PL" : locale === "ro" ? "ro-RO" : "en-GB";
-        recognition.continuous = true;
-        recognition.interimResults = true;
-
-        recognition.onresult = (event: any) => {
-          let finalChunk = "";
-          let interimChunk = "";
-          for (let i = 0; i < event.results.length; i++) {
-            const res = event.results[i];
-            if (res.isFinal) {
-              finalChunk += res[0].transcript + " ";
-            } else {
-              interimChunk += res[0].transcript;
-            }
-          }
-          const spoken = `${finalChunk}${interimChunk}`.trim();
-          if (spoken) {
-            speechProducedTextRef.current = true;
-            const prefix = dictationBaseDraftRef.current;
-            setChatDraft(prefix ? `${prefix} ${spoken}` : spoken);
-          }
-        };
-
-        recognition.onerror = (event: any) => {
-          const errCode = event?.error;
-          if ((errCode === "not-allowed" || errCode === "service-not-allowed") && !mediaRecorderRef.current) {
-            stopDictationSession();
-            showToast(
-              locale === "pl"
-                ? "Zezwól na dostęp do mikrofonu w pasku przeglądarki, aby dyktować wiadomość."
-                : locale === "ro"
-                ? "Permite accesul la microfon în browser pentru a dicta mesajul."
-                : "Please allow microphone access in your browser to dictate messages."
-            );
-          }
-        };
-
-        recognition.onend = () => {
-          // If MediaRecorder is not active, end dictation state when recognition finishes
-          if (!mediaRecorderRef.current || mediaRecorderRef.current.state === "inactive") {
-            setIsDictating(false);
-            if (recordingTimerRef.current) {
-              clearInterval(recordingTimerRef.current);
-              recordingTimerRef.current = null;
-            }
-          }
-        };
-
-        recognitionRef.current = recognition;
-        recognition.start();
-        startedAnyEngine = true;
-      } catch {
-        // Will rely on MediaRecorder below
-      }
-    }
-
-    // 2. Start MediaRecorder audio capture so recording always works and can transcribe via server if SpeechRecognition doesn't emit text
+    // PRIMARY ENGINE: Pure in-browser MediaRecorder (never conflicts with OS SpeechRecognizer or exits mobile preview iframe)
     if (canRecordMedia) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
         mediaStreamRef.current = stream;
         audioChunksRef.current = [];
+        setRecordingSeconds(0);
+        setIsDictating(true);
 
-        const preferredMime =
-          typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-            ? "audio/webm;codecs=opus"
-            : typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/mp4")
-            ? "audio/mp4"
-            : "";
+        recordingTimerRef.current = setInterval(() => {
+          setRecordingSeconds((prev) => prev + 1);
+        }, 1000);
+
+        const preferredMime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+          ? "audio/webm;codecs=opus"
+          : MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : MediaRecorder.isTypeSupported("audio/mp4")
+          ? "audio/mp4"
+          : "";
 
         const recorder = preferredMime
           ? new MediaRecorder(stream, { mimeType: preferredMime })
@@ -1270,72 +1301,135 @@ export const ChatTab: React.FC = () => {
           }
         };
 
+        // Live progressive transcription while speaking (every 2.8 seconds)
+        liveTranscribeTimerRef.current = setInterval(async () => {
+          if (
+            isLiveTranscribingRef.current ||
+            audioChunksRef.current.length === 0 ||
+            audioChunksRef.current.length === lastTranscribedChunkCountRef.current
+          ) {
+            return;
+          }
+          isLiveTranscribingRef.current = true;
+          const snapshotCount = audioChunksRef.current.length;
+          const mimeType = recorder.mimeType || preferredMime || "audio/webm";
+          const snapshotBlob = new Blob([...audioChunksRef.current], { type: mimeType });
+
+          try {
+            const partialText = await transcribeAudioBlob(snapshotBlob, mimeType);
+            if (partialText) {
+              lastTranscribedChunkCountRef.current = snapshotCount;
+              speechProducedTextRef.current = true;
+              const prefix = dictationBaseDraftRef.current;
+              setChatDraft(prefix ? `${prefix} ${partialText}` : partialText);
+            }
+          } finally {
+            isLiveTranscribingRef.current = false;
+          }
+        }, 2800);
+
         recorder.onstop = async () => {
-          const mimeType = recorder.mimeType || "audio/webm";
+          const mimeType = recorder.mimeType || preferredMime || "audio/webm";
           const chunks = [...audioChunksRef.current];
           audioChunksRef.current = [];
           stopMediaStreams();
+          mediaRecorderRef.current = null;
 
-          // If Web Speech API already populated live text, no need to re-transcribe
-          if (speechProducedTextRef.current || chunks.length === 0) {
+          if (chunks.length === 0) {
+            sendAfterTranscribeRef.current = false;
             return;
           }
 
-          const blob = new Blob(chunks, { type: mimeType });
-          if (blob.size < 400) return;
+          const fullBlob = new Blob(chunks, { type: mimeType });
+          if (fullBlob.size < 300) {
+            sendAfterTranscribeRef.current = false;
+            return;
+          }
 
           setIsTranscribing(true);
           try {
-            const base64Audio = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                const res = String(reader.result || "");
-                const base64 = res.includes(",") ? res.split(",")[1] : res;
-                resolve(base64);
-              };
-              reader.onerror = reject;
-              reader.readAsDataURL(blob);
-            });
+            const finalText = await transcribeAudioBlob(fullBlob, mimeType);
+            const prefix = dictationBaseDraftRef.current;
+            const combined = finalText
+              ? prefix
+                ? `${prefix} ${finalText}`
+                : finalText
+              : chatDraft.trim();
 
-            const resp = await fetch("/api/gemini/transcribe", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                audioBase64: base64Audio,
-                mimeType,
-                locale,
-              }),
-            });
-
-            if (resp.ok) {
-              const data = await resp.json();
-              const transcribed = String(data?.text || "").trim();
-              if (transcribed) {
-                const prefix = dictationBaseDraftRef.current;
-                setChatDraft(prefix ? `${prefix} ${transcribed}` : transcribed);
+            if (combined) {
+              setChatDraft(combined);
+              if (sendAfterTranscribeRef.current) {
+                sendAfterTranscribeRef.current = false;
+                isAutoScrollPinnedRef.current = true;
+                setIsAutoScrollPinned(true);
+                sendChatMessage(combined);
               }
             }
-          } catch {
-            // Ignore transcription error if offline
           } finally {
+            sendAfterTranscribeRef.current = false;
             setIsTranscribing(false);
           }
         };
 
         mediaRecorderRef.current = recorder;
-        recorder.start(250);
-        startedAnyEngine = true;
+        recorder.start(400);
+        return;
       } catch (err: any) {
-        if (!startedAnyEngine) {
+        stopMediaStreams();
+        setIsDictating(false);
+        showToast(
+          locale === "pl"
+            ? "Brak dostępu do mikrofonu — zezwól na mikrofon w przeglądarce."
+            : locale === "ro"
+            ? "Accesul la microfon este blocat — permite microfonul în browser."
+            : "Microphone access denied — please allow microphone access in your browser."
+        );
+        return;
+      }
+    }
+
+    // FALLBACK ENGINE: Only used if MediaRecorder is not available in the browser
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = locale === "pl" ? "pl-PL" : locale === "ro" ? "ro-RO" : "en-GB";
+        recognition.continuous = false;
+        recognition.interimResults = true;
+
+        setRecordingSeconds(0);
+        setIsDictating(true);
+        recordingTimerRef.current = setInterval(() => {
+          setRecordingSeconds((prev) => prev + 1);
+        }, 1000);
+
+        recognition.onresult = (event: any) => {
+          let transcript = "";
+          for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript + " ";
+          }
+          const spoken = transcript.trim();
+          if (spoken) {
+            const prefix = dictationBaseDraftRef.current;
+            setChatDraft(prefix ? `${prefix} ${spoken}` : spoken);
+          }
+        };
+
+        recognition.onerror = () => {
           stopDictationSession();
-          showToast(
-            locale === "pl"
-              ? "Brak dostępu do mikrofonu — odblokuj mikrofon w ustawieniach przeglądarki."
-              : locale === "ro"
-              ? "Accesul la microfon este blocat — activează microfonul în setările browserului."
-              : "Microphone access denied — please allow microphone access in your browser settings."
-          );
-        }
+        };
+
+        recognition.onend = () => {
+          setIsDictating(false);
+          if (recordingTimerRef.current) {
+            clearInterval(recordingTimerRef.current);
+            recordingTimerRef.current = null;
+          }
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+      } catch {
+        stopDictationSession();
       }
     }
   };
@@ -1346,18 +1440,113 @@ export const ChatTab: React.FC = () => {
     .map((id) => templates.find((tpl) => tpl.id === id))
     .filter(Boolean);
 
-  // Reusable Legal Summary Panel Content (rendered in desktop side-column & mobile drawer)
+  // Group the 10 most recent unsaved conversations by date (dateISO)
+  const groupedUnsavedChats = useMemo(() => {
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const yesterdayISO = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    const groupsMap = new Map<
+      string,
+      { dateISO: string; displayDate: string; items: RecentUnsavedChat[] }
+    >();
+
+    recentUnsavedChats.slice(0, 10).forEach((chat) => {
+      const key = chat.dateISO || todayISO;
+      if (!groupsMap.has(key)) {
+        let displayDate = chat.dateLabel || key;
+        if (key === todayISO) {
+          displayDate =
+            locale === "pl"
+              ? `Dzisiaj · ${chat.dateLabel}`
+              : locale === "ro"
+              ? `Astăzi · ${chat.dateLabel}`
+              : `Today · ${chat.dateLabel}`;
+        } else if (key === yesterdayISO) {
+          displayDate =
+            locale === "pl"
+              ? `Wczoraj · ${chat.dateLabel}`
+              : locale === "ro"
+              ? `Ieri · ${chat.dateLabel}`
+              : `Yesterday · ${chat.dateLabel}`;
+        }
+        groupsMap.set(key, { dateISO: key, displayDate, items: [] });
+      }
+      groupsMap.get(key)!.items.push(chat);
+    });
+
+    return Array.from(groupsMap.values());
+  }, [recentUnsavedChats, locale]);
+
+  // Topic icon & badge styling helper for each unsaved conversation item
+  const renderUnsavedChatIcon = (iconType: UnsavedChatIconType) => {
+    switch (iconType) {
+      case "wages":
+        return {
+          icon: <Banknote className="w-4 h-4 text-[#FBBF24]" />,
+          bg: "bg-[#FBBF24]/15 border-[#FBBF24]/40",
+          label: locale === "pl" ? "Płace" : "Wages",
+        };
+      case "grievance":
+        return {
+          icon: <ShieldAlert className="w-4 h-4 text-[#FF6A00]" />,
+          bg: "bg-[#FF6A00]/15 border-[#FF6A00]/40",
+          label: locale === "pl" ? "Skarga" : "Grievance",
+        };
+      case "sick_pay":
+        return {
+          icon: <HeartPulse className="w-4 h-4 text-[#A78BFA]" />,
+          bg: "bg-[#A78BFA]/15 border-[#A78BFA]/40",
+          label: "SSP",
+        };
+      case "dismissal":
+        return {
+          icon: <AlertTriangle className="w-4 h-4 text-[#EF4444]" />,
+          bg: "bg-[#EF4444]/15 border-[#EF4444]/40",
+          label: locale === "pl" ? "Zwolnienie" : "Dismissal",
+        };
+      case "contract":
+        return {
+          icon: <Briefcase className="w-4 h-4 text-[#38BDF8]" />,
+          bg: "bg-[#38BDF8]/15 border-[#38BDF8]/40",
+          label: locale === "pl" ? "Umowa" : "Contract",
+        };
+      case "settlement":
+        return {
+          icon: <Scale className="w-4 h-4 text-[#2EE59D]" />,
+          bg: "bg-[#2EE59D]/15 border-[#2EE59D]/40",
+          label: locale === "pl" ? "Ugoda" : "Settlement",
+        };
+      case "data":
+        return {
+          icon: <Database className="w-4 h-4 text-[#34D399]" />,
+          bg: "bg-[#34D399]/15 border-[#34D399]/40",
+          label: "GDPR",
+        };
+      default:
+        return {
+          icon: <MessageSquare className="w-4 h-4 text-[#2EE59D]" />,
+          bg: "bg-[#2EE59D]/15 border-[#2EE59D]/35",
+          label: locale === "pl" ? "Rozmowa" : "Chat",
+        };
+    }
+  };
+
+  // Reusable Side-Panel Content (10 Recent Unsaved Conversations History + Legal Summary)
   const renderLegalSummaryContent = (isMobileDrawer: boolean = false) => (
     <div className="flex flex-col h-full bg-[#0B2038] border border-white/10 rounded-2xl overflow-hidden shadow-xl">
       {/* Side-Panel Header */}
       <div className="px-4 py-3 bg-[#0F2C4D] border-b border-white/10 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-xl bg-[#0B6E4F]/30 border border-[#2EE59D]/40 flex items-center justify-center text-[#2EE59D] shrink-0">
-            <Scale className="w-4 h-4" />
+            <History className="w-4 h-4" />
           </div>
           <div className="min-w-0">
             <h3 className="text-xs font-extrabold text-white tracking-tight truncate">
-              {t("legalSummaryTitle")}
+              {locale === "pl"
+                ? "Historia Rozmów i Analiza Prawna"
+                : locale === "ro"
+                ? "Istoric Conversații & Analiză"
+                : "Recent Chats & Legal Summary"}
             </h3>
             <p className="text-[11px] text-[#BACADA] truncate flex items-center gap-1.5">
               {isChatLoading ? (
@@ -1374,10 +1563,12 @@ export const ChatTab: React.FC = () => {
                     {t("analyzingContextBadge")}
                   </span>
                 </>
-              ) : legalSummary.isBaseline ? (
-                t("legalSummarySubBaseline")
               ) : (
-                t("legalSummarySubLive")
+                <span>
+                  {locale === "pl"
+                    ? `Auto-zapis 10 ostatnich rozmów (${recentUnsavedChats.length}/10)`
+                    : `Auto-saved last 10 unsaved chats (${recentUnsavedChats.length}/10)`}
+                </span>
               )}
             </p>
           </div>
@@ -1427,6 +1618,140 @@ export const ChatTab: React.FC = () => {
 
       {/* Scrollable Body */}
       <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
+        {/* SECTION 0: HISTORY OF 10 MOST RECENT UNSAVED CONVERSATIONS (GROUPED BY DATES & ICONS) */}
+        <div className="rounded-2xl bg-[#0F2C4D]/90 border border-[#FF6A00]/40 p-3 space-y-2.5 shadow-md">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <History className="w-3.5 h-3.5 text-[#FF6A00]" />
+              <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-white">
+                {locale === "pl"
+                  ? "Ostatnie niezapisane rozmowy"
+                  : locale === "ro"
+                  ? "Ultimele conversații nesalvate"
+                  : "Recent Unsaved Conversations"}
+              </h4>
+            </div>
+            <span className="px-2 py-0.5 rounded-md bg-[#FF6A00]/20 border border-[#FF6A00]/40 text-[10px] font-mono font-extrabold text-[#FF9E58]">
+              {recentUnsavedChats.length}/10
+            </span>
+          </div>
+
+          <p className="text-[10px] text-[#BACADA] leading-snug">
+            {locale === "pl"
+              ? "Niezapisane rozmowy zapisują się tu automatycznie w trakcie czatu, po resecie oraz przy wyjściu z aplikacji."
+              : "Unsaved chats are automatically stored here on reset and when exiting the app."}
+          </p>
+
+          {groupedUnsavedChats.length > 0 ? (
+            <div className="space-y-3 pt-1">
+              {groupedUnsavedChats.map((group) => (
+                <div key={group.dateISO} className="space-y-1.5">
+                  {/* Date Group Header */}
+                  <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-[#2EE59D] px-1">
+                    <Calendar className="w-3 h-3 text-[#FF6A00] shrink-0" />
+                    <span>{group.displayDate}</span>
+                  </div>
+
+                  {/* Conversation Items under this Date */}
+                  <div className="space-y-1.5">
+                    {group.items.map((item) => {
+                      const iconMeta = renderUnsavedChatIcon(item.iconType);
+                      const isActiveSession = item.id === activeUnsavedChatId;
+
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => {
+                            handleStopSpeech();
+                            item.messages.forEach((m) =>
+                              fullyRevealedMsgIdsRef.current.add(m.id)
+                            );
+                            restoreUnsavedChat(item.id);
+                            if (isMobileDrawer) setIsMobilePanelOpen(false);
+                          }}
+                          className={`group rounded-xl p-2.5 border transition-all cursor-pointer flex items-start justify-between gap-2.5 ${
+                            isActiveSession
+                              ? "bg-[#143A66] border-[#2EE59D]/60 shadow-sm"
+                              : "bg-[#0B2038]/85 hover:bg-[#12304F] border-white/10 hover:border-[#FF6A00]/50"
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                            {/* Topic Icon Badge */}
+                            <div
+                              className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${iconMeta.bg}`}
+                              title={iconMeta.label}
+                            >
+                              {iconMeta.icon}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded bg-white/5 text-[#BACADA] border border-white/10">
+                                  {iconMeta.label}
+                                </span>
+                                <span className="text-[10px] font-mono text-[#BACADA]/80">
+                                  {item.updatedAtTime}
+                                </span>
+                                {isActiveSession && (
+                                  <span className="text-[9px] font-extrabold text-[#2EE59D]">
+                                    • Aktywna
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="text-xs font-bold text-white group-hover:text-[#2EE59D] transition-colors truncate mt-0.5">
+                                {item.title}
+                              </div>
+
+                              <p className="text-[10px] text-[#BACADA] line-clamp-1 mt-0.5">
+                                {item.preview}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Quick Save as Case & Remove Actions */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                saveUnsavedChatAsCase(item.id);
+                              }}
+                              title={t("saveAsCase")}
+                              aria-label={t("saveAsCase")}
+                              className="p-1.5 rounded-lg bg-[#0B6E4F]/30 hover:bg-[#0B6E4F] border border-[#2EE59D]/30 text-[#2EE59D] hover:text-white transition-colors cursor-pointer"
+                            >
+                              <BookmarkPlus className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeUnsavedChat(item.id);
+                              }}
+                              title="Usuń z historii"
+                              aria-label="Usuń z historii"
+                              className="p-1.5 rounded-lg bg-white/5 hover:bg-[#EF4444]/25 text-[#BACADA] hover:text-[#FF8A8A] transition-colors cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-[11px] text-[#BACADA]/70">
+              {locale === "pl"
+                ? "Brak niezapisanych rozmów w historii."
+                : "No unsaved conversations in history."}
+            </div>
+          )}
+        </div>
         {/* Contextual Summary Digest */}
         <div className="rounded-xl bg-[#0F2C4D]/90 border border-white/10 p-3">
           <div className="flex items-center justify-between gap-2 text-[11px] text-[#BACADA] mb-1">
@@ -1785,10 +2110,14 @@ export const ChatTab: React.FC = () => {
                     .find((m) => m.role === "user")?.text || ""
                 : "";
 
-            // Show the animated English Letter Envelope after Elon finishes responding & speaking on this turn
+            // Show the animated English Letter Envelope after Elon finishes responding & speaking on a real user question turn
             const isConversationTurnFinished =
               isAI &&
               msg.id !== "msg_init" &&
+              !msg.id.startsWith("msg_reset_") &&
+              !msg.id.startsWith("msg_sys_") &&
+              !msg.isSystemBroadcast &&
+              prevUserMsg.trim().length > 0 &&
               !isActivelyStreaming &&
               !isCurrentSpeaking;
 
@@ -1806,7 +2135,9 @@ export const ChatTab: React.FC = () => {
                   className={`${
                     isAI ? "w-full sm:max-w-[97%]" : "max-w-[92%] sm:max-w-[85%]"
                   } rounded-2xl px-4 py-3 shadow-md transition-all duration-300 ${
-                    isAI
+                    msg.isSystemBroadcast
+                      ? "bg-gradient-to-r from-[#2B1608] via-[#122C4A] to-[#0F2C4D] border-2 border-[#FF6A00]/70 text-[#F4F8FB]"
+                      : isAI
                       ? isCurrentSpeaking
                         ? isSpeechPaused
                           ? "bg-[#112C4A] border-2 border-[#2EE59D]/80 text-[#F4F8FB] shadow-[0_0_20px_rgba(46,229,157,0.2)]"
@@ -1819,10 +2150,17 @@ export const ChatTab: React.FC = () => {
                 >
                   {/* Header inside bubble */}
                   <div className="flex items-center justify-between gap-3 mb-1.5 text-[11px] text-[#BACADA]">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-[#2EE59D]">
-                        {isAI ? "Elon" : user.fullName || "Ty"}
-                      </span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {msg.isSystemBroadcast ? (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#FF6A00]/20 border border-[#FF6A00]/50 text-[#FF6A00] font-extrabold text-[10px] uppercase tracking-wider">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>{msg.senderLabel || "ADMIN HUB · KOMUNIKAT SYSTEMOWY"}</span>
+                        </span>
+                      ) : (
+                        <span className="font-semibold text-[#2EE59D]">
+                          {isAI ? "Elon" : user.fullName || "Ty"}
+                        </span>
+                      )}
 
                       {/* Animated 5-Bar Audio Wave Indicator when speaking this bubble */}
                       {isCurrentSpeaking && (
@@ -2318,7 +2656,15 @@ export const ChatTab: React.FC = () => {
             {/* Voice Recording / Dictation Button */}
             <button
               type="button"
-              onClick={toggleDictation}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleDictation();
+              }}
               aria-pressed={isDictating}
               className={`flex items-center gap-1.5 p-2.5 rounded-xl transition-all shrink-0 cursor-pointer ${
                 isDictating
@@ -2386,7 +2732,7 @@ export const ChatTab: React.FC = () => {
               <button
                 type="button"
                 onClick={handleSend}
-                disabled={!chatDraft.trim() || isChatLoading}
+                disabled={(!chatDraft.trim() && !isDictating) || isChatLoading}
                 className={`p-2.5 rounded-xl font-extrabold disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 transition-opacity shadow-md shrink-0 cursor-pointer ${
                   !isOnline
                     ? "bg-[#FF6A00] text-black"

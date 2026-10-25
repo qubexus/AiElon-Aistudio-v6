@@ -22,6 +22,11 @@ export const translations: Record<string, Record<Locale, string>> = {
     en: "Hey mate! I'm Elon – your UK work-rights negotiator and buddy on the shift. I know the ACAS Code, Employment Rights Act, and National Minimum Wage rules inside out, so nobody's going to push you around. Tell me straight—what's your boss or agency pulling?",
     ro: "Salut, prietene! Sunt Elon – colegul și negociatorul tău pentru drepturile muncii în UK. Cunosc la perfecție legile ACAS, Employment Rights Act și salariul minim, așa că nu lăsăm pe nimeni să profite de tine. Spune-mi direct, ce problemă ai cu șeful sau agenția?",
   },
+  elonResetPrompt: {
+    pl: "Czy masz jeszcze jakieś dalsze pytania? Powiedz, o co jeszcze chcesz zapytać.",
+    en: "Do you have any further questions? Let me know what else you'd like to ask.",
+    ro: "Mai ai și alte întrebări? Spune-mi ce altceva ai dori să întrebi.",
+  },
   chatPlaceholder: {
     pl: "Opisz swój problem (np. obcięcie godzin, brak wypłaty, zwolnienie)...",
     en: "Describe your issue (e.g. cut hours, unpaid wages, dismissal)...",
