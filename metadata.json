@@ -1,0 +1,13 @@
+{
+  "name": "Ask Elon - UK Employment Law & Trade Union Companion",
+  "description": "AI-powered UK employment rights assistant. Audit payslips, calculate unpaid wages, draft formal grievance and statutory letters to HR, manage workplace dispute cases, and get advice in Polish, English, and Romanian.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ],
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
