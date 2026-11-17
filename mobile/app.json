@@ -1,0 +1,66 @@
+{
+  "expo": {
+    "name": "Ask Elon",
+    "slug": "ask-elon",
+    "scheme": "askelon",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#FBF8F3",
+      "resizeMode": "contain",
+      "image": "./assets/splash-icon.png"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "uk.askelon.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Ask Elon uses your microphone so you can dictate your workplace question instead of typing it.",
+        "NSSpeechRecognitionUsageDescription": "Ask Elon converts your spoken question into text for the legal consultation.",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
+    },
+    "android": {
+      "package": "uk.askelon.app",
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "RECORD_AUDIO",
+        "INTERNET"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#FBF8F3",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-secure-store",
+      "expo-status-bar"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": ""
+      }
+    }
+  }
+}

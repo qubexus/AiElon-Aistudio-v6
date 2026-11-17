@@ -4,11 +4,12 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GoogleGenAI, Type } from "@google/genai";
+import { aiGate, registerAuthRoutes } from "./server/auth.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 function getAiClient(): GoogleGenAI | null {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -51,6 +52,51 @@ RESPONSE STRUCTURE & PROFILE COMPLETION:
 [ENGLISH_LETTER_START]
 (Complete formal English letter to HR/Employer with full sender and recipient addresses, phone, email, statutory citations, concrete figures/dates, and signature. CRITICAL RULE: NEVER include square brackets like [insert date], [amount], [delete as applicable], or any instructions to edit/remove text. The document must be 100% finished and ready to send immediately.)
 [ENGLISH_LETTER_END]`;
+
+interface WorkerContext {
+  name?: string;
+  homeAddress?: string;
+  phone?: string;
+  email?: string;
+  jobTitle?: string;
+  startDate?: string;
+  hourlyRate?: number | string;
+  hoursPerWeek?: number | string;
+  contractType?: string;
+  employer?: string;
+  companyNumber?: string;
+  employerAddress?: string;
+}
+
+/**
+ * Builds the worker-profile part of the prompt from the data the user really entered.
+ * Missing details are marked NOT PROVIDED: sample values must never reach a real legal letter.
+ */
+function buildContextSnippet(userContext: WorkerContext | undefined, langName: string): string {
+  const languageRule = `Always write the conversational explanation in ${langName}, and generate the formal document inside [ENGLISH_LETTER_START]...[ENGLISH_LETTER_END] in English.`;
+  if (!userContext) return `\n${languageRule}`;
+
+  const show = (value: unknown, prefix = "", suffix = "") => {
+    const text = value === undefined || value === null ? "" : String(value).trim();
+    return text && text !== "0" ? `${prefix}${text}${suffix}` : "NOT PROVIDED";
+  };
+
+  return `\nActive Worker Profile (use it to pre-fill all formal English letters):
+- Full Name: ${show(userContext.name)}
+- Home Address: ${show(userContext.homeAddress)}
+- Telephone: ${show(userContext.phone)}
+- Email: ${show(userContext.email)}
+- Job Title: ${show(userContext.jobTitle)}
+- Start Date: ${show(userContext.startDate)}
+- Hourly Rate: ${show(userContext.hourlyRate, "£", "/hr")}
+- Hours per Week: ${show(userContext.hoursPerWeek)}
+- Contract Type: ${show(userContext.contractType)}
+- Employer Name: ${show(userContext.employer)}
+- Company Number: ${show(userContext.companyNumber)}
+- Employer Address: ${show(userContext.employerAddress)}
+STRICT RULE FOR MISSING DATA: any detail marked NOT PROVIDED is unknown. Never invent, guess or use example values for it. Leave that line out of the letter and, in the chat reply, ask the worker to add the missing detail to their profile before sending the letter.
+${languageRule}`;
+}
 
 // Fallback heuristic sentiment analyzer if Gemini API key is unavailable or errors
 interface HeuristicFlag {
@@ -278,8 +324,21 @@ function runServerFallbackSentimentAnalysis(
 
 async function startServer() {
   const app = express();
-  app.use(cors());
+  if (process.env.TRUST_PROXY) {
+    // Needed behind a hosting proxy so rate limits see the real client address.
+    const hops = Number(process.env.TRUST_PROXY);
+    app.set("trust proxy", Number.isFinite(hops) ? hops : process.env.TRUST_PROXY === "true");
+  }
+
+  // Native apps send no Origin header, so this list only affects browsers.
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+  app.use(cors(allowedOrigins.length ? { origin: allowedOrigins } : undefined));
   app.use(express.json({ limit: "5mb" }));
+
+  registerAuthRoutes(app);
 
   // 0. Lightweight Health & Connectivity Probe Endpoint
   app.get("/api/health", (_req, res) => {
@@ -288,7 +347,7 @@ async function startServer() {
   });
 
   // 1. Server-side Gemini Chat Endpoint
-  app.post("/api/gemini/chat", async (req, res) => {
+  app.post("/api/gemini/chat", aiGate(true), async (req, res) => {
     try {
       const { prompt, history = [], locale = "pl", userContext } = req.body || {};
       if (!prompt || typeof prompt !== "string") {
@@ -303,19 +362,7 @@ async function startServer() {
       }
 
       const langName = locale === "pl" ? "Polish" : locale === "ro" ? "Romanian" : "English";
-      const contextSnippet = userContext
-        ? `\nActive Worker Profile (MUST be used to pre-fill all formal English letters):
-- Full Name: ${userContext.name || "Artur Kowalski"}
-- Home Address: ${userContext.homeAddress || "42 Victoria Road, Dartford, DA1 5DJ"}
-- Telephone: ${userContext.phone || "+44 7700 900342"}
-- Email: ${userContext.email || "artur.kowalski@example.co.uk"}
-- Job Title: ${userContext.jobTitle || "Warehouse Operative"}
-- Start Date: ${userContext.startDate || "2024-03-15"}
-- Hourly Rate: £${userContext.hourlyRate || "13.50"}/hr (${userContext.hoursPerWeek || 40} hrs/wk, ${userContext.contractType || "permanent"})
-- Employer Name: ${userContext.employer || "Amazon Fulfilment LCY2"} (Company No: ${userContext.companyNumber || "03223028"})
-- Employer Address: ${userContext.employerAddress || "London Distribution Park, Windrush Drive, Tilbury RM18 7AN"}
-Always write the conversational explanation in ${langName}, and generate the formal document inside [ENGLISH_LETTER_START]...[ENGLISH_LETTER_END] in English.`
-        : `\nAlways write the conversational explanation in ${langName}, and generate the formal document inside [ENGLISH_LETTER_START]...[ENGLISH_LETTER_END] in English.`;
+      const contextSnippet = buildContextSnippet(userContext, langName);
 
       const contents = [
         ...history.slice(-6).map((m: { role: string; text: string }) => ({
@@ -344,7 +391,7 @@ Always write the conversational explanation in ${langName}, and generate the for
   });
 
   // 1b. Server-side Gemini Streaming Chat Endpoint (SSE)
-  app.post("/api/gemini/chat-stream", async (req, res) => {
+  app.post("/api/gemini/chat-stream", aiGate(true), async (req, res) => {
     try {
       const { prompt, history = [], locale = "pl", userContext } = req.body || {};
       if (!prompt || typeof prompt !== "string") {
@@ -359,19 +406,7 @@ Always write the conversational explanation in ${langName}, and generate the for
       }
 
       const langName = locale === "pl" ? "Polish" : locale === "ro" ? "Romanian" : "English";
-      const contextSnippet = userContext
-        ? `\nActive Worker Profile (MUST be used to pre-fill all formal English letters):
-- Full Name: ${userContext.name || "Artur Kowalski"}
-- Home Address: ${userContext.homeAddress || "42 Victoria Road, Dartford, DA1 5DJ"}
-- Telephone: ${userContext.phone || "+44 7700 900342"}
-- Email: ${userContext.email || "artur.kowalski@example.co.uk"}
-- Job Title: ${userContext.jobTitle || "Warehouse Operative"}
-- Start Date: ${userContext.startDate || "2024-03-15"}
-- Hourly Rate: £${userContext.hourlyRate || "13.50"}/hr (${userContext.hoursPerWeek || 40} hrs/wk, ${userContext.contractType || "permanent"})
-- Employer Name: ${userContext.employer || "Amazon Fulfilment LCY2"} (Company No: ${userContext.companyNumber || "03223028"})
-- Employer Address: ${userContext.employerAddress || "London Distribution Park, Windrush Drive, Tilbury RM18 7AN"}
-Always write the conversational explanation in ${langName}, and generate the formal document inside [ENGLISH_LETTER_START]...[ENGLISH_LETTER_END] in English.`
-        : `\nAlways write the conversational explanation in ${langName}, and generate the formal document inside [ENGLISH_LETTER_START]...[ENGLISH_LETTER_END] in English.`;
+      const contextSnippet = buildContextSnippet(userContext, langName);
 
       const contents = [
         ...history
@@ -420,7 +455,7 @@ Always write the conversational explanation in ${langName}, and generate the for
   });
 
   // 1c. Server-side Audio Transcription Endpoint for Chat Voice Recording
-  app.post("/api/gemini/transcribe", async (req, res) => {
+  app.post("/api/gemini/transcribe", aiGate(false), async (req, res) => {
     try {
       const { audioBase64, mimeType = "audio/webm", locale = "pl" } = req.body || {};
       if (!audioBase64 || typeof audioBase64 !== "string") {
@@ -476,7 +511,7 @@ Always write the conversational explanation in ${langName}, and generate the for
   });
 
   // 2. Background Letter Sentiment & Tone Analysis Endpoint
-  app.post("/api/gemini/analyze-letter-sentiment", async (req, res) => {
+  app.post("/api/gemini/analyze-letter-sentiment", aiGate(false), async (req, res) => {
     try {
       const { fields = {}, letterPreview = "", templateTitle = "", locale = "pl" } = req.body || {};
 
@@ -620,7 +655,7 @@ Instructions:
   });
 
   // 3. Conversation Legal Summary Endpoint (Extracts Key Rights & Statutory Deadlines)
-  app.post("/api/gemini/legal-summary", async (req, res) => {
+  app.post("/api/gemini/legal-summary", aiGate(false), async (req, res) => {
     try {
       const { messages = [], locale = "pl", userContext } = req.body || {};
       const ai = getAiClient();

@@ -103,3 +103,6 @@ test-na-zywo/dane/
 test-na-zywo/run/
 test-na-zywo/dist/
 test-na-zywo/node_modules/
+
+# Baza kont (hasze haseł) i sekret sesji serwera - nigdy do repozytorium
+/data/
