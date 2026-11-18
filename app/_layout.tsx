@@ -30,6 +30,10 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="case/[id]" />
         <Stack.Screen name="template/[id]" />
+        <Stack.Screen
+          name="camera"
+          options={{ animation: "fade", presentation: "fullScreenModal" }}
+        />
       </Stack>
     </View>
   );

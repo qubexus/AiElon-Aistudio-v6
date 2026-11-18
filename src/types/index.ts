@@ -36,6 +36,37 @@ export interface UserProfile {
   lastPasswordResetAt?: string;
 }
 
+export type AttachmentKind = "photo" | "document";
+export type AttachmentSource = "camera" | "library" | "files";
+
+/** A photo or file kept locally as evidence for a case. */
+export interface CaseAttachment {
+  id: string;
+  caseId: string;
+  kind: AttachmentKind;
+  name: string;
+  /** file:// URI inside the app sandbox (copied, so it survives cache eviction). */
+  uri: string;
+  mimeType: string;
+  /** Bytes. 0 when the picker could not report a size. */
+  size: number;
+  createdAt: string;
+  source: AttachmentSource;
+}
+
+/** A local notification scheduled for a case deadline. */
+export interface CaseReminder {
+  id: string;
+  caseId: string;
+  title: string;
+  body: string;
+  /** ISO timestamp of the moment the notification fires. */
+  fireAt: string;
+  /** Identifier returned by expo-notifications, used for cancellation. */
+  notificationId: string | null;
+  createdAt: string;
+}
+
 export interface CaseNote {
   id: string;
   text: string;
@@ -54,6 +85,8 @@ export interface WorkplaceCase {
   createdAt: string;
   updatedAt: string;
   notes: CaseNote[];
+  /** YYYY-MM-DD, drives deadline reminders. */
+  deadline?: string;
 }
 
 export interface TemplateField {

@@ -13,12 +13,16 @@ import { translate, type TranslationKey } from "../i18n/translations";
 import { setActiveTheme, type ThemeMode } from "../theme/tokens";
 import { BACKEND_URL, checkHealth } from "../api/client";
 import type {
+  CaseAttachment,
+  CaseReminder,
   ChatMessage,
   Locale,
   SentLetter,
   UserProfile,
   WorkplaceCase,
 } from "../types";
+import { configureNotifications, cancelNotification } from "../utils/notifications";
+import { deleteAttachmentFile } from "../utils/attachments";
 
 const STORAGE_KEY = "ask-elon/state/v1";
 
@@ -51,6 +55,9 @@ interface PersistedState {
   cases: WorkplaceCase[];
   letters: SentLetter[];
   messages: ChatMessage[];
+  attachments: CaseAttachment[];
+  reminders: CaseReminder[];
+  notificationsEnabled: boolean;
 }
 
 interface AppContextValue extends PersistedState {
@@ -76,6 +83,11 @@ interface AppContextValue extends PersistedState {
   clearChat: () => void;
   addLetter: (letter: SentLetter) => void;
   deleteLetter: (id: string) => void;
+  addAttachment: (attachment: CaseAttachment) => void;
+  removeAttachment: (id: string) => void;
+  addReminder: (reminder: CaseReminder) => void;
+  removeReminder: (id: string) => void;
+  setNotificationsEnabled: (value: boolean) => void;
   serviceLength: { years: number; months: number; days: number } | null;
 }
 
@@ -123,6 +135,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     cases: [],
     letters: [],
     messages: [],
+    attachments: [],
+    reminders: [],
+    notificationsEnabled: true,
   });
   const [hydrated, setHydrated] = useState(false);
   const [online, setOnline] = useState(true);
@@ -144,6 +159,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             cases: Array.isArray(parsed.cases) ? parsed.cases : [],
             letters: Array.isArray(parsed.letters) ? parsed.letters : [],
             messages: Array.isArray(parsed.messages) ? parsed.messages : [],
+            attachments: Array.isArray(parsed.attachments) ? parsed.attachments : [],
+            reminders: Array.isArray(parsed.reminders) ? parsed.reminders : [],
+            notificationsEnabled:
+              typeof parsed.notificationsEnabled === "boolean"
+                ? parsed.notificationsEnabled
+                : prev.notificationsEnabled,
           }));
         }
       } catch (err) {
@@ -167,6 +188,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn("Failed to persist local state:", err)
     );
   }, [state]);
+
+  // Native notification handler + Android channel, once per launch.
+  useEffect(() => {
+    configureNotifications().catch(() => {});
+  }, []);
 
   // Connectivity probe.
   useEffect(() => {
@@ -271,6 +297,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setState((prev) => ({ ...prev, letters: prev.letters.filter((l) => l.id !== id) }));
   }, []);
 
+  const addAttachment = useCallback((attachment: CaseAttachment) => {
+    setState((prev) => ({ ...prev, attachments: [attachment, ...prev.attachments] }));
+  }, []);
+
+  const removeAttachment = useCallback((id: string) => {
+    setState((prev) => {
+      const target = prev.attachments.find((a) => a.id === id);
+      if (target) void deleteAttachmentFile(target.uri);
+      return { ...prev, attachments: prev.attachments.filter((a) => a.id !== id) };
+    });
+  }, []);
+
+  const addReminder = useCallback((reminder: CaseReminder) => {
+    setState((prev) => ({ ...prev, reminders: [reminder, ...prev.reminders] }));
+  }, []);
+
+  const removeReminder = useCallback((id: string) => {
+    setState((prev) => {
+      const target = prev.reminders.find((r) => r.id === id);
+      if (target) void cancelNotification(target.notificationId);
+      return { ...prev, reminders: prev.reminders.filter((r) => r.id !== id) };
+    });
+  }, []);
+
+  const setNotificationsEnabled = useCallback((notificationsEnabled: boolean) => {
+    setState((prev) => ({ ...prev, notificationsEnabled }));
+  }, []);
+
   const t = useCallback((key: TranslationKey) => translate(state.locale, key), [state.locale]);
 
   const systemScheme = useColorScheme();
@@ -306,6 +360,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearChat,
       addLetter,
       deleteLetter,
+      addAttachment,
+      removeAttachment,
+      addReminder,
+      removeReminder,
+      setNotificationsEnabled,
       serviceLength,
     }),
     [
@@ -327,6 +386,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearChat,
       addLetter,
       deleteLetter,
+      addAttachment,
+      removeAttachment,
+      addReminder,
+      removeReminder,
+      setNotificationsEnabled,
       serviceLength,
     ]
   );

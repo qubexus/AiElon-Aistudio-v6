@@ -19,7 +19,34 @@ Natywna aplikacja (iOS / Android) doradcy prawa pracy UK, zbudowana na **Expo SD
 - **Znak wodny robota** — delikatna głowa robota (4% w Light, 6% w Dark) w tle baniek asystenta, za tekstem, bez wpływu na czytelność.
 - **Porządki** — usunięte `expo-secure-store` i `expo-font`, backend nie serwuje już Vite ani statycznego web builda (czyste API dla aplikacji natywnej), model Gemini konfigurowalny przez `GEMINI_MODEL`.
 
+- **Natywne powiadomienia** — `expo-notifications`: przypomnienia o terminie sprawy (7 dni i 1 dzień wcześniej, 09:00 czasu lokalnego), kanał Androida `deadlines`, testowe powiadomienie z Profilu.
+- **Kamera w aplikacji** — `expo-camera`: pełnoekranowy ekran `app/camera.tsx` z podglądem, lampą, przełączaniem kamery i spustem migawki; zdjęcie wraca do sprawy przez `src/utils/cameraBus.ts`.
+- **Zdjęcia i pliki** — `expo-image-picker` (galeria, wiele zdjęć) i `expo-document-picker` (PDF, DOC/DOCX, TXT, obrazy). Każdy plik jest kopiowany do piaskownicy aplikacji (`documentDirectory/attachments/`), więc nie znika po wyczyszczeniu cache.
+
 ---
+
+## Natywna warstwa (powiadomienia, kamera, pliki)
+
+Wersja 7 nie jest już webową aplikacją w powłoce — korzysta z API systemowych, które są dostępne tylko w prawdziwej aplikacji:
+
+| Funkcja | Moduł | Gdzie w UI |
+| --- | --- | --- |
+| Przypomnienia o terminach | `expo-notifications` | Sprawa → **Termin** → *Przypomnij mi*; Profil → **Powiadomienia** |
+| Aparat w aplikacji | `expo-camera` | Sprawa → **Załączniki** → *Zrób zdjęcie* (`/camera`) |
+| Galeria zdjęć | `expo-image-picker` | Sprawa → **Załączniki** → *Galeria zdjęć* |
+| Wybór dokumentów | `expo-document-picker` | Sprawa → **Załączniki** → *Wybierz plik* |
+
+### Jak to działa
+
+`src/utils/notifications.ts` importuje `expo-notifications` **leniwie** (`await import()`), ustawia foreground handler i kanał Androida raz na start aplikacji (efekt w `AppProvider`). `scheduleNotification()` prosi o zgodę, a daty z przeszłości przesuwa na *teraz + 10 s*, więc test nigdy nie przepada. `deadlineReminderDates()` liczy dwa terminy — tydzień i dzień przed — i odrzuca te, które już minęły.
+
+`src/utils/attachments.ts` normalizuje wynik każdego pickera do jednego kształtu (`PickedAttachment`), kopiuje plik do trwałego katalogu i zwraca rozmiar oraz MIME. `app/camera.tsx` jest osobnym route'em (`presentation: "fullScreenModal"`), a wynik wraca przez `cameraBus` — bo expo-router nie ma API „zwróć wartość do poprzedniego ekranu”.
+
+Na **webie** wszystko degraduje się łagodnie: powiadomienia są no-opem (z komunikatem w Profilu), a *Zrób zdjęcie* otwiera systemowy wybór pliku przez `ImagePicker`. Dzięki temu `npx expo export -p web` nadal działa i można obejrzeć interfejs w przeglądarce.
+
+### Uprawnienia
+
+`app.json` rejestruje pluginy `expo-camera`, `expo-image-picker`, `expo-notifications` i `expo-document-picker` wraz z opisami po angielsku (teksty widoczne w systemowych dialogach) oraz dopisuje do Androida `CAMERA`, `POST_NOTIFICATIONS`, `READ_MEDIA_IMAGES` i `READ_EXTERNAL_STORAGE`. Na iOS opisy trafiają do `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription` i `NSPhotoLibraryAddUsageDescription`.
 
 ## Języki (i18n)
 

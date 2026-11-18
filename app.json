@@ -23,7 +23,10 @@
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true
         },
-        "NSMicrophoneUsageDescription": "Ask Elon uses the microphone to dictate your message."
+        "NSMicrophoneUsageDescription": "Ask Elon uses the microphone to dictate your message.",
+        "NSCameraUsageDescription": "Ask Elon uses the camera to photograph payslips, contracts and other evidence for your case.",
+        "NSPhotoLibraryUsageDescription": "Ask Elon needs access to your photos so you can attach evidence to a case.",
+        "NSPhotoLibraryAddUsageDescription": "Ask Elon saves photos you capture to your library when you ask it to."
       }
     },
     "android": {
@@ -31,7 +34,11 @@
       "usesCleartextTraffic": true,
       "permissions": [
         "INTERNET",
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "CAMERA",
+        "POST_NOTIFICATIONS",
+        "READ_MEDIA_IMAGES",
+        "READ_EXTERNAL_STORAGE"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#F8FAFC",
@@ -57,7 +64,29 @@
           "microphonePermission": "Allow Ask Elon to record your voice so it can turn your words into a message.",
           "enableBackgroundRecording": false
         }
-      ]
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Ask Elon to use the camera so you can photograph documents for your case.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Ask Elon to access your photos so you can attach evidence to a case.",
+          "cameraPermission": "Allow Ask Elon to use the camera so you can photograph documents for your case."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#F59E42"
+        }
+      ],
+      "expo-document-picker"
     ],
     "experiments": {
       "typedRoutes": true

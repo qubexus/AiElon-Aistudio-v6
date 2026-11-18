@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { Button, Card, Field, Header, Pill, Screen, SectionTitle } from "../../src/components/ui";
 import { formatDate, localeLabels, type TranslationKey } from "../../src/i18n/translations";
 import { useApp } from "../../src/store/AppContext";
@@ -16,6 +16,11 @@ import {
 } from "../../src/theme/tokens";
 import type { ContractType, Locale, SentLetter, UserProfile } from "../../src/types";
 import { exportLetterToPdf } from "../../src/utils/pdf";
+import {
+  ensureNotificationPermission,
+  scheduledCount,
+  sendTestNotification,
+} from "../../src/utils/notifications";
 
 const LOCALES: Locale[] = ["en", "pl", "ro"];
 const THEMES: ThemeMode[] = ["light", "dark", "system"];
@@ -35,9 +40,50 @@ export default function ProfileScreen() {
     deleteLetter,
     backendUrl,
     online,
+    reminders,
+    notificationsEnabled,
+    setNotificationsEnabled,
   } = useApp();
   const [draft, setDraft] = useState<UserProfile>(profile);
   const [selectedLetter, setSelectedLetter] = useState<SentLetter | null>(null);
+  const [scheduled, setScheduled] = useState(0);
+  const [notifBusy, setNotifBusy] = useState(false);
+
+  // Keep the "scheduled" counter in sync with what the OS actually queued.
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    scheduledCount()
+      .then(setScheduled)
+      .catch(() => {});
+  }, [reminders.length]);
+
+  const toggleNotifications = async (value: boolean) => {
+    if (value) {
+      const granted = await ensureNotificationPermission();
+      if (!granted) {
+        Alert.alert(t("notifications.title"), t("notifications.denied"));
+        return;
+      }
+    }
+    setNotificationsEnabled(value);
+    Haptics.selectionAsync().catch(() => {});
+  };
+
+  const testNotification = async () => {
+    setNotifBusy(true);
+    try {
+      const ok = await sendTestNotification(
+        t("notifications.testTitle"),
+        t("notifications.testBody")
+      );
+      Alert.alert(
+        t("notifications.title"),
+        ok ? t("notifications.testSent") : t("notifications.testFailed")
+      );
+    } finally {
+      setNotifBusy(false);
+    }
+  };
 
   const copySelected = async () => {
     if (!selectedLetter) return;
@@ -157,6 +203,41 @@ export default function ProfileScreen() {
             );
           })}
         </View>
+
+        <SectionTitle>{t("notifications.title")}</SectionTitle>
+        <Card style={styles.notifCard}>
+          <View style={styles.notifRow}>
+            <View style={styles.notifTextWrap}>
+              <Text style={styles.notifTitle}>{t("notifications.enable")}</Text>
+              <Text style={styles.notifHint}>{t("notifications.enableHint")}</Text>
+            </View>
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={toggleNotifications}
+              trackColor={{ false: colors.borderStrong, true: colors.brand }}
+              thumbColor={colors.surface}
+              accessibilityLabel={t("notifications.enable")}
+            />
+          </View>
+
+          {Platform.OS === "web" ? (
+            <Text style={styles.notifHint}>{t("notifications.webUnavailable")}</Text>
+          ) : (
+            <>
+              <Text style={styles.notifHint}>
+                {t("notifications.scheduled").replace("{count}", String(scheduled))}
+              </Text>
+              <Button
+                label={t("notifications.test")}
+                onPress={testNotification}
+                variant="secondary"
+                icon="notifications-outline"
+                loading={notifBusy}
+                disabled={!notificationsEnabled}
+              />
+            </>
+          )}
+        </Card>
 
         <SectionTitle>{t("profile.personal")}</SectionTitle>
         <Field label={t("profile.fullName")} value={draft.fullName} onChangeText={(v) => set("fullName", v)} />
@@ -347,6 +428,12 @@ const styles = createThemedStyles(() => ({
   letterTitle: { ...typography.base, color: colors.onSurface, fontWeight: "700" },
   letterMeta: { ...typography.sm, color: colors.muted, fontWeight: "400", marginTop: 2 },
   deleteText: { ...typography.sm, color: colors.onErrorSoft, fontWeight: "700" },
+
+  notifCard: { gap: spacing.md },
+  notifRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  notifTextWrap: { flex: 1, gap: 2 },
+  notifTitle: { ...typography.base, color: colors.onSurface, fontWeight: "700" },
+  notifHint: { ...typography.sm, color: colors.muted, fontWeight: "400", lineHeight: 18 },
 
   aboutCard: { gap: spacing.sm },
   aboutLine: { ...typography.sm, color: colors.muted, fontWeight: "400" },
