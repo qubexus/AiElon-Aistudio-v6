@@ -361,6 +361,8 @@ export default function ChatScreen() {
     [t]
   );
 
+  const hasMessages = messages.length > 0;
+
   const data = messages.length === 0 ? [greeting] : messages;
 
   const renderItem = ({ item }: { item: ChatMessage }) => {
@@ -582,36 +584,38 @@ export default function ChatScreen() {
           >
             <View style={styles.sheetHandle} />
             <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
-              {messages.length > 0 ? (
-                <>
-                  <MenuItem
-                    icon="add-circle-outline"
-                    label={t("chat.newChat")}
-                    onPress={() => runMenuAction(clearChat)}
-                  />
-                  <MenuItem
-                    icon="briefcase-outline"
-                    label={t("chat.saveAsCase")}
-                    onPress={() => runMenuAction(saveAsCase)}
-                  />
-                  <MenuItem
-                    icon="document-text-outline"
-                    label={t("chat.exportPdf")}
-                    onPress={() => runMenuAction(exportConversation)}
-                  />
-                  <MenuItem
-                    icon="copy-outline"
-                    label={t("chat.copyTranscript")}
-                    onPress={() => runMenuAction(copyTranscript)}
-                  />
-                  <MenuItem
-                    icon="list-outline"
-                    label={t("chat.summarize")}
-                    onPress={() => runMenuAction(() => send(t("chat.summaryPrompt")))}
-                  />
-                  <View style={styles.sheetDivider} />
-                </>
-              ) : null}
+              <Text style={styles.sheetSection}>{t("chat.conversation")}</Text>
+              <MenuItem
+                icon="add-circle-outline"
+                label={t("chat.newChat")}
+                disabled={!hasMessages}
+                onPress={() => runMenuAction(clearChat)}
+              />
+              <MenuItem
+                icon="briefcase-outline"
+                label={t("chat.saveAsCase")}
+                disabled={!hasMessages}
+                onPress={() => runMenuAction(saveAsCase)}
+              />
+              <MenuItem
+                icon="document-text-outline"
+                label={t("chat.exportPdf")}
+                disabled={!hasMessages}
+                onPress={() => runMenuAction(exportConversation)}
+              />
+              <MenuItem
+                icon="copy-outline"
+                label={t("chat.copyTranscript")}
+                disabled={!hasMessages}
+                onPress={() => runMenuAction(copyTranscript)}
+              />
+              <MenuItem
+                icon="list-outline"
+                label={t("chat.summarize")}
+                disabled={!hasMessages}
+                onPress={() => runMenuAction(() => send(t("chat.summaryPrompt")))}
+              />
+              <View style={styles.sheetDivider} />
 
               <Text style={styles.sheetSection}>{t("chat.voice")}</Text>
               <MenuItem
@@ -722,14 +726,24 @@ const MenuItem: React.FC<{
   label: string;
   onPress: () => void;
   active?: boolean;
-}> = ({ icon, label, onPress, active }) => (
+  disabled?: boolean;
+}> = ({ icon, label, onPress, active, disabled }) => (
   <Pressable
     onPress={onPress}
-    style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
+    disabled={disabled}
+    style={({ pressed }) => [
+      styles.menuItem,
+      pressed && !disabled && styles.menuItemPressed,
+      disabled && styles.menuItemDisabled,
+    ]}
     accessibilityRole="button"
-    accessibilityState={active === undefined ? undefined : { selected: active }}
+    accessibilityState={{ disabled, selected: active }}
   >
-    <Ionicons name={icon} size={19} color={active ? colors.brand : colors.onSurfaceSecondary} />
+    <Ionicons
+      name={icon}
+      size={19}
+      color={active ? colors.brand : colors.onSurfaceSecondary}
+    />
     <Text style={[styles.menuItemText, active && styles.menuItemTextActive]}>{label}</Text>
     {active ? <Ionicons name="checkmark" size={18} color={colors.brand} /> : null}
   </Pressable>
@@ -969,6 +983,7 @@ const styles = createThemedStyles(() => ({
     borderRadius: radius.md,
   },
   menuItemPressed: { backgroundColor: colors.surfaceTertiary },
+  menuItemDisabled: { opacity: 0.4 },
   menuItemText: { ...typography.body, color: colors.onSurface, flex: 1 },
   menuItemTextActive: { color: colors.brand, fontWeight: "600" },
   sheetClose: {
