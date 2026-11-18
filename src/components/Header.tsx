@@ -231,8 +231,31 @@ export const Header: React.FC = () => {
   })();
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-md border-b border-slate-200/80 dark:border-white/10 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-3 sm:px-5 h-16 flex items-center justify-between gap-2">
+    <header className="sticky top-0 z-30 bg-[var(--bg-surface)]/95 backdrop-blur-md border-b border-[var(--border-color)] transition-colors duration-200">
+      {/* Top Demo Strip matching specification mockup */}
+      <div className="bg-[#FDE6CE] dark:bg-[#3A2E25] border-b border-[#F59E42]/25 dark:border-[#FBB063]/20 px-3 py-1 text-center">
+        <div className="max-w-7xl mx-auto flex items-center justify-center gap-1.5 text-[11px] font-semibold text-[#9A4D06] dark:text-[#FBB063]">
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            className="w-3.5 h-3.5 shrink-0 stroke-current"
+             strokeWidth="1.8"
+            aria-hidden="true"
+          >
+            <path d="M8 3h4M9 3v4.5L4.8 14.2A1.8 1.8 0 0 0 6.3 17h7.4a1.8 1.8 0 0 0 1.5-2.8L11 7.5V3" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M6.5 12.5h7" strokeLinecap="round" />
+          </svg>
+          <span>
+            {locale === "pl"
+              ? "Wersja demo – przykładowe dane"
+              : locale === "ro"
+              ? "Versiune demo – date exemplificative"
+              : "Demo version – sample workplace data"}
+          </span>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-3 sm:px-5 h-15 flex items-center justify-between gap-2">
         {/* Left: Hamburger Menu + Brand Identity with Reactive Robot Logo */}
         <div className="flex items-center gap-2.5 min-w-0">
           <Tooltip
@@ -247,7 +270,7 @@ export const Header: React.FC = () => {
           >
             <button
               onClick={() => setIsMenuDrawerOpen(true)}
-              className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-[#131B2E] hover:bg-slate-200/80 dark:hover:bg-[#1A243B] border border-slate-200/80 dark:border-white/10 flex items-center justify-center text-slate-700 dark:text-[#F1F5F9] transition-colors shrink-0 cursor-pointer"
+              className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-[#1E2732] hover:bg-slate-200/80 dark:hover:bg-[#232E3C] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-primary)] transition-colors shrink-0 cursor-pointer"
               aria-label="Open menu"
             >
               <Menu className="w-5 h-5" />
@@ -273,40 +296,42 @@ export const Header: React.FC = () => {
               className="flex items-center gap-2.5 text-left group min-w-0 cursor-pointer"
             >
               <div
-                className={`relative w-11 h-11 rounded-2xl bg-[#131B2E] border flex items-center justify-center shrink-0 transition-transform duration-300 ${
+                className={`relative w-11 h-11 rounded-2xl bg-[#1E2732] border flex items-center justify-center shrink-0 transition-transform duration-300 ${
                   robotState === "happy" || robotState === "typing" || robotState === "success"
-                    ? "border-[#38B28B] shadow-[0_0_14px_rgba(56,178,139,0.32)] scale-105"
+                    ? "border-[var(--accent-green)] shadow-[0_0_14px_rgba(82,183,152,0.32)] scale-105"
                     : robotState === "concerned"
                     ? "border-amber-500 shadow-[0_0_14px_rgba(245,158,11,0.32)] scale-105"
                     : robotState === "speaking" || robotState === "listening"
-                    ? "border-[#D97724] shadow-[0_0_14px_rgba(217,119,36,0.3)] scale-105"
+                    ? "border-[var(--accent-orange)] shadow-[0_0_14px_rgba(245,158,66,0.3)] scale-105"
                     : robotState !== "idle"
-                    ? "border-[#38B28B] shadow-[0_0_12px_rgba(56,178,139,0.25)]"
-                    : "border-[#38B28B]/35 group-hover:border-[#38B28B]"
+                    ? "border-[var(--accent-green)] shadow-[0_0_12px_rgba(82,183,152,0.25)]"
+                    : "border-[var(--accent-green)]/40 group-hover:border-[var(--accent-green)]"
                 }`}
               >
                 <AskElonShieldLogo className="w-9 h-9" activityState={robotState} />
                 <span
-                  className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-[#0B0F17] ${
+                  className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-[#141B23] ${
                     !isOnline
-                      ? "bg-[#D97724]"
+                      ? "bg-[var(--accent-orange)]"
                       : robotState === "speaking" || robotState === "listening"
-                      ? "bg-[#D97724] animate-ping"
-                      : "bg-[#38B28B]"
+                      ? "bg-[var(--accent-orange)] animate-ping"
+                      : "bg-[var(--accent-green)]"
                   }`}
                 />
               </div>
               <div className="leading-tight truncate">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-sm sm:text-base tracking-tight text-slate-900 dark:text-[#F1F5F9] group-hover:text-[#1D6852] dark:group-hover:text-[#38B28B] transition-colors">
-                    ask Elon
+                <div className="flex items-center gap-2">
+                  <span className="logo-ask-elon text-base sm:text-lg">
+                    <span className="part-ask">ask</span>
+                    <span className="part-elon">Elon</span>
                   </span>
+                  <span className="badge-demo-pill">DEMO</span>
                 </div>
                 <span
                   className={`block text-[10px] font-medium truncate transition-colors ${
                     robotState !== "idle"
-                      ? "text-[#1D6852] dark:text-[#38B28B] font-semibold"
-                      : "text-slate-500 dark:text-[#94A3B8]"
+                      ? "text-[var(--accent-green)] font-semibold"
+                      : "text-[var(--text-secondary)]"
                   }`}
                 >
                   {robotStatusLabel}

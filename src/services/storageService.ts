@@ -35,10 +35,11 @@ import { ensureSentLetterTagged } from "../data/legalTemplates";
 
 const STORAGE_KEYS = {
   USER: "ask_elon_user_profile",
-  USER_ADMIN_MIGRATED: "ask_elon_admin_role_migrated_v1",
+  USER_ADMIN_MIGRATED: "ask_elon_admin_role_migrated_v2",
+  NOTES_SPEC_MIGRATED: "ask_elon_notes_spec_migrated_v2",
   LOCALE: "ask_elon_locale",
   CASES: "ask_elon_cases",
-  FORUM: "ask_elon_forum",
+  FORUM: "ask_elon_qa_v2",
   DOCS: "ask_elon_docs",
   NOTES: "ask_elon_notes",
   CHAT: "ask_elon_chat_history",
@@ -65,8 +66,15 @@ export function loadUserProfile(): UserProfile {
       const migrated = localStorage.getItem(STORAGE_KEYS.USER_ADMIN_MIGRATED);
       if (!migrated) {
         parsed.role = "admin";
+        if (parsed.fullName === "Artur Kowalski" || !parsed.fullName) {
+          parsed.fullName = initialUserProfile.fullName;
+        }
+        if (parsed.accountId === "ELON-89241" || !parsed.accountId) {
+          parsed.accountId = initialUserProfile.accountId;
+        }
+        parsed.registeredAt = initialUserProfile.registeredAt;
+        parsed.contractType = initialUserProfile.contractType;
         parsed.city = parsed.city || initialUserProfile.city;
-        parsed.registeredAt = parsed.registeredAt || initialUserProfile.registeredAt;
         parsed.sessionsToday = parsed.sessionsToday ?? initialUserProfile.sessionsToday;
         parsed.sessionsLast7Days = parsed.sessionsLast7Days ?? initialUserProfile.sessionsLast7Days;
         parsed.sessionsTotal = parsed.sessionsTotal ?? initialUserProfile.sessionsTotal;
@@ -150,6 +158,12 @@ export function saveDocuments(docs: UserDocument[]): void {
 
 export function loadNotes(): WorkplaceNote[] {
   try {
+    const migrated = localStorage.getItem(STORAGE_KEYS.NOTES_SPEC_MIGRATED);
+    if (!migrated) {
+      localStorage.setItem(STORAGE_KEYS.NOTES_SPEC_MIGRATED, "true");
+      localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(initialNotes));
+      return initialNotes;
+    }
     const raw = localStorage.getItem(STORAGE_KEYS.NOTES);
     if (raw) return JSON.parse(raw);
   } catch {}

@@ -110,8 +110,9 @@ export const AskElonShieldLogo: React.FC<AskElonShieldLogoProps> = ({
 
   return (
     <svg
-      viewBox={isHeadOnly ? "16 0 88 76" : "0 0 120 128"}
+      viewBox={isHeadOnly ? "20 4 80 72" : "0 0 120 128"}
       fill="none"
+      overflow="visible"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       data-robot-state={currentActivity}

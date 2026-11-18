@@ -157,21 +157,25 @@ export const QuickSearchModal: React.FC = () => {
       });
     }
 
-    // 5. Community Forum Posts
+    // 5. Q&A Guides & Community Questions
     if (scope === "all" || scope === "forum") {
       forumPosts.forEach((post) => {
+        const stepsBlob = (post.whatToSelect || []).join(" ").toLowerCase();
         const matches =
           !q ||
           post.title.toLowerCase().includes(q) ||
           post.content.toLowerCase().includes(q) ||
           post.tag.toLowerCase().includes(q) ||
-          post.author.toLowerCase().includes(q);
+          post.author.toLowerCase().includes(q) ||
+          (post.whereToGo || "").toLowerCase().includes(q) ||
+          (post.whatYouGet || "").toLowerCase().includes(q) ||
+          stepsBlob.includes(q);
         if (matches) {
           items.push({
             id: `post_${post.id}`,
             scope: "forum",
             title: post.title,
-            subtitle: post.content,
+            subtitle: post.whereToGo ? `Gdzie wejść: ${post.whereToGo}` : post.content,
             meta: `${post.tag} · ${post.author}`,
             onSelect: () => {
               setActiveTab("forum");
@@ -208,7 +212,7 @@ export const QuickSearchModal: React.FC = () => {
     { id: "chats", label: locale === "pl" ? "Czaty" : locale === "ro" ? "Chat-uri" : "Chats" },
     { id: "templates", label: locale === "pl" ? "Pisma" : locale === "ro" ? "Șabloane" : "Templates" },
     { id: "letters", label: locale === "pl" ? "Wysłane" : locale === "ro" ? "Trimise" : "Sent" },
-    { id: "forum", label: "Forum" },
+    { id: "forum", label: "Q&A" },
   ];
 
   const renderScopeIcon = (itemScope: Exclude<SearchScope, "all">) => {
@@ -233,10 +237,10 @@ export const QuickSearchModal: React.FC = () => {
       aria-modal="true"
       aria-label={
         locale === "pl"
-          ? "Szybkie wyszukiwanie w sprawach, czatach i pismach"
+          ? "Szybkie wyszukiwanie w sprawach, czatach, pismach i Q&A"
           : locale === "ro"
-          ? "Căutare rapidă în cazuri, conversații și șabloane"
-          : "Quick Search across cases, chats, and templates"
+          ? "Căutare rapidă în cazuri, conversații, șabloane și Q&A"
+          : "Quick Search across cases, chats, templates, and Q&A"
       }
       onClick={(e) => {
         if (e.target === e.currentTarget) setIsQuickSearchModalOpen(false);
@@ -258,10 +262,10 @@ export const QuickSearchModal: React.FC = () => {
                 }}
                 placeholder={
                   locale === "pl"
-                    ? "Szybkie szukanie: sprawy, czaty, wzory pism, forum..."
+                    ? "Szybkie szukanie: sprawy, czaty, wzory pism, Q&A..."
                     : locale === "ro"
-                    ? "Căutare rapidă: cazuri, conversații, șabloane, forum..."
-                    : "Quick search: cases, chat history, templates, forum..."
+                    ? "Căutare rapidă: cazuri, conversații, șabloane, Q&A..."
+                    : "Quick search: cases, chat history, templates, Q&A..."
                 }
                 className="w-full bg-[#131B2E] border border-white/15 focus:border-[#38BDF8] rounded-xl pl-9 pr-9 py-2.5 text-xs sm:text-sm text-[#F1F5F9] placeholder-[#94A3B8]/65 focus:outline-none"
               />

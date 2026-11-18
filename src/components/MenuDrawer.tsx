@@ -984,7 +984,7 @@ export const MenuDrawer: React.FC = () => {
                   <ChevronRight className="w-4 h-4 text-[#8EA4BA]" />
                 </button>
 
-                {/* Forum */}
+                {/* Q&A */}
                 <button
                   type="button"
                   onClick={() => {
@@ -1003,7 +1003,7 @@ export const MenuDrawer: React.FC = () => {
                         activeTab === "forum" ? "text-[#D97724]" : "text-[#8EA4BA]"
                       }`}
                     />
-                    <span>Forum</span>
+                    <span>Q&A (Instrukcje i Pytania)</span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-[#8EA4BA]" />
                 </button>

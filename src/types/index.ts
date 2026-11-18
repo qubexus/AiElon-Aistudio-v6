@@ -65,6 +65,15 @@ export interface CaseNote {
   author: string;
 }
 
+export interface CasePinnedItem {
+  id: string;
+  messageId: string;
+  role: "user" | "assistant";
+  senderName: string;
+  text: string;
+  pinnedAt: string;
+}
+
 export interface WorkplaceCase {
   id: string;
   title: string;
@@ -76,6 +85,7 @@ export interface WorkplaceCase {
   createdAt: string;
   updatedAt: string;
   notes: CaseNote[];
+  pinnedItems?: CasePinnedItem[];
 }
 
 export interface TemplateField {
@@ -133,6 +143,20 @@ export interface ForumComment {
   createdAt: string;
 }
 
+export interface QAActionLink {
+  label: string;
+  targetTab?: "chat" | "cases" | "templates" | "forum" | "profile";
+  targetProfileSubTab?: "details" | "docs" | "notes" | "settings";
+  targetTemplateId?: string;
+  openModal?:
+    | "newCase"
+    | "legalDict"
+    | "quickSearch"
+    | "employerLookup"
+    | "voicePrefs"
+    | "menuDrawer";
+}
+
 export interface ForumPost {
   id: string;
   author: string;
@@ -140,6 +164,11 @@ export interface ForumPost {
   title: string;
   content: string;
   tag: string;
+  statuteOrFeatureBadge?: string;
+  whereToGo?: string;
+  whatToSelect?: string[];
+  whatYouGet?: string;
+  actionLink?: QAActionLink;
   upvotes: number;
   userUpvoted?: boolean;
   createdAt: string;
@@ -165,6 +194,8 @@ export interface ChatMessage {
   isSystemBroadcast?: boolean;
   systemMessageType?: "broadcast" | "direct";
   senderLabel?: string;
+  flaggedAsIncorrect?: boolean;
+  pinnedToCaseId?: string;
 }
 
 export type UnsavedChatIconType =

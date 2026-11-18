@@ -243,8 +243,217 @@ export const ProfileTab: React.FC = () => {
     setNoteDesc("");
   };
 
+  const { setActiveTab } = useApp();
+  const formattedMembershipName = useMemo(() => {
+    const raw = (user.fullName || "Marek Nowak").trim();
+    const parts = raw.split(/\s+/);
+    if (parts.length <= 1) return raw;
+    const first = parts[0];
+    const rest = parts.slice(1).join(" ").toUpperCase();
+    return `${first} ${rest}`;
+  }, [user.fullName]);
+
+  const showcaseNotes = useMemo(() => {
+    const defaults = [
+      { id: "n1", title: "Kierownik", description: "John Smith" },
+      { id: "n2", title: "Zmiana nocna", description: "Od 22:00, 4 noce w tygodniu" },
+      { id: "n3", title: "Umowa", description: "Zero-hours, od marca" },
+    ];
+    if (notes.length >= 3) {
+      return notes.slice(0, 3).map((n) => ({
+        id: n.id,
+        title: n.title,
+        description: n.description,
+      }));
+    }
+    return defaults;
+  }, [notes]);
+
   return (
-    <div className="p-4 sm:p-6 space-y-5">
+    <div className="p-4 sm:p-6 space-y-6">
+      {/* ====================================================================
+          NOTATKI I KARTA PRO + KARTA CZŁONKOWSKA ask Elon (Specyfikacja)
+          ==================================================================== */}
+      <section className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+          <div>
+            <h1 className="title-section text-xl sm:text-2xl font-extrabold text-[var(--text-primary)]">
+              {locale === "pl"
+                ? "Notatki i karta PRO"
+                : locale === "ro"
+                ? "Notițe și cardul PRO"
+                : "Notes & PRO Membership Card"}
+            </h1>
+            <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
+              {locale === "pl"
+                ? "Elon pamięta, co ważne – nie musisz powtarzać"
+                : locale === "ro"
+                ? "Elon reține ce e important – nu trebuie să repeți"
+                : "Elon remembers what matters – no need to repeat yourself"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="logo-ask-elon text-base">
+              <span className="part-ask">ask</span>
+              <span className="part-elon">Elon</span>
+            </span>
+            <span className="badge-demo-pill">DEMO</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* Left 7 Cols: NOTATKI 2x2 Grid */}
+          <div className="lg:col-span-7 space-y-2">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] px-0.5">
+              {locale === "pl" ? "NOTATKI" : locale === "ro" ? "NOTIȚE" : "NOTES"}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {showcaseNotes.map((item) => (
+                <div
+                  key={item.id}
+                  className="card-module-green flex flex-col justify-between min-h-[104px] shadow-2xs"
+                >
+                  <div className="font-bold text-sm text-[var(--text-primary)] leading-snug">
+                    {item.title}
+                  </div>
+                  <div className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1.5 leading-snug">
+                    {item.description}
+                  </div>
+                </div>
+              ))}
+
+              {/* 4th Card: Dodaj notatkę */}
+              <button
+                type="button"
+                onClick={() => setProfileSubTab("notes")}
+                className="rounded-2xl border border-[var(--border-color)] bg-[#EEF5F2]/70 dark:bg-[#232E3C]/80 hover:border-[var(--accent-orange)] p-4 flex flex-col items-center justify-center gap-2 min-h-[104px] transition-all cursor-pointer group"
+              >
+                <div className="w-8 h-8 rounded-xl bg-[var(--accent-orange)]/15 flex items-center justify-center text-[var(--accent-orange)] group-hover:scale-105 transition-transform">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="icon-fixed stroke-current"
+                    strokeWidth="2.2"
+                    aria-hidden="true"
+                  >
+                    <rect x="5" y="11" width="14" height="10" rx="2" />
+                    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                  </svg>
+                </div>
+                <span className="text-xs sm:text-sm font-bold text-[var(--accent-orange)]">
+                  {locale === "pl"
+                    ? "Dodaj notatkę"
+                    : locale === "ro"
+                    ? "Adaugă notiță"
+                    : "Add note"}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Right 5 Cols: KARTA CZŁONKOWSKA ask Elon + Zacznij z PRO */}
+          <div className="lg:col-span-5 space-y-3.5">
+            {/* KARTA CZŁONKOWSKA ask Elon (with robot head watermark) */}
+            <div className="chat-bubble-elon rounded-2xl p-4 sm:p-5 space-y-3 border border-[var(--border-color)] shadow-xs">
+              <div className="relative z-10 space-y-2.5">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                  KARTA CZŁONKOWSKA{" "}
+                  <span className="logo-ask-elon text-xs ml-0.5">
+                    <span className="part-ask">ask</span>
+                    <span className="part-elon">Elon</span>
+                  </span>
+                </div>
+
+                <div className="text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--text-primary)]">
+                  {formattedMembershipName}
+                </div>
+
+                {/* Badges Row: ★ PRO | PL | DEMO */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FDE6CE] dark:bg-[#3A2E25] text-[#9A4D06] dark:text-[#FBB063] text-[11px] font-extrabold">
+                    <span>★</span>
+                    <span>PRO</span>
+                  </span>
+
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-[#141B23] border border-[var(--border-color)] text-[var(--text-primary)] text-[11px] font-bold">
+                    <svg viewBox="0 0 24 16" className="w-3.5 h-2.5 rounded-[2px] shrink-0" aria-hidden="true">
+                      <rect width="24" height="8" y="0" fill="#FFFFFF" />
+                      <rect width="24" height="8" y="8" fill="#DC143C" />
+                    </svg>
+                    <span>PL</span>
+                  </span>
+
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-[#141B23] border border-[var(--border-color)] text-[var(--text-secondary)] text-[11px] font-bold uppercase">
+                    DEMO
+                  </span>
+                </div>
+
+                {/* Account Number in DM Mono */}
+                <div className="pt-1">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+                    W KONTA
+                  </div>
+                  <div className="font-mono text-sm sm:text-base font-bold text-[var(--text-primary)] tracking-wide mt-0.5">
+                    {user.accountId || "MN 2609 0000 9 T"}
+                  </div>
+                  <div className="text-xs text-[var(--text-secondary)] mt-0.5">
+                    {locale === "pl"
+                      ? `Członek od ${user.registeredAt || "09.2026"}`
+                      : `Member since ${user.registeredAt || "09.2026"}`}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Zacznij z PRO – £9,99 miesięcznie Card */}
+            <div className="card-module space-y-3 shadow-xs">
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[var(--text-primary)]">
+                  {locale === "pl"
+                    ? "Zacznij z PRO – £9,99 miesięcznie"
+                    : locale === "ro"
+                    ? "Începe cu PRO – £9,99 lunar"
+                    : "Start with PRO – £9.99 / month"}
+                </h3>
+                <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1 leading-relaxed">
+                  {locale === "pl"
+                    ? "W PRO: rozmowy z Elonem, prowadzenie spraw, pisma do HR i notatki."
+                    : locale === "ro"
+                    ? "În PRO: conversații cu Elon, dosare, scrisori către HR și notițe."
+                    : "Included in PRO: unlimited Elon chats, case management, HR letters & notes."}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("chat")}
+                  className="min-h-[44px] px-4 py-2 rounded-full border border-[var(--border-color)] bg-[var(--bg-surface)] hover:bg-[var(--bg-header-accent)] text-xs sm:text-sm font-bold text-[var(--text-primary)] inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <span>←</span>
+                  <span>{locale === "pl" ? "Wstecz" : locale === "ro" ? "Înapoi" : "Back"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPaywallModalOpen(true)}
+                  className="btn-primary flex-1 text-xs sm:text-sm gap-1.5"
+                >
+                  <span>
+                    {locale === "pl"
+                      ? "Zacznij z PRO"
+                      : locale === "ro"
+                      ? "Începe cu PRO"
+                      : "Start with PRO"}
+                  </span>
+                  <span>→</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Top User Dossier Header Card */}
       <div className="bg-white dark:bg-[#131B2E] border border-slate-200/80 dark:border-white/10 rounded-2xl p-5 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">

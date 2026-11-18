@@ -13,21 +13,21 @@ import {
 
 export const initialUserProfile: UserProfile = {
   id: "user_elon_001",
-  accountId: "ELON-89241",
-  fullName: "Artur Kowalski",
-  email: "artur.kowalski@example.co.uk",
+  accountId: "MN 2609 0000 9 T",
+  fullName: "Marek Nowak",
+  email: "marek.nowak@example.co.uk",
   phone: "+44 7700 900342",
   homeAddress: "42 Victoria Road, Dartford, DA1 5DJ",
   city: "Dartford, Kent",
-  registeredAt: "2026-03-15",
+  registeredAt: "09.2026",
   employerName: "Amazon Fulfilment LCY2",
   companyNumber: "03223028",
   employerAddress: "London Distribution Park, Windrush Drive, Tilbury RM18 7AN",
-  jobTitle: "Warehouse Operative (Inbound)",
-  startDate: "2024-03-15",
+  jobTitle: "Warehouse Operative (Night Shift)",
+  startDate: "2026-03-01",
   hourlyRate: 13.50,
   hoursPerWeek: 40,
-  contractType: "permanent",
+  contractType: "zero_hours",
   industry: "Warehouse / Logistics",
   isPro: true,
   free_access: false,
@@ -64,7 +64,17 @@ export const initialCases: WorkplaceCase[] = [
         id: "note_102",
         text: "Wysłałem oficjalne pismo Section 13 ERA 1996 wygenerowane przez ask Elon do Payroll HR.",
         date: "2026-10-18 16:45",
-        author: "Artur Kowalski"
+        author: "Marek Nowak"
+      }
+    ],
+    pinnedItems: [
+      {
+        id: "pin_init_101",
+        messageId: "msg_seed_overtime",
+        role: "assistant",
+        senderName: "Elon · AI",
+        text: "Brakuje dokładnie 12 godzin – zgodnie z Section 13 Employment Rights Act 1996 niewypłacenie przepracowanych nadgodzin oraz potrącenie £65 za buty ochronne (Section 9 Health and Safety at Work etc. Act 1974) stanowi bezprawne potrącenie z wynagrodzenia (Unlawful Deduction from Wages).",
+        pinnedAt: "2026-10-18 16:40"
       }
     ]
   },
@@ -110,44 +120,306 @@ export const initialCases: WorkplaceCase[] = [
 
 export const initialForumPosts: ForumPost[] = [
   {
+    id: "qa_app_01",
+    author: "Elon · Przewodnik Systemowy",
+    authorRole: "Oficjalna Instrukcja ask Elon · Czat AI",
+    title: "Jak przeprowadzić konsultację z Elonem, wybrać tryb doradczy (Prawo Pracy vs Związki) i wygenerować pismo prosto z rozmowy?",
+    content: "Główny czat z Elonem analizuje Twój problem pod kątem brytyjskich ustaw (Employment Rights Act 1996, Working Time Regulations 1998, kodeks ACAS) i automatycznie przygotowuje gotowe pismo po angielsku na podstawie faktów podanych w rozmowie.",
+    tag: "Czat AI i Głos",
+    statuteOrFeatureBadge: "Tryb AI + Koperta Pisma EN",
+    whereToGo: "Dolny pasek nawigacji → Środkowa ruszająca się głowa Elona (Zakładka: Czat)",
+    whatToSelect: [
+      "Nad polem tekstowym kliknij pastylkę aktywnego trybu AI, aby wybrać perspektywę: 'Prawo Pracy (Employment Law)' lub 'Związki Zawodowe (Trade Union)'.",
+      "Wpisz opis problemu w polu czatu lub zaznacz jedną z gotowych sugestii startowych (np. 'Nie zapłacili mi za nadgodziny i potrącili z payslipu') i kliknij pomarańczowy przycisk 'Wyślij'.",
+      "Gdy pod odpowiedzią Elona pojawi się animowana karta koperty, kliknij przycisk 'Otwórz wygenerowane pismo EN' lub 'Kopiuj pismo'.",
+      "Na komputerze lub poprzez przycisk 'Podsumowanie prawne' sprawdź prawy panel boczny z wyodrębnionymi na żywo terminami (Deadlines) i paragrafami."
+    ],
+    whatYouGet: "Otrzymujesz natychmiastową diagnozę prawną po polsku, wykaz ustawowych terminów (np. 3 miesiące mniej 1 dzień do ACAS) oraz spersonalizowane oficjalne pismo po angielsku gotowe do wysłania do HR.",
+    actionLink: {
+      label: "Wejdź teraz do Czatu z Elonem →",
+      targetTab: "chat"
+    },
+    upvotes: 68,
+    createdAt: "2026-10-25T10:00:00Z",
+    comments: [
+      {
+        id: "c_qa_1",
+        author: "Marek Nowak",
+        text: "Najlepsze jest to, że jak napiszę w czacie ile godzin brakuje na payslipie, Elon sam podstawia tę kwotę do angielskiego pisma w kopercie pod spodem!",
+        createdAt: "2026-10-25T11:15:00Z"
+      }
+    ]
+  },
+  {
+    id: "qa_app_02",
+    author: "Elon · Przewodnik Systemowy",
+    authorRole: "Oficjalna Instrukcja ask Elon · Głos & Menu Dymka",
+    title: "Jak korzystać z błyskawicznego dyktowania głosowego (Speech-to-Text), czytania na głos (Read Aloud) i menu podręcznego dymków?",
+    content: "Nie musisz pisać długich wiadomości na klawiaturze telefonu po nocnej zmianie. Możesz podyktować swój problem głosem, odsłuchać odpowiedź Elona z regulacją tempa oraz zarządzać każdą wiadomością przez przytrzymanie dymka.",
+    tag: "Czat AI i Głos",
+    statuteOrFeatureBadge: "Dyktowanie Live + Long-Press Menu",
+    whereToGo: "Zakładka: Czat → Dolne przyciski przy głowie Elona ('Dyktuj' / 'Odsłuchaj') lub przytrzymanie dymka wiadomości",
+    whatToSelect: [
+      "Aby mówić zamiast pisać: kliknij przycisk 'Dyktuj' (ikona mikrofonu po lewej stronie głowy Elona) – tekst pojawia się w ułamku sekundy na żywo podczas mówienia.",
+      "Aby odsłuchać odpowiedź: kliknij 'Odsłuchaj' pod dymkiem Elona lub na dolnym pasku po prawej stronie głowy robota i wybierz tempo ('0.85x', '1x', '1.15x', '1.3x').",
+      "Aby otworzyć menu wiadomości: przytrzymaj palcem (long-press) lub kliknij prawym przyciskiem myszy dowolny dymek czatu i zaznacz: 'Przypnij do sprawy', 'Kopiuj tekst', 'Zgłoś jako błędne' lub 'Usuń wiadomość'."
+    ],
+    whatYouGet: "Błyskawiczną zamianę mowy na tekst bez oczekiwania, wygodny odsłuch audio z wizualizacją fali głosowej oraz pełną kontrolę nad zapisywaniem i porządkowaniem wiadomości.",
+    actionLink: {
+      label: "Przetestuj głos i dymki w Czacie →",
+      targetTab: "chat"
+    },
+    upvotes: 54,
+    createdAt: "2026-10-25T09:30:00Z",
+    comments: [
+      {
+        id: "c_qa_2",
+        author: "Pawel_UK",
+        text: "Dyktowanie na żywo działa teraz błyskawicznie – od razu widać każde wypowiedziane słowo w pasku wpisywania.",
+        createdAt: "2026-10-25T10:40:00Z"
+      }
+    ]
+  },
+  {
+    id: "qa_app_03",
+    author: "Elon · Przewodnik Systemowy",
+    authorRole: "Oficjalna Instrukcja ask Elon · Generator Pism UK",
+    title: "Jak wygenerować oficjalne pismo do HR po angielsku (np. Wezwanie do zapłaty nadgodzin lub Formal Grievance) i pobrać PDF?",
+    content: "Zakładka Pisma zawiera gotowe, zgodne z prawem brytyjskim szablony przedprocesowe. Twoje dane z profilu oraz dane pracodawcy uzupełniają się w nich automatycznie.",
+    tag: "Pisma i Generator PDF",
+    statuteOrFeatureBadge: "Wzory ACAS / ERA 1996 + Eksport PDF",
+    whereToGo: "Dolny pasek nawigacji → Zakładka: Pisma (druga ikona od lewej)",
+    whatToSelect: [
+      "Na górnym pasku filtrów zaznacz interesującą Cię kategorię: 'Wynagrodzenia & Płace', 'Skargi (Grievance)', 'Chorobowe (SSP)', 'Dane osobowe (SAR)' lub 'Zwolnienia & Spory'.",
+      "Z listy po lewej stronie zaznacz konkretny wzór pisma (np. 'Unlawful Deduction from Wages – Section 13 ERA 1996').",
+      "W formularzu uzupełnij szczegóły sporu (np. brakującą kwotę £ i datę zmiany), a następnie kliknij przycisk 'Podgląd i wysyłka'.",
+      "Pod gotowym dokumentem kliknij 'Pobierz PDF', 'Pobierz pismo (.txt)', 'Kopiuj treść' lub 'Zapisz w wysłanych'."
+    ],
+    whatYouGet: "Oficjalny brytyjski dokument prawny (Formal Statutory Notice) w języku angielskim z powołaniem na właściwe artykuły ustaw UK, gotowy do wydruku jako PDF lub wysłania e-mailem do HR.",
+    actionLink: {
+      label: "Otwórz Generator Pism UK →",
+      targetTab: "templates",
+      targetTemplateId: "unpaid_wages"
+    },
+    upvotes: 79,
+    createdAt: "2026-10-24T18:20:00Z",
+    comments: []
+  },
+  {
+    id: "qa_app_04",
+    author: "Elon · Przewodnik Systemowy",
+    authorRole: "Oficjalna Instrukcja ask Elon · ACAS Tone Shield",
+    title: "Jak działa Strażnik Tonu Prawnego AI (ACAS Tone Shield) i jak zneutralizować emocjonalne zwroty przed wysłaniem pisma?",
+    content: "W brytyjskim prawie pracy użycie agresywnych słów, gróźb lub wyzwisk w piśmie do HR może zostać wykorzystane przeciwko pracownikowi jako podstawa dyscyplinarki (Gross Misconduct). Strażnik Tonu chroni Cię przed tym błędem.",
+    tag: "Pisma i Generator PDF",
+    statuteOrFeatureBadge: "Strażnik Tonu ACAS (Tone Shield)",
+    whereToGo: "Zakładka: Pisma → Wybierz dowolny wzór → Sekcja: Strażnik Tonu Prawnego AI nad formularzem",
+    whatToSelect: [
+      "Wpisz opis sytuacji w polach formularza pisma (lub kliknij przycisk 'Przetestuj detektor agresji', aby zobaczyć działanie na żywo).",
+      "Jeśli Strażnik podświetli emocjonalne lub konfrontacyjne słowa na pomarańczowo/czerwono, zaznacz przycisk 'Zastąp bezpiecznym zwrotem prawnym' przy danej frazie.",
+      "Możesz też kliknąć jednym ruchem 'Zneutralizuj wszystkie oflagowane zwroty (ACAS)' albo podczas finalizacji wybrać 'Zamień na język prawny i finalizuj pismo'."
+    ],
+    whatYouGet: "Twoje pismo zachowuje 100% stanowczości prawnej, ale wszystkie ryzykowne emocjonalnie sformułowania zostają zastąpione profesjonalnym słownictwem akceptowanym przez Employment Tribunal.",
+    actionLink: {
+      label: "Sprawdź Strażnika Tonu w Pismach →",
+      targetTab: "templates",
+      targetTemplateId: "formal_grievance"
+    },
+    upvotes: 47,
+    createdAt: "2026-10-24T15:10:00Z",
+    comments: []
+  },
+  {
+    id: "qa_app_05",
+    author: "Elon · Przewodnik Systemowy",
+    authorRole: "Oficjalna Instrukcja ask Elon · Akta Sprawy",
+    title: "Jak założyć nową sprawę pracowniczą, prowadzić oś czasu dowodów i zarządzać statusem sporu?",
+    content: "Każdy spór z pracodawcą lub agencją warto prowadzić w osobnej teczce. W zakładce Sprawy gromadzisz chronologiczną oś czasu wydarzeń, notatki ze spotkań z kierownikiem oraz przypięte porady z czatu.",
+    tag: "Sprawy i Przypięte Dowody",
+    statuteOrFeatureBadge: "Case Workspace + Oś Czasu",
+    whereToGo: "Dolny pasek nawigacji → Zakładka: Sprawy (pierwsza ikona od lewej)",
+    whatToSelect: [
+      "Kliknij przycisk 'Nowa sprawa' w prawym górnym rogu (lub zapisz bieżącą rozmowę przyciskiem 'Zapisz jako sprawę' w czacie).",
+      "W oknie tworzenia sprawy wpisz tytuł, nazwę pracodawcy/agencji, wybierz branżę i zaznacz priorytet ('Niski', 'Średni', 'Wysoki'), po czym kliknij 'Utwórz sprawę'.",
+      "Kliknij na kartę sprawy, aby ją rozwinąć: wpisz nowe wydarzenie w polu 'Dodaj wpis do sprawy' lub kliknij 'Zapytaj Elona o tę sprawę', aby kontynuować czat w kontekście tych akt.",
+      "Gdy odzyskasz pieniądze lub rozwiążesz spór, zaznacz 'Oznacz jako rozwiązaną'."
+    ],
+    whatYouGet: "Uporządkowane cyfrowe dossier sporu (Case Dossier) z dokładnymi datami, dowodami i historią działań – gotowe do przedstawienia reprezentantowi związku zawodowego lub mediatorowi ACAS.",
+    actionLink: {
+      label: "Przejdź do zakładki Sprawy →",
+      targetTab: "cases"
+    },
+    upvotes: 63,
+    createdAt: "2026-10-23T19:00:00Z",
+    comments: []
+  },
+  {
+    id: "qa_app_06",
+    author: "Elon · Przewodnik Systemowy",
+    authorRole: "Oficjalna Instrukcja ask Elon · Pin to Case",
+    title: "Jak przypiąć kluczową odpowiedź Elona z czatu bezpośrednio do wybranej sprawy ('Przypnij do sprawy / Pin to Case')?",
+    content: "Podczas rozmowy z Elonem możesz jednym ruchem wyodrębnić najważniejszą poradę, wyliczenie nadgodzin lub podstawę prawną i przypiąć ją na stałe do teczki swojej sprawy.",
+    tag: "Sprawy i Przypięte Dowody",
+    statuteOrFeatureBadge: "Przypięte Elementy · Pinned Items",
+    whereToGo: "Zakładka: Czat → Przytrzymaj (Long-press) lub kliknij prawym przyciskiem myszy dymek wiadomości",
+    whatToSelect: [
+      "W oknie czatu przytrzymaj palcem lub kliknij prawym przyciskiem myszy dymek z odpowiedzią Elona (lub własną wiadomość).",
+      "W menu kontekstowym zaznacz pierwszą pozycję: 'Przypnij do sprawy (Pin to Case)' – zobaczysz pod spodem nazwę docelowej sprawy.",
+      "Na dymku pojawi się zielona pastylka 'Przypięto do sprawy' – kliknij ją, aby natychmiast otworzyć tę sprawę w zakładce Sprawy na sekcji 'Przypięte elementy z czatu · Pinned Items'."
+    ],
+    whatYouGet: "Wyodrębniony tekst wiadomości trafia bezpośrednio do dedykowanej sekcji 'Przypięte elementy z czatu' wewnątrz Twojej sprawy, skąd możesz go w każdej chwili skopiować lub odpiąć.",
+    actionLink: {
+      label: "Zobacz Przypięte Elementy w Sprawach →",
+      targetTab: "cases"
+    },
+    upvotes: 58,
+    createdAt: "2026-10-23T16:45:00Z",
+    comments: [
+      {
+        id: "c_qa_6",
+        author: "Dorota_L",
+        text: "Super funkcja! Przypięłam sobie wyliczenie brakujących 12h i paragraf Section 13 ERA 1996 prosto do mojej sprawy z Amazonem.",
+        createdAt: "2026-10-23T17:30:00Z"
+      }
+    ]
+  },
+  {
+    id: "qa_app_07",
+    author: "Elon · Przewodnik Systemowy",
+    authorRole: "Oficjalna Instrukcja ask Elon · Audytor Payslipów",
+    title: "Jak zeskanować aparatem lub wgrać odcinek wypłaty (Payslip) i uruchomić automatyczny Audyt AI?",
+    content: "Moduł dokumentów w Profilu potrafi przeanalizować Twój payslip, umowę o pracę, grafik lub pismo z HR – wykrywając zaniżoną stawkę godzinową oraz bezprawne potrącenia (np. za buty robocze PPE).",
+    tag: "Audyt Payslipu i Dokumenty",
+    statuteOrFeatureBadge: "Camera AI Scanner + Payslip Audit",
+    whereToGo: "Dolny pasek nawigacji → Zakładka: Profil → Pod-zakładka: Dokumenty & Payslipy",
+    whatToSelect: [
+      "Wejdź w zakładkę 'Profil' (prawy dolny róg), a następnie na pasku pod-zakładek zaznacz 'Dokumenty & Payslipy'.",
+      "Kliknij 'Skanuj aparatem (Camera AI)', aby zrobić zdjęcie dokumentu, lub 'Wgraj dokument / payslip', aby wybrać plik PDF/JPG z telefonu lub komputera.",
+      "Przy wgranym dokumencie kliknij przycisk 'Audyt AI z Elonem' (możesz też zmienić kategorię dokumentu z listy rozwijanej, np. na 'PDF Paystub' lub 'Employment Contract')."
+    ],
+    whatYouGet: "Kompletny raport z audytu wypłaty: wyliczoną realną stawkę godzinową względem National Living Wage, status naliczenia Holiday Pay (12.07%) oraz listę wykrytych naruszeń wraz z rekomendacją prawną.",
+    actionLink: {
+      label: "Otwórz Dokumenty i Audyt Payslipu →",
+      targetTab: "profile",
+      targetProfileSubTab: "docs"
+    },
+    upvotes: 72,
+    createdAt: "2026-10-22T14:20:00Z",
+    comments: []
+  },
+  {
+    id: "qa_app_08",
+    author: "Elon · Przewodnik Systemowy",
+    authorRole: "Oficjalna Instrukcja ask Elon · Profil & Karta PRO",
+    title: "Gdzie zapisać szybkie notatki dla Elona (Kierownik, Zmiana, Umowa), znaleźć firmę po kodzie pocztowym UK i sprawdzić Kartę Członkowską?",
+    content: "Elon pamięta fakty zapisane w Twoim profilu i notatkach, dzięki czemu nie musisz w każdej rozmowie powtarzać, jak nazywa się Twój menadżer, jaką masz stawkę godzinową ani jaki jest adres siedziby pracodawcy.",
+    tag: "Notatki, Karta PRO i Offline",
+    statuteOrFeatureBadge: "Karta PRO + Wyszukiwarka Companies House",
+    whereToGo: "Dolny pasek nawigacji → Zakładka: Profil (sekcja 'Notatki i karta PRO' oraz 'Dane osobowe')",
+    whatToSelect: [
+      "W górnej części zakładki 'Profil' przejrzyj kafle pamięci Elona ('Kierownik', 'Zmiana nocna', 'Umowa') lub kliknij kafelek 'Dodaj notatkę', aby dopisać ważny fakt.",
+      "Sprawdź swoją 'Kartę Członkowską ask Elon' z indywidualnym numerem konta oraz statusem planu PRO / DEMO.",
+      "W sekcji 'Dane pracodawcy / agencji' kliknij przycisk 'Znajdź pracodawcę (UK Postcode / Firma)', wpisz kod pocztowy lub nazwę firmy i zaznacz 'Wybierz ten adres'.",
+      "Na dole formularza kliknij 'Zapisz zmiany w profilu'."
+    ],
+    whatYouGet: "Trwałą pamięć kontekstową asystenta AI oraz automatyczne podstawianie Twojego imienia, adresu, stawki godzinowej i numeru Companies House pracodawcy we wszystkich generowanych pismach.",
+    actionLink: {
+      label: "Wejdź do Profilu i Karty PRO →",
+      targetTab: "profile",
+      targetProfileSubTab: "details"
+    },
+    upvotes: 51,
+    createdAt: "2026-10-21T12:10:00Z",
+    comments: []
+  },
+  {
+    id: "qa_app_09",
+    author: "Elon · Przewodnik Systemowy",
+    authorRole: "Oficjalna Instrukcja ask Elon · Szybkie Akcje & Offline",
+    title: "Jak wywołać kołowe menu Szybkich Akcji (Słownik Prawny, Szybkie Szukanie) oraz szufladę z Pismami Elona i ochroną Offline?",
+    content: "Aplikacja posiada dwa szybkie centra dowodzenia dostępne z każdego ekranu: rozsuwane menu kołowe pod głową Elona oraz cztero-zakładkową szufladę boczną pod ikoną Menu w nagłówku.",
+    tag: "Notatki, Karta PRO i Offline",
+    statuteOrFeatureBadge: "Radial Menu + Szuflada 4-w-1 + Offline",
+    whereToGo: "Środkowa głowa Elona (przytrzymanie / prawy klik) lub przycisk 'Menu ☰' w prawym górnym rogu ekranu",
+    whatToSelect: [
+      "Przytrzymaj palcem (long-press) lub kliknij prawym przyciskiem myszy ruchomą głowę Elona na dolnym pasku – wybierz jedną z 3 ikon: 'Nowa Sprawa', 'Słownik Prawny' lub 'Szybkie Szukanie'.",
+      "Kliknij przycisk 'Menu (☰)' w prawym górnym rogu nagłówka i przełączaj między 4 zakładkami: 'Menu', 'Historia' (niezapisane czaty), 'Notatki' oraz 'Pisma Elona' (pełne archiwum z podglądem A4).",
+      "Aby przetestować ochronę bez zasięgu w magazynie: kliknij wskaźnik statusu sieci ('Online' / 'Offline') w górnym nagłówku lub w zakładce 'Profil → Ustawienia & Offline'."
+    ],
+    whatYouGet: "Błyskawiczny dostęp do słownika pojęć brytyjskiego prawa pracy (np. Constructive Dismissal, ACAS, TUPE), globalnej wyszukiwarki oraz stuprocentową ochronę szkiców pism i wiadomości nawet przy utracie internetu.",
+    actionLink: {
+      label: "Otwórz Słownik Prawny UK →",
+      openModal: "legalDict"
+    },
+    upvotes: 49,
+    createdAt: "2026-10-20T17:00:00Z",
+    comments: []
+  },
+  {
     id: "post_1",
     author: "Marek_K",
     authorRole: "Magazynier · Unite Union",
-    title: "Czy agencja może zabrać wyrobione godziny holiday pay przy zmianie kontraktu?",
-    content: "Przechodzę z agencji na stały kontrakt bezpośrednio w magazynie DHL. Agencja twierdzi, że mój niewykorzystany urlop 'przepada', bo to inny pracodawca. Z tego co wiem z ACAS, muszą wypłacić Payment in Lieu of Holiday. Ktoś miał podobnie?",
-    tag: "Magazyn",
-    upvotes: 24,
-    createdAt: "2026-10-22T14:10:00Z",
+    title: "Czy agencja może zabrać wyrobione godziny Holiday Pay przy zmianie kontraktu lub zakończeniu zlecenia?",
+    content: "Przechodzę z agencji na stały kontrakt bezpośrednio w magazynie DHL. Agencja twierdzi, że mój niewykorzystany urlop 'przepada', bo kończę u nich umowę. Zgodnie z Working Time Regulations 1998 muszą wypłacić ekwiwalent pieniężny za każdą wyrobioną godzinę!",
+    tag: "Prawo Pracy UK w Praktyce",
+    statuteOrFeatureBadge: "Reg. 14 Working Time Regulations 1998",
+    whereToGo: "Zakładka: Pisma → Kategoria: Wynagrodzenia & Płace (lub Szuflada Menu ☰ → Pisma Elona → Urlop i Czas Pracy)",
+    whatToSelect: [
+      "Wejdź w zakładkę 'Pisma' lub otwórz 'Menu ☰ → Pisma Elona' i zaznacz temat 'Urlop i Czas Pracy'.",
+      "Wybierz pismo o niewypłacony ekwiwalent urlopowy (Holiday Pay in Lieu – Reg. 14 WTR 1998 & s.13 ERA 1996).",
+      "Wpisz liczbę niewykorzystanych dni/godzin urlopu oraz kwotę zaległości i pobierz gotowe wezwanie PDF do agencji."
+    ],
+    whatYouGet: "Formalne przedprocesowe wezwanie do zapłaty ekwiwalentu za niewykorzystany urlop ustawowy (5.6 tygodnia rocznie proporcjonalnie) z wyznaczeniem 7 dni na przelew przed zgłoszeniem do ACAS.",
+    actionLink: {
+      label: "Otwórz wzór wezwania o zapłatę →",
+      targetTab: "templates",
+      targetTemplateId: "unpaid_wages"
+    },
+    upvotes: 84,
+    createdAt: "2026-10-19T14:10:00Z",
     comments: [
       {
         id: "c_1",
         author: "Pawel_UK",
-        text: "Absolutnie nie może przapaść! Zgodnie z Working Time Regulations 1998, przy zakończeniu zatrudnienia agencyjnego mają ustawowy obowiązek rozliczyć każdą godzinę. Użyj szablonu pisma z tej aplikacji – mi oddali £340 w tydzień.",
-        createdAt: "2026-10-22T15:20:00Z"
+        text: "Absolutnie nie może przepaść! Zgodnie z Working Time Regulations 1998, przy zakończeniu zatrudnienia agencyjnego mają ustawowy obowiązek rozliczyć każdą godzinę. Użyj szablonu pisma z tej aplikacji – mi oddali £340 w tydzień.",
+        createdAt: "2026-10-19T15:20:00Z"
       },
       {
         id: "c_2",
         author: "Elon (Asystent AI)",
-        text: "Dokładnie tak jak pisze Paweł. Zgodnie z Reg. 14 Working Time Regulations 1998, pracownik agencyjny ma prawo do ekwiwalentu pieniężnego za niewykorzystany urlop ustawowy (5.6 tygodnia rocznie). Wyślij pismo powołując się na s.13 Employment Rights Act 1996.",
-        createdAt: "2026-10-22T15:35:00Z"
+        text: "Dokładnie tak jak pisze Paweł. Zgodnie z Reg. 14 Working Time Regulations 1998, pracownik agencyjny ma bezwzględne prawo do Payment in Lieu of Accrued Holiday. Wyślij pismo powołując się na s.13 Employment Rights Act 1996.",
+        createdAt: "2026-10-19T15:35:00Z"
       }
     ]
   },
   {
     id: "post_2",
     author: "Elena_R",
-    authorRole: "Care Assistant · NHS Trust",
-    title: "Care worker overtime vs National Living Wage: check your travel time between clients!",
-    content: "If you work in domiciliary care and your agency does not pay for travel time between service users' homes, your real hourly pay might drop below the National Living Wage (£11.44/hr). We took this to tribunal with our rep and won back pay for 2 years!",
-    tag: "Opieka / NHS",
-    upvotes: 42,
-    createdAt: "2026-10-20T10:00:00Z",
+    authorRole: "Care Assistant · NHS & Domiciliary Care",
+    title: "Brak zapłaty za czas dojazdu między podopiecznymi (Care Worker) a spadek stawki poniżej National Living Wage",
+    content: "Jeśli pracujesz w opiece środowiskowej (domiciliary care) i agencja nie płaci za czas przejazdu między domami podopiecznych, Twoja realna stawka godzinowa często spada poniżej ustawowego minimum (National Minimum Wage Regulations 2015).",
+    tag: "Prawo Pracy UK w Praktyce",
+    statuteOrFeatureBadge: "National Minimum Wage Act 1998",
+    whereToGo: "Zakładka: Profil → Dokumenty & Payslipy (Audyt AI) oraz Zakładka: Pisma → Wezwanie do zapłaty",
+    whatToSelect: [
+      "Wgraj swój odcinek wypłaty w 'Profil → Dokumenty & Payslipy' i kliknij 'Audyt AI z Elonem', aby porównać łączny czas pracy i dojazdów z wypłaconą kwotą.",
+      "Następnie wejdź w 'Czat' i poproś Elona o wyliczenie niedopłaty za czas przejazdów między klientami (Travel Time Assignment).",
+      "Wygeneruj oficjalne wezwanie Section 13 ERA 1996 / NMW Act 1998 i zapisz sprawę w zakładce 'Sprawy'."
+    ],
+    whatYouGet: "Dokładne wyliczenie zaniżenia stawki poniżej National Living Wage oraz formalne pismo wzywające pracodawcę do wyrównania zaległości (nawet do 2 lat wstecz przed Trybunałem lub przez HMRC NMW Enforcement).",
+    actionLink: {
+      label: "Sprawdź swój Payslip w Audytorze →",
+      targetTab: "profile",
+      targetProfileSubTab: "docs"
+    },
+    upvotes: 62,
+    createdAt: "2026-10-18T10:00:00Z",
     comments: [
       {
         id: "c_3",
         author: "Dorota_L",
-        text: "Dziękuję za ten wpis! Właśnie wrzuciłam payslip do audytu w Elon i faktycznie przez czas dojazdu wychodziło mi £10.10/h. Składam formal grievance.",
-        createdAt: "2026-10-20T12:45:00Z"
+        text: "Dziękuję za tę instrukcję! Właśnie wrzuciłam payslip do audytu w Elon i faktycznie przez czas dojazdu wychodziło mi £10.10/h. Składam formal grievance.",
+        createdAt: "2026-10-18T12:45:00Z"
       }
     ]
   },
@@ -155,11 +427,24 @@ export const initialForumPosts: ForumPost[] = [
     id: "post_3",
     author: "Tomasz_Bud",
     authorRole: "Stolarz · CIS Subcontractor",
-    title: "CIS deduction vs Employee status: Kiedy self-employed jest faktycznie pracownikiem?",
-    content: "Pracuję dla jednej firmy budowlanej od 14 miesięcy, dają mi narzędzia, wyznaczają godziny 7:30-16:30 i nie mogę wysłać zastępcy (Right of substitution). Mimo to odliczają 20% CIS i nie płacą za chorobowe ani urlop. Sprawdźcie test statusu pracowniczego!",
-    tag: "Budownictwo",
-    upvotes: 31,
-    createdAt: "2026-10-18T18:00:00Z",
+    title: "Potrącenia CIS 20% na budowie a ukryty stosunek pracy (Worker Status) – jak odzyskać urlop i chorobowe?",
+    content: "Pracuję dla jednej firmy budowlanej od 14 miesięcy, dają mi narzędzia, wyznaczają godziny 7:30–16:30 i nie mogę wysłać zastępcy (brak Right of Substitution). Mimo że odliczają CIS, według prawa UK (sprawa Pimlico Plumbers) przysługuje mi status 'Worker' i pełny płatny urlop!",
+    tag: "Prawo Pracy UK w Praktyce",
+    statuteOrFeatureBadge: "Section 230(3)(b) ERA 1996 · Worker Status",
+    whereToGo: "Zakładka: Czat (Tryb: Prawo Pracy) → Konsultacja statusu 'Worker vs Self-Employed' + Zakładka: Sprawy",
+    whatToSelect: [
+      "Wejdź w 'Czat', wybierz tryb 'Prawo Pracy' i opisz warunki współpracy (kto zapewnia narzędzia, czy masz narzucone godziny i czy możesz wysłać zastępcę).",
+      "Przytrzymaj odpowiedź Elona z analizą testu statusu pracowniczego i zaznacz 'Przypnij do sprawy (Pin to Case)'.",
+      "W zakładce 'Pisma' wybierz wniosek o wydanie dokumentacji czasu pracy i umów (Subject Access Request – Art. 15 UK GDPR), aby zabezpieczyć dowody obecności na budowie."
+    ],
+    whatYouGet: "Analizę spełnienia przesłanek 'Worker Status' (Section 230 ERA 1996), zabezpieczone dowody w teczce sprawy oraz wniosek SAR/wezwanie o wypłatę zaległego Holiday Pay.",
+    actionLink: {
+      label: "Otwórz wniosek o dokumentację SAR →",
+      targetTab: "templates",
+      targetTemplateId: "sar_data_request"
+    },
+    upvotes: 45,
+    createdAt: "2026-10-17T18:00:00Z",
     comments: []
   }
 ];
@@ -219,18 +504,32 @@ export const initialDocuments: UserDocument[] = [
 
 export const initialNotes: WorkplaceNote[] = [
   {
+    id: "note_spec_1",
+    title: "Kierownik",
+    date: "2026-09-12",
+    description: "John Smith",
+    category: "Rozmowa z przełożonym"
+  },
+  {
+    id: "note_spec_2",
+    title: "Zmiana nocna",
+    date: "2026-09-15",
+    description: "Od 22:00, 4 noce w tygodniu",
+    category: "Godziny i Grafik"
+  },
+  {
+    id: "note_spec_3",
+    title: "Umowa",
+    date: "2026-03-01",
+    description: "Zero-hours, od marca",
+    category: "Godziny i Grafik"
+  },
+  {
     id: "note_1",
     title: "Rozmowa z kierownikiem zmiany ws. nadgodzin",
     date: "2026-10-15",
-    description: "Zgłosiłem menadżerowi Dave brakujące 12h na payslipie. Odpowiedział, że 'musi to sprawdzić z agencją' i kazał czekać 2 tygodnie.",
-    category: "Wypłata"
-  },
-  {
-    id: "note_2",
-    title: "Otrzymanie pisemnego ostrzeżenia bez spotkania wyjaśniającego",
-    date: "2026-10-08",
-    description: "Kierownik wręczył mi 'Informal written concern' za rzekome spóźnienie, chociaż bramka elektroniczna potwierdza przyjście o 06:52.",
-    category: "Dyscyplina"
+    description: "Zgłosiłem menadżerowi John Smith brakujące 12h na payslipie (160h zamiast 172h z grafiku). Odpowiedział, że 'musi to sprawdzić z agencją'.",
+    category: "Wypłata i Potrącenia"
   }
 ];
 

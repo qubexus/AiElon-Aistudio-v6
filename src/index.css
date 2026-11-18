@@ -1,41 +1,288 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
-@layer base {
-  :root,
-  html.light-theme {
-    --bg-surface: #F4F6F9;
-    --bg-card: #FFFFFF;
-    --bg-input: #EDF2F7;
-    --brand-primary: #1D6852;
-    --brand-primary-light: #16654E;
-    --brand-orange: #C25E0E;
-    --text-primary: #0F172A;
-    --text-muted: #475569;
-    --border-color: rgba(15, 23, 42, 0.12);
-  }
+/* ============================================================================
+   1. ZMIENNE KOLORYSTYCZNE I TYPOGRAFIA (TRYB JASNY - DOMYŚLNY)
+   Zgodnie ze specyfikacją wizualną i techniczną ask Elon
+   ============================================================================ */
+:root,
+html.light-theme {
+  --bg-main: #F8FAFC;
+  --bg-surface: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-input: #EEF5F2;
+  --bg-header-accent: #EEF5F2;
 
-  html.dark {
-    --bg-surface: #0B0F17;
-    --bg-card: #131B2E;
-    --bg-input: #1A243B;
-    --brand-primary: #1D6852;
-    --brand-primary-light: #38B28B;
-    --brand-orange: #D97724;
-    --text-primary: #F1F5F9;
-    --text-muted: #94A3B8;
-    --border-color: rgba(255, 255, 255, 0.09);
-  }
+  --bubble-user: #DCECE6;
+  --bubble-elon: #FFFFFF;
 
-  body {
-    background-color: var(--bg-surface);
-    color: var(--text-primary);
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    transition: background-color 0.2s ease, color 0.2s ease;
-  }
+  --text-primary: #1E293B;
+  --text-secondary: #64748B;
+  --text-muted: #64748B;
+
+  --accent-green: #2E6F57;
+  --accent-orange: #F59E42;
+  --brand-primary: #2E6F57;
+  --brand-primary-light: #2E6F57;
+  --brand-orange: #F59E42;
+
+  --border-color: #E2E8F0;
+  --logo-ask: #2E6F57;
+  --watermark-opacity: 0.04;
+
+  --demo-pill-bg: #FDE6CE;
+  --demo-pill-text: #9A4D06;
+  --demo-banner-bg: #FDE6CE;
+  --demo-banner-text: #7C3AED;
+
+  --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'DM Mono', monospace;
 }
 
-/* High-Contrast Daylight Theme adaptation for deep legal slate surfaces */
+/* ============================================================================
+   2. ZMIENNE KOLORYSTYCZNE (TRYB CIEMNY)
+   ============================================================================ */
+[data-theme="dark"],
+html.dark {
+  --bg-main: #141B23;
+  --bg-surface: #1E2732;
+  --bg-card: #1E2732;
+  --bg-input: #232E3C;
+  --bg-header-accent: #162C28;
+
+  --bubble-user: #1F4E3D;
+  --bubble-elon: #232E3C;
+
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #94A3B8;
+
+  --accent-green: #52B798;
+  --accent-orange: #FBB063;
+  --brand-primary: #2E6F57;
+  --brand-primary-light: #52B798;
+  --brand-orange: #FBB063;
+
+  --border-color: #2C3847;
+  --logo-ask: #52B798;
+  --watermark-opacity: 0.06;
+
+  --demo-pill-bg: #3A2E25;
+  --demo-pill-text: #FBB063;
+}
+
+/* ============================================================================
+   3. BAZA I ZABEZPIECZENIE UKŁADU (Anti-Overflow)
+   ============================================================================ */
+html,
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.font-mono {
+  font-family: var(--font-mono) !important;
+}
+
+/* ============================================================================
+   4. TYPOGRAFIA
+   ============================================================================ */
+.text-body {
+  font-size: 16px;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.title-section {
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+/* ============================================================================
+   5. LOGOTYP "ask Elon" + PASTYLKA DEMO / PRO
+   ============================================================================ */
+.logo-ask-elon {
+  font-family: var(--font-main);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.22em;
+}
+
+.logo-ask-elon .part-ask {
+  color: var(--logo-ask);
+  text-transform: lowercase;
+}
+
+.logo-ask-elon .part-elon {
+  color: var(--accent-orange);
+}
+
+.badge-demo-pill {
+  background-color: var(--demo-pill-bg);
+  color: var(--demo-pill-text);
+  font-family: var(--font-main);
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  line-height: 1.3;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ============================================================================
+   6. DYMKI CZATU I ZNAK WODNY ROBOTA (.chat-bubble-elon / .chat-bubble-user)
+   ============================================================================ */
+.chat-bubble-elon {
+  position: relative;
+  background-color: var(--bubble-elon) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+  border-radius: 16px;
+  padding: 16px;
+  overflow: visible;
+  z-index: 1;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+}
+
+.chat-bubble-elon::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  width: 78px;
+  height: 78px;
+  background-image: url('/assets/elon-robot-outline.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: bottom right;
+  opacity: var(--watermark-opacity);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.chat-bubble-user {
+  position: relative;
+  background-color: var(--bubble-user) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+  border-radius: 16px;
+  border-top-right-radius: 4px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+/* ============================================================================
+   7. KARTY I PRZYCISKI (.card-module, .btn-primary, .icon-fixed)
+   ============================================================================ */
+.card-module {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--accent-orange);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.card-module-green {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--accent-green);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 10px 24px;
+  background-color: var(--accent-orange);
+  color: #141B23;
+  font-weight: 700;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.18s ease, transform 0.15s ease;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.04);
+}
+
+.icon-fixed {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+/* ============================================================================
+   8. ADAPTACJA ISTNIEJĄCYCH KLAS TAILWIND DO NOWEJ PALETY (LIGHT & DARK)
+   ============================================================================ */
+html.dark .bg-\[\#0B0F17\],
+html.dark .bg-\[\#070F1A\] {
+  background-color: var(--bg-main) !important;
+}
+
+html.dark .bg-\[\#0B0F17\]\/95,
+html.dark .bg-\[\#0B0F17\]\/90,
+html.dark .bg-\[\#0B0F17\]\/80,
+html.dark .bg-\[\#0B0F17\]\/75 {
+  background-color: rgba(20, 27, 35, 0.94) !important;
+}
+
+html.dark .bg-\[\#131B2E\],
+html.dark .bg-\[\#131B2E\]\/95,
+html.dark .bg-\[\#131B2E\]\/90 {
+  background-color: var(--bg-surface) !important;
+}
+
+html.dark .bg-\[\#1A243B\],
+html.dark .bg-\[\#1A243B\]\/90,
+html.dark .bg-\[\#1A243B\]\/80,
+html.dark .bg-\[\#1A243B\]\/75,
+html.dark .bg-\[\#1E2942\] {
+  background-color: #232E3C !important;
+}
+
+html.dark .text-\[\#38B28B\] {
+  color: var(--accent-green) !important;
+}
+
+html.dark .text-\[\#D97724\] {
+  color: var(--accent-orange) !important;
+}
+
+html.dark .bg-\[\#D97724\] {
+  background-color: var(--accent-orange) !important;
+  color: #141B23 !important;
+}
+
+html.dark .bg-\[\#1D6852\] {
+  background-color: #2E6F57 !important;
+}
+
+html.dark .border-white\/10,
+html.dark .border-white\/15 {
+  border-color: var(--border-color) !important;
+}
+
+/* Light Mode mappings */
 html.light-theme .bg-\[\#0B0F17\],
 html.light-theme .bg-\[\#0B0F17\]\/95,
 html.light-theme .bg-\[\#0B0F17\]\/90,
@@ -43,7 +290,7 @@ html.light-theme .bg-\[\#0B0F17\]\/80,
 html.light-theme .bg-\[\#0B0F17\]\/75,
 html.light-theme .bg-\[\#0B0F17\]\/70,
 html.light-theme .bg-\[\#0B0F17\]\/60 {
-  background-color: #F4F6F9 !important;
+  background-color: var(--bg-main) !important;
 }
 
 html.light-theme .bg-\[\#131B2E\],
@@ -51,38 +298,59 @@ html.light-theme .bg-\[\#131B2E\]\/95,
 html.light-theme .bg-\[\#131B2E\]\/90,
 html.light-theme .bg-\[\#131B2E\]\/80,
 html.light-theme .bg-\[\#131B2E\]\/60 {
-  background-color: #FFFFFF !important;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+  background-color: var(--bg-surface) !important;
+  box-shadow: 0 2px 10px rgba(30, 41, 59, 0.04);
 }
 
 html.light-theme .bg-\[\#1A243B\],
 html.light-theme .bg-\[\#1A243B\]\/90,
 html.light-theme .bg-\[\#1A243B\]\/80,
-html.light-theme .bg-\[\#1E2942\] {
-  background-color: #EDF2F7 !important;
+html.light-theme .bg-\[\#1A243B\]\/75,
+html.light-theme .bg-\[\#1E2942\],
+html.light-theme .bg-\[\#0B2038\],
+html.light-theme .bg-\[\#0B2038\]\/80 {
+  background-color: var(--bg-header-accent) !important;
 }
 
-html.light-theme .text-\[\#F1F5F9\] {
-  color: #0F172A !important;
+html.light-theme .text-\[\#F1F5F9\],
+html.light-theme .text-white {
+  color: var(--text-primary) !important;
 }
 
-html.light-theme .text-\[\#94A3B8\] {
-  color: #475569 !important;
+html.light-theme .bg-\[\#1D6852\] .text-white,
+html.light-theme .bg-\[\#2E6F57\] .text-white,
+html.light-theme button.bg-\[\#1D6852\],
+html.light-theme button.bg-\[\#2E6F57\] {
+  color: #FFFFFF !important;
+}
+
+html.light-theme .text-\[\#94A3B8\],
+html.light-theme .text-\[\#CBD5E1\] {
+  color: var(--text-secondary) !important;
 }
 
 html.light-theme .text-\[\#38B28B\] {
-  color: #135E46 !important;
+  color: var(--accent-green) !important;
 }
 
 html.light-theme .text-\[\#D97724\] {
-  color: #B45309 !important;
+  color: var(--accent-orange) !important;
+}
+
+html.light-theme .bg-\[\#D97724\] {
+  background-color: var(--accent-orange) !important;
+  color: #141B23 !important;
+}
+
+html.light-theme .bg-\[\#1D6852\] {
+  background-color: var(--accent-green) !important;
 }
 
 html.light-theme .border-white\/5,
 html.light-theme .border-white\/10,
 html.light-theme .border-white\/15,
 html.light-theme .border-white\/20 {
-  border-color: rgba(15, 23, 42, 0.12) !important;
+  border-color: var(--border-color) !important;
 }
 
 /* Custom scrollbars */
@@ -91,27 +359,67 @@ html.light-theme .border-white\/20 {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bg-surface);
+  background: var(--bg-main);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
+  background: rgba(148, 163, 184, 0.28);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.42);
+  background: rgba(148, 163, 184, 0.45);
 }
 
 /* Subtle, Non-Glaring Advisory Highlights */
 .glow-orange {
-  box-shadow: 0 4px 16px rgba(217, 119, 36, 0.22);
+  box-shadow: 0 4px 16px rgba(245, 158, 66, 0.22);
 }
 
 .glow-orange-soft {
-  box-shadow: 0 2px 12px rgba(217, 119, 36, 0.15);
+  box-shadow: 0 2px 12px rgba(245, 158, 66, 0.15);
 }
 
 .glow-green {
-  box-shadow: 0 4px 16px rgba(56, 178, 139, 0.2);
+  box-shadow: 0 4px 16px rgba(82, 183, 152, 0.2);
+}
+
+/* ============================================================================
+   9. EFEKT "PODGLĄDANIA" ROBOTA ZZA KRAWĘDZI DYMKA ODPOWIEDZI (.elon-peek-*)
+   Elon wystaje do połowy zza lewej lub prawej krawędzi dymka, a jego
+   metalowe palce zaciskają się na krawędzi wiadomości z wysokim z-index.
+   ============================================================================ */
+@keyframes elon-peek-bob-left {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(-11deg);
+  }
+  50% {
+    transform: translate3d(-2px, -2px, 0) rotate(-14deg);
+  }
+}
+
+@keyframes elon-peek-bob-right {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(11deg);
+  }
+  50% {
+    transform: translate3d(2px, -2px, 0) rotate(14deg);
+  }
+}
+
+.elon-peek-head-left {
+  transform-origin: right center;
+  animation: elon-peek-bob-left 4.2s ease-in-out infinite;
+}
+
+.elon-peek-head-right {
+  transform-origin: left center;
+  animation: elon-peek-bob-right 4.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .elon-peek-head-left,
+  .elon-peek-head-right {
+    animation: none;
+  }
 }
 
 /* ============================================================================
@@ -120,11 +428,11 @@ html.light-theme .border-white\/20 {
    ============================================================================ */
 :root {
   --nav-bar-height: 58px;
-  --robot-head-size: 58px;
-  --robot-head-svg-size: 54px;
-  --robot-head-bottom: 6px;
-  --robot-notch-width: 90px;
-  --robot-head-protrusion: 6px;
+  --robot-head-size: 76px;
+  --robot-head-svg-size: 76px;
+  --robot-head-bottom: 2px;
+  --robot-notch-width: 96px;
+  --robot-head-protrusion: 16px;
   --nav-wing-inner-gap: 6px;
 
   --chat-container-px: 8px;
@@ -139,11 +447,11 @@ html.light-theme .border-white\/20 {
 @media (min-width: 420px) {
   :root {
     --nav-bar-height: 62px;
-    --robot-head-size: 64px;
-    --robot-head-svg-size: 60px;
-    --robot-head-bottom: 6px;
-    --robot-notch-width: 100px;
-    --robot-head-protrusion: 8px;
+    --robot-head-size: 84px;
+    --robot-head-svg-size: 84px;
+    --robot-head-bottom: 2px;
+    --robot-notch-width: 106px;
+    --robot-head-protrusion: 20px;
     --nav-wing-inner-gap: 10px;
 
     --chat-container-px: 10px;
@@ -158,11 +466,11 @@ html.light-theme .border-white\/20 {
 @media (min-width: 640px) {
   :root {
     --nav-bar-height: 64px;
-    --robot-head-size: 70px;
-    --robot-head-svg-size: 66px;
-    --robot-head-bottom: 6px;
-    --robot-notch-width: 112px;
-    --robot-head-protrusion: 12px;
+    --robot-head-size: 92px;
+    --robot-head-svg-size: 92px;
+    --robot-head-bottom: 2px;
+    --robot-notch-width: 118px;
+    --robot-head-protrusion: 24px;
     --nav-wing-inner-gap: 16px;
 
     --chat-container-px: 16px;
@@ -177,11 +485,11 @@ html.light-theme .border-white\/20 {
 @media (min-width: 1024px) {
   :root {
     --nav-bar-height: 66px;
-    --robot-head-size: 74px;
-    --robot-head-svg-size: 70px;
-    --robot-head-bottom: 6px;
-    --robot-notch-width: 118px;
-    --robot-head-protrusion: 14px;
+    --robot-head-size: 98px;
+    --robot-head-svg-size: 98px;
+    --robot-head-bottom: 2px;
+    --robot-notch-width: 124px;
+    --robot-head-protrusion: 28px;
     --nav-wing-inner-gap: 20px;
 
     --chat-container-px: 16px;
@@ -197,11 +505,11 @@ html.light-theme .border-white\/20 {
 @media (min-width: 1280px) {
   :root {
     --nav-bar-height: 66px;
-    --robot-head-size: 76px;
-    --robot-head-svg-size: 72px;
-    --robot-head-bottom: 6px;
-    --robot-notch-width: 122px;
-    --robot-head-protrusion: 16px;
+    --robot-head-size: 104px;
+    --robot-head-svg-size: 104px;
+    --robot-head-bottom: 2px;
+    --robot-notch-width: 130px;
+    --robot-head-protrusion: 32px;
     --nav-wing-inner-gap: 24px;
 
     --chat-container-pb: 20px;
@@ -215,11 +523,11 @@ html.light-theme .border-white\/20 {
 @media (max-height: 600px) {
   :root {
     --nav-bar-height: 54px;
-    --robot-head-size: 54px;
-    --robot-head-svg-size: 50px;
-    --robot-head-bottom: 4px;
-    --robot-notch-width: 86px;
-    --robot-head-protrusion: 4px;
+    --robot-head-size: 70px;
+    --robot-head-svg-size: 70px;
+    --robot-head-bottom: 2px;
+    --robot-notch-width: 90px;
+    --robot-head-protrusion: 14px;
     --chat-robot-side-gap: 10px;
     --chat-robot-gap: calc(var(--robot-notch-width) + (var(--chat-robot-side-gap) * 2));
     --chat-flank-clearance: 42px;

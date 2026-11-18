@@ -8,6 +8,7 @@ import {
   UserDocument,
   WorkplaceNote,
   ChatMessage,
+  CasePinnedItem,
   SentLetter,
   SentLetterCategoryTag,
   BroadcastMessage,
@@ -31,6 +32,7 @@ import {
   defaultTemplates,
   extractProfileUpdatesFromChat,
   buildPersonalizedEnglishLetterForChat,
+  stripEmbeddedEnglishLetter,
   classifySentLetter,
 } from "../data/legalTemplates";
 import * as storage from "../services/storageService";
@@ -90,6 +92,8 @@ interface AppContextType {
   addCase: (newCase: Omit<WorkplaceCase, "id" | "createdAt" | "updatedAt" | "notes">) => string;
   updateCaseStatus: (id: string, status: "open" | "resolved") => void;
   addCaseNote: (caseId: string, noteText: string) => void;
+  pinChatMessageToCase: (msgId: string, targetCaseId?: string) => WorkplaceCase | null;
+  removeCasePinnedItem: (caseId: string, pinnedItemId: string) => void;
   startChatAboutCase: (caseItem: WorkplaceCase) => void;
 
   // Templates
@@ -101,9 +105,19 @@ interface AppContextType {
   removeSentLetter: (id: string) => void;
   toggleSentLetterTag: (id: string, tag: SentLetterCategoryTag) => void;
 
-  // Forum
+  // Q&A (dawniej Forum)
   forumPosts: ForumPost[];
-  addForumPost: (title: string, content: string, tag: string) => void;
+  addForumPost: (
+    title: string,
+    content: string,
+    tag: string,
+    extra?: {
+      whereToGo?: string;
+      whatToSelect?: string[];
+      whatYouGet?: string;
+      statuteOrFeatureBadge?: string;
+    }
+  ) => void;
   upvoteForumPost: (postId: string) => void;
   addForumComment: (postId: string, commentText: string) => void;
 
@@ -124,6 +138,8 @@ interface AppContextType {
   isChatLoading: boolean;
   sendChatMessage: (text: string, attachedDocIds?: string[]) => Promise<void>;
   clearChatMessages: () => void;
+  deleteChatMessage: (msgId: string) => void;
+  toggleFlagChatMessage: (msgId: string) => boolean;
   saveCurrentChatAsCase: () => void;
   recentUnsavedChats: RecentUnsavedChat[];
   activeUnsavedChatId: string;
@@ -435,6 +451,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const root = document.documentElement;
       root.classList.toggle("dark", themeMode === "dark");
       root.classList.toggle("light-theme", themeMode === "light");
+      root.setAttribute("data-theme", themeMode);
       root.style.colorScheme = themeMode;
     }
   }, [themeMode]);
@@ -1155,7 +1172,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const addForumPost = (title: string, content: string, tag: string) => {
+  const addForumPost = (
+    title: string,
+    content: string,
+    tag: string,
+    extra?: {
+      whereToGo?: string;
+      whatToSelect?: string[];
+      whatYouGet?: string;
+      statuteOrFeatureBadge?: string;
+    }
+  ) => {
     const newPost: ForumPost = {
       id: `post_${Date.now()}`,
       author: user.fullName || "Worker_UK",
@@ -1163,10 +1190,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       title,
       content,
       tag,
+      statuteOrFeatureBadge: extra?.statuteOrFeatureBadge,
+      whereToGo: extra?.whereToGo,
+      whatToSelect: extra?.whatToSelect,
+      whatYouGet: extra?.whatYouGet,
       upvotes: 1,
       userUpvoted: true,
       createdAt: new Date().toISOString(),
-      comments: []
+      comments: [],
     };
     const updated = [newPost, ...forumPosts];
     setForumPostsState(updated);
@@ -1705,6 +1736,171 @@ export function AppProvider({ children }: { children: ReactNode }) {
     showToast(t("clearChat"));
   };
 
+  const deleteChatMessage = (msgId: string) => {
+    setChatMessagesState((prev) => {
+      const remaining = prev.filter((m) => m.id !== msgId);
+      const hasNonInitMessages = remaining.some((m) => m.id !== "msg_init");
+      if (!hasNonInitMessages || remaining.length === 0) {
+        const freshWelcomeMsg: ChatMessage[] = [
+          {
+            id: "msg_init",
+            role: "assistant",
+            text: getTranslation("elonGreeting", locale),
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            status: "sent",
+          },
+        ];
+        storage.saveChatHistory([]);
+        return freshWelcomeMsg;
+      }
+      storage.saveChatHistory(remaining);
+      return remaining;
+    });
+  };
+
+  const toggleFlagChatMessage = (msgId: string): boolean => {
+    let nextFlagState = false;
+    setChatMessagesState((prev) => {
+      const updated = prev.map((m) => {
+        if (m.id !== msgId) return m;
+        nextFlagState = !m.flaggedAsIncorrect;
+        return { ...m, flaggedAsIncorrect: nextFlagState };
+      });
+      storage.saveChatHistory(updated);
+      return updated;
+    });
+    return nextFlagState;
+  };
+
+  const pinChatMessageToCase = (msgId: string, explicitCaseId?: string): WorkplaceCase | null => {
+    const targetMsg = chatMessages.find((m) => m.id === msgId);
+    if (!targetMsg) return null;
+
+    const extractedText =
+      targetMsg.role === "assistant"
+        ? stripEmbeddedEnglishLetter(targetMsg.text).trim()
+        : targetMsg.text.trim();
+    if (!extractedText) return null;
+
+    const nowFormatted = new Date().toISOString().replace("T", " ").slice(0, 16);
+    const senderName =
+      targetMsg.role === "assistant"
+        ? "Elon · AI"
+        : user.fullName || (locale === "pl" ? "Pracownik" : "Worker");
+
+    // Resolve target case: explicitCaseId -> message's threadId -> activeCaseId -> first open case -> first case
+    const preferredCaseId = explicitCaseId || targetMsg.threadId || activeCaseId;
+    let resolvedCase: WorkplaceCase | undefined = preferredCaseId
+      ? cases.find((c) => c.id === preferredCaseId)
+      : undefined;
+    if (!resolvedCase) {
+      resolvedCase = cases.find((c) => c.status === "open") || cases[0];
+    }
+
+    // If no cases exist at all, create one automatically for this workspace
+    if (!resolvedCase) {
+      const nowIso = new Date().toISOString();
+      const newPinItem: CasePinnedItem = {
+        id: `pin_${Date.now()}`,
+        messageId: targetMsg.id,
+        role: targetMsg.role,
+        senderName,
+        text: extractedText,
+        pinnedAt: nowFormatted,
+      };
+      const autoCase: WorkplaceCase = {
+        id: `case_${Date.now()}`,
+        title:
+          extractedText.length > 64
+            ? `${extractedText.slice(0, 62).trim()}…`
+            : extractedText,
+        description: extractedText,
+        sector: user.industry || "Logistyka / Magazyn",
+        employer: user.employerName || "UK Employer",
+        status: "open",
+        priority: "high",
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        notes: [],
+        pinnedItems: [newPinItem],
+      };
+      const nextCases = [autoCase, ...cases];
+      setCasesState(nextCases);
+      storage.saveCases(nextCases);
+      setActiveCaseId(autoCase.id);
+      setChatMessagesState((prev) => {
+        const next = prev.map((m) =>
+          m.id === msgId ? { ...m, pinnedToCaseId: autoCase.id } : m
+        );
+        storage.saveChatHistory(next);
+        return next;
+      });
+      return autoCase;
+    }
+
+    const targetId = resolvedCase.id;
+    const existingPinned = resolvedCase.pinnedItems || [];
+    const filteredPinned = existingPinned.filter((p) => p.messageId !== targetMsg.id);
+    const newPinnedEntry: CasePinnedItem = {
+      id: `pin_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      messageId: targetMsg.id,
+      role: targetMsg.role,
+      senderName,
+      text: extractedText,
+      pinnedAt: nowFormatted,
+    };
+
+    const updatedCase: WorkplaceCase = {
+      ...resolvedCase,
+      updatedAt: new Date().toISOString(),
+      pinnedItems: [newPinnedEntry, ...filteredPinned],
+    };
+
+    const updatedCases = cases.map((c) => (c.id === targetId ? updatedCase : c));
+    setCasesState(updatedCases);
+    storage.saveCases(updatedCases);
+    setActiveCaseId(targetId);
+
+    setChatMessagesState((prev) => {
+      const next = prev.map((m) =>
+        m.id === msgId ? { ...m, pinnedToCaseId: targetId } : m
+      );
+      storage.saveChatHistory(next);
+      return next;
+    });
+
+    return updatedCase;
+  };
+
+  const removeCasePinnedItem = (caseId: string, pinnedItemId: string) => {
+    let removedMsgId: string | null = null;
+    const updatedCases = cases.map((c) => {
+      if (c.id !== caseId) return c;
+      const currentPinned = c.pinnedItems || [];
+      const found = currentPinned.find((p) => p.id === pinnedItemId);
+      if (found) removedMsgId = found.messageId;
+      return {
+        ...c,
+        updatedAt: new Date().toISOString(),
+        pinnedItems: currentPinned.filter((p) => p.id !== pinnedItemId),
+      };
+    });
+    setCasesState(updatedCases);
+    storage.saveCases(updatedCases);
+
+    if (removedMsgId) {
+      setChatMessagesState((prev) => {
+        const next = prev.map((m) =>
+          m.id === removedMsgId && m.pinnedToCaseId === caseId
+            ? { ...m, pinnedToCaseId: undefined }
+            : m
+        );
+        storage.saveChatHistory(next);
+        return next;
+      });
+    }
+  };
+
   const restoreUnsavedChat = (id: string) => {
     // Save current unsaved chat first if it has user messages
     if (id !== activeUnsavedChatId) {
@@ -2221,6 +2417,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isChatLoading,
         sendChatMessage,
         clearChatMessages,
+        deleteChatMessage,
+        toggleFlagChatMessage,
+        pinChatMessageToCase,
+        removeCasePinnedItem,
         saveCurrentChatAsCase,
         recentUnsavedChats,
         activeUnsavedChatId,

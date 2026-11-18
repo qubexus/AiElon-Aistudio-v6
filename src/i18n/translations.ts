@@ -13,12 +13,12 @@ export const translations: Record<string, Record<Locale, string>> = {
   tabChat: { pl: "Czat", en: "Chat", ro: "Chat" },
   tabCases: { pl: "Sprawy", en: "Cases", ro: "Cazuri" },
   tabTemplates: { pl: "Pisma", en: "Letters", ro: "Scrisori" },
-  tabForum: { pl: "Forum", en: "Forum", ro: "Forum" },
+  tabForum: { pl: "Q&A", en: "Q&A", ro: "Q&A" },
   tabProfile: { pl: "Profil", en: "Profile", ro: "Profil" },
   navChat: { pl: "Czat", en: "Chat", ro: "Chat" },
   navCases: { pl: "Sprawy", en: "Cases", ro: "Cazuri" },
   navTemplates: { pl: "Pisma", en: "Letters", ro: "Scrisori" },
-  navForum: { pl: "Forum", en: "Forum", ro: "Forum" },
+  navForum: { pl: "Q&A", en: "Q&A", ro: "Q&A" },
   navProfile: { pl: "Profil", en: "Profile", ro: "Profil" },
 
   // Chat
@@ -181,18 +181,36 @@ export const translations: Record<string, Record<Locale, string>> = {
     ro: "Testează detectorul (inserează text agresiv)",
   },
 
-  // Forum
-  forumTitle: { pl: "Forum pracownicze", en: "Workplace Forum", ro: "Forumul Muncitorilor" },
-  forumSub: { pl: "Dziel się doświadczeniami, pytaj społeczność i wspieraj innych", en: "Share experiences, ask the community, and support coworkers", ro: "Împărtășește experiențe, întreabă comunitatea și susține colegii" },
-  newPost: { pl: "Nowy wpis", en: "New post", ro: "Postare nouă" },
-  postTitleLabel: { pl: "Tytuł pytania lub historii", en: "Title of your question or story", ro: "Titlul întrebării sau poveștii" },
-  postTagLabel: { pl: "Branża / Kategoria", en: "Industry / Category", ro: "Domeniu / Categorie" },
-  postContentLabel: { pl: "Treść wpisu", en: "Post content", ro: "Conținutul postării" },
-  publishPost: { pl: "Opublikuj wpis", en: "Publish post", ro: "Publică postarea" },
+  // Q&A (dawniej Forum)
+  forumTitle: {
+    pl: "Centrum Q&A i Możliwości Aplikacji",
+    en: "Q&A & App Capabilities Hub",
+    ro: "Centru Q&A & Funcționalități Aplicație",
+  },
+  forumHeading: {
+    pl: "Q&A — Możliwości Aplikacji i Baza Wiedzy UK",
+    en: "Q&A — App Capabilities & UK Work-Rights Guide",
+    ro: "Q&A — Funcționalități Aplicație & Ghid UK",
+  },
+  forumSub: {
+    pl: "Systematyczny przewodnik po funkcjach ask Elon: sprawdź dokładnie gdzie wejść, co zaznaczyć i jaki rezultat prawny uzyskasz krok po kroku",
+    en: "Systematic guide to ask Elon capabilities: check exactly where to go, what to select, and what legal result you get step by step",
+    ro: "Ghid sistematic ask Elon: verifică exact unde să intri, ce să selectezi și ce rezultat obții pas cu pas",
+  },
+  newPost: { pl: "Dodaj pytanie Q&A / instrukcję", en: "Add Q&A question / guide", ro: "Adaugă întrebare Q&A / ghid" },
+  newPostBtn: { pl: "Dodaj pytanie Q&A", en: "Ask Q&A Question", ro: "Adaugă Q&A" },
+  filterAll: { pl: "Wszystkie kategorie", en: "All categories", ro: "Toate categoriile" },
+  postTitleLabel: { pl: "Pytanie lub temat instrukcji Q&A", en: "Question or Q&A guide title", ro: "Titlul întrebării sau ghidului Q&A" },
+  postTagLabel: { pl: "Kategoria Q&A", en: "Q&A Category", ro: "Categorie Q&A" },
+  postContentLabel: { pl: "Szczegółowa odpowiedź lub opis problemu", en: "Detailed answer or problem description", ro: "Răspuns detaliat sau descrierea problemei" },
+  publishPost: { pl: "Opublikuj w Q&A", en: "Publish to Q&A", ro: "Publică în Q&A" },
   upvote: { pl: "Pomocne", en: "Helpful", ro: "Util" },
-  comments: { pl: "Komentarze", en: "Comments", ro: "Comentarii" },
-  addComment: { pl: "Napisz komentarz...", en: "Write a comment...", ro: "Scrie un comentariu..." },
+  comments: { pl: "Komentarze i odpowiedzi", en: "Comments & Answers", ro: "Comentarii & Răspunsuri" },
+  commentsCount: { pl: "odpowiedzi", en: "answers", ro: "răspunsuri" },
+  addComment: { pl: "Dodaj odpowiedź lub dopytaj...", en: "Add an answer or follow-up...", ro: "Adaugă un răspuns..." },
+  addCommentPlaceholder: { pl: "Dodaj odpowiedź lub pytanie uzupełniające...", en: "Write an answer or follow-up question...", ro: "Scrie un răspuns sau o întrebare..." },
   postComment: { pl: "Dodaj", en: "Reply", ro: "Trimite" },
+  replyBtn: { pl: "Wyślij", en: "Reply", ro: "Trimite" },
 
   // Profile & Details
   profileTitle: { pl: "Twój profil pracownika", en: "Worker Profile & Hub", ro: "Profil Muncitor" },

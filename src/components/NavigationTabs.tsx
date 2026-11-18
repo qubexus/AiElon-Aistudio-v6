@@ -22,7 +22,6 @@ export const NavigationTabs: React.FC = () => {
     cases,
     robotState,
     triggerRobotReaction,
-    themeMode,
     locale,
     setIsNewCaseModalOpen,
     setIsLegalDictionaryModalOpen,
@@ -123,10 +122,10 @@ export const NavigationTabs: React.FC = () => {
       label: t("tabForum"),
       tooltip:
         locale === "pl"
-          ? "Społeczność — Forum pracowników w UK"
+          ? "Q&A — Możliwości aplikacji: gdzie wejść, co zaznaczyć i co uzyskać"
           : locale === "ro"
-          ? "Comunitate — Forum muncitori UK"
-          : "Community — UK workplace forum",
+          ? "Q&A — Ghid funcționalități aplicație și întrebări"
+          : "Q&A — App capabilities guide: where to go, what to select & what you get",
       icon: <MessagesSquare className="w-5 h-5" />,
     },
     {
@@ -228,7 +227,6 @@ export const NavigationTabs: React.FC = () => {
     robotState === "speaking" ||
     robotState === "listening" ||
     robotState === "concerned";
-  const isLight = themeMode === "light";
 
   const renderNavButton = (item: {
     id: TabType;
@@ -309,27 +307,9 @@ export const NavigationTabs: React.FC = () => {
           </div>
         </div>
 
-        {/* Center Semicircular Notch Cradling Oversized Animated Robot Head + Radial Quick Actions */}
-        <div className="nav-robot-notch relative shrink-0 -mx-px pointer-events-none select-none">
-          <svg
-            viewBox="0 0 120 64"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-            className="w-full h-full block pointer-events-auto relative z-10"
-          >
-            <path
-              d="M 0 0 L 9 0 Q 17 0 19 12 A 41 41 0 0 0 101 12 Q 103 0 111 0 L 120 0 L 120 64 L 0 64 Z"
-              fill={isLight ? "rgba(255, 255, 255, 0.95)" : "rgba(11, 15, 23, 0.95)"}
-            />
-            <path
-              d="M 0 0.5 L 9 0.5 Q 17 0.5 19 12 A 41 41 0 0 0 101 12 Q 103 0.5 111 0.5 L 120 0.5"
-              fill="none"
-              stroke={isLight ? "rgba(226, 232, 240, 0.85)" : "rgba(255, 255, 255, 0.12)"}
-              strokeWidth="1.2"
-            />
-          </svg>
-
-          {/* RADIAL QUICK ACTIONS LAYER (Positioned cleanly BEHIND the circular robot head at z-0) */}
+        {/* Center Section Hosting Freestanding Enlarged Animated Robot Head + Radial Quick Actions */}
+        <div className="nav-robot-notch relative shrink-0 -mx-px pointer-events-auto select-none bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-lg border-t border-slate-200/80 dark:border-white/10 transition-colors duration-200">
+          {/* RADIAL QUICK ACTIONS LAYER (Positioned cleanly BEHIND the freestanding robot head at z-0) */}
           <div
             role="menu"
             aria-label={
@@ -392,7 +372,7 @@ export const NavigationTabs: React.FC = () => {
             ))}
           </div>
 
-          {/* Oversized Animated Robot Head Button (z-20 above the radial menu origin) */}
+          {/* Freestanding Enlarged Animated Robot Head Button (no circular shell/border) */}
           <Tooltip
             side="top"
             disabled={isQuickActionsOpen || showRadialOnboarding}
@@ -421,103 +401,83 @@ export const NavigationTabs: React.FC = () => {
                   : "long-press or right-click for Quick Actions"
               }`}
               onPointerDown={(e) => {
-              if (e.button === 2) return;
-              longPressTriggeredRef.current = false;
-              pointerStartRef.current = { x: e.clientX, y: e.clientY };
-              clearLongPressTimer();
-              setIsPressingRobot(true);
-              longPressTimerRef.current = setTimeout(() => {
-                longPressTriggeredRef.current = true;
-                setIsPressingRobot(false);
-                if (showRadialOnboarding) markRadialOnboardingSeen();
-                setIsQuickActionsOpen(true);
-                triggerRobotReaction("thinking", 1800);
-                try {
-                  navigator.vibrate?.(18);
-                } catch {
-                  // Ignore if vibration unsupported
-                }
-              }, 420);
-            }}
-            onPointerMove={(e) => {
-              if (!pointerStartRef.current || !longPressTimerRef.current) return;
-              const dx = e.clientX - pointerStartRef.current.x;
-              const dy = e.clientY - pointerStartRef.current.y;
-              if (dx * dx + dy * dy > 100) {
-                clearLongPressTimer();
-              }
-            }}
-            onPointerUp={() => clearLongPressTimer()}
-            onPointerCancel={() => clearLongPressTimer()}
-            onPointerLeave={() => clearLongPressTimer()}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              clearLongPressTimer();
-              if (showRadialOnboarding) markRadialOnboardingSeen();
-              setIsQuickActionsOpen((prev) => {
-                const next = !prev;
-                if (next) triggerRobotReaction("thinking", 1800);
-                return next;
-              });
-            }}
-            onClick={(e) => {
-              if (longPressTriggeredRef.current) {
+                if (e.button === 2) return;
                 longPressTriggeredRef.current = false;
+                pointerStartRef.current = { x: e.clientX, y: e.clientY };
+                clearLongPressTimer();
+                setIsPressingRobot(true);
+                longPressTimerRef.current = setTimeout(() => {
+                  longPressTriggeredRef.current = true;
+                  setIsPressingRobot(false);
+                  if (showRadialOnboarding) markRadialOnboardingSeen();
+                  setIsQuickActionsOpen(true);
+                  triggerRobotReaction("thinking", 1800);
+                  try {
+                    navigator.vibrate?.(18);
+                  } catch {
+                    // Ignore if vibration unsupported
+                  }
+                }, 420);
+              }}
+              onPointerMove={(e) => {
+                if (!pointerStartRef.current || !longPressTimerRef.current) return;
+                const dx = e.clientX - pointerStartRef.current.x;
+                const dy = e.clientY - pointerStartRef.current.y;
+                if (dx * dx + dy * dy > 100) {
+                  clearLongPressTimer();
+                }
+              }}
+              onPointerUp={() => clearLongPressTimer()}
+              onPointerCancel={() => clearLongPressTimer()}
+              onPointerLeave={() => clearLongPressTimer()}
+              onContextMenu={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                return;
-              }
-              if (isQuickActionsOpen) {
-                setIsQuickActionsOpen(false);
-                return;
-              }
-              setActiveTab("chat");
-              triggerRobotReaction("success", 1800);
-            }}
-            className="nav-robot-head-btn pointer-events-auto group absolute left-1/2 -translate-x-1/2 z-20 focus:outline-none cursor-pointer touch-manipulation"
-          >
-            {showRadialOnboarding && !isQuickActionsOpen && (
-              <span
-                aria-hidden="true"
-                className="radial-gesture-ripple absolute -inset-2 rounded-full border-2 border-[#D97724]/70 pointer-events-none"
-              />
-            )}
-
-            <span
-              aria-hidden="true"
-              className={`absolute -inset-1 rounded-full transition-opacity duration-300 pointer-events-none ${
-                isQuickActionsOpen
-                  ? "bg-[#D97724]/30 opacity-100"
-                  : isVoiceOrAlert
-                  ? "bg-[#D97724]/25 animate-pulse opacity-100"
-                  : isChatActive || robotState !== "idle"
-                  ? "bg-[#38B28B]/20 opacity-100"
-                  : "bg-[#38B28B]/10 opacity-0 group-hover:opacity-100"
-              }`}
-            />
-
-            <div
-              className={`nav-robot-head-frame relative rounded-full bg-gradient-to-b from-[#162238] to-[#0B0F17] border-2 flex items-center justify-center transition-all duration-200 ${
-                isPressingRobot
-                  ? "scale-95 border-[#D97724]"
-                  : isQuickActionsOpen
-                  ? "border-[#D97724] shadow-[0_6px_26px_rgba(217,119,36,0.5)] scale-105"
-                  : isVoiceOrAlert
-                  ? "border-[#D97724] shadow-[0_6px_24px_rgba(217,119,36,0.45)] scale-[1.04]"
-                  : isChatActive || robotState !== "idle"
-                  ? "border-[#38B28B] shadow-[0_6px_24px_rgba(56,178,139,0.36)] scale-[1.03]"
-                  : "border-slate-300/80 dark:border-white/20 shadow-[0_8px_22px_rgba(11,15,23,0.45)] group-hover:border-[#38B28B] group-hover:scale-[1.04]"
-              }`}
+                clearLongPressTimer();
+                if (showRadialOnboarding) markRadialOnboardingSeen();
+                setIsQuickActionsOpen((prev) => {
+                  const next = !prev;
+                  if (next) triggerRobotReaction("thinking", 1800);
+                  return next;
+                });
+              }}
+              onClick={(e) => {
+                if (longPressTriggeredRef.current) {
+                  longPressTriggeredRef.current = false;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  return;
+                }
+                if (isQuickActionsOpen) {
+                  setIsQuickActionsOpen(false);
+                  return;
+                }
+                setActiveTab("chat");
+                triggerRobotReaction("success", 1800);
+              }}
+              className="nav-robot-head-btn pointer-events-auto group absolute left-1/2 -translate-x-1/2 z-20 focus:outline-none cursor-pointer touch-manipulation bg-transparent border-0 p-0"
             >
-              <AskElonShieldLogo
-                variant="head-only"
-                className="nav-robot-head-svg"
-                active={isChatActive || isQuickActionsOpen}
-                activityState={robotState}
-              />
-            </div>
-          </button>
+              <div
+                className={`nav-robot-head-frame relative flex items-center justify-center transition-transform duration-200 bg-transparent border-0 ${
+                  isPressingRobot
+                    ? "scale-95"
+                    : isQuickActionsOpen
+                    ? "scale-110 drop-shadow-[0_8px_20px_rgba(217,119,36,0.45)]"
+                    : isVoiceOrAlert
+                    ? "scale-105 drop-shadow-[0_8px_18px_rgba(217,119,36,0.4)]"
+                    : isChatActive || robotState !== "idle"
+                    ? "scale-105 drop-shadow-[0_8px_18px_rgba(56,178,139,0.35)]"
+                    : "drop-shadow-[0_6px_14px_rgba(11,15,23,0.38)] group-hover:scale-105"
+                }`}
+              >
+                <AskElonShieldLogo
+                  variant="head-only"
+                  className="nav-robot-head-svg"
+                  active={isChatActive || isQuickActionsOpen}
+                  activityState={robotState}
+                />
+              </div>
+            </button>
           </Tooltip>
         </div>
 

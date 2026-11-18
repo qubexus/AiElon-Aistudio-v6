@@ -19,6 +19,7 @@ import {
   GeneratedChatLetter,
 } from "../data/legalTemplates";
 import { AskElonShieldLogo, analyzeAiResponseSentiment } from "./AskElonShieldLogo";
+import { ElonPeekingBubbleGrip, PeekEdgeSide } from "./ElonPeekingBubbleGrip";
 import { Tooltip } from "./Tooltip";
 import { CameraScannerModal } from "./CameraScannerModal";
 import { analyzeUploadedDocument, DOCUMENT_TAG_STYLES } from "../utils/documentClassifier";
@@ -75,6 +76,9 @@ import {
   FileSearch,
   FileLock2,
   Eye,
+  Flag,
+  Pin,
+  MoreHorizontal,
 } from "lucide-react";
 
 const SPEECH_RATES = [0.92, 1.0, 1.15] as const;
@@ -603,6 +607,9 @@ export const ChatTab: React.FC = () => {
     isChatLoading,
     sendChatMessage,
     clearChatMessages,
+    deleteChatMessage,
+    toggleFlagChatMessage,
+    pinChatMessageToCase,
     saveCurrentChatAsCase,
     locale,
     user,
@@ -624,6 +631,7 @@ export const ChatTab: React.FC = () => {
     saveSentLetter,
     cases,
     activeCaseId,
+    setActiveCaseId,
     recentUnsavedChats,
     activeUnsavedChatId,
     restoreUnsavedChat,
@@ -659,6 +667,77 @@ export const ChatTab: React.FC = () => {
     }
   });
   const chatFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Randomly assigns 'left' or 'right' edge for the peeking robot head + metallic gripping fingers per bot message ID
+  const botPeekSideMapRef = useRef<Record<string, PeekEdgeSide>>({});
+  const getBotBubblePeekSide = useCallback((msgId: string): PeekEdgeSide => {
+    if (!botPeekSideMapRef.current[msgId]) {
+      botPeekSideMapRef.current[msgId] = Math.random() < 0.5 ? "left" : "right";
+    }
+    return botPeekSideMapRef.current[msgId];
+  }, []);
+
+  // Context Menu state for individual chat bubbles (triggered on long-press or right-click)
+  const [bubbleContextMenu, setBubbleContextMenu] = useState<{
+    msgId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const bubbleLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bubbleLongPressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const bubbleContextMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const clearBubbleLongPress = useCallback(() => {
+    if (bubbleLongPressTimerRef.current) {
+      clearTimeout(bubbleLongPressTimerRef.current);
+      bubbleLongPressTimerRef.current = null;
+    }
+    bubbleLongPressStartRef.current = null;
+  }, []);
+
+  const openBubbleContextMenu = useCallback((msgId: string, clientX: number, clientY: number) => {
+    const menuWidth = 244;
+    const menuHeight = 216;
+    const vw = typeof window !== "undefined" ? window.innerWidth : 390;
+    const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+    const clampedX = Math.max(12, Math.min(clientX, vw - menuWidth - 12));
+    const clampedY = Math.max(56, Math.min(clientY, vh - menuHeight - 84));
+    setBubbleContextMenu({ msgId, x: clampedX, y: clampedY });
+    try {
+      navigator.vibrate?.(15);
+    } catch {
+      // ignore if unsupported
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!bubbleContextMenu) return;
+    const handlePointerDownOutside = (e: PointerEvent) => {
+      if (
+        bubbleContextMenuRef.current &&
+        !bubbleContextMenuRef.current.contains(e.target as Node)
+      ) {
+        setBubbleContextMenu(null);
+      }
+    };
+    const handleKeyDownEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setBubbleContextMenu(null);
+      }
+    };
+    window.addEventListener("pointerdown", handlePointerDownOutside);
+    window.addEventListener("keydown", handleKeyDownEscape);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDownOutside);
+      window.removeEventListener("keydown", handleKeyDownEscape);
+    };
+  }, [bubbleContextMenu]);
+
+  useEffect(() => {
+    return () => {
+      clearBubbleLongPress();
+    };
+  }, [clearBubbleLongPress]);
 
   const handleToggleDocLibraryContext = useCallback(() => {
     setAllowDocLibraryContext((prev) => {
@@ -1206,6 +1285,7 @@ export const ChatTab: React.FC = () => {
   }, [isContextPreviewOpen]);
 
   const [isAutoScrollPinned, setIsAutoScrollPinned] = useState<boolean>(true);
+  const [unreadBelowCount, setUnreadBelowCount] = useState<number>(0);
 
   // Ordered stack of user-uploaded/scanned or explicitly attached documents
   const processedThumbnailDocs = useMemo(() => {
@@ -1474,6 +1554,9 @@ export const ChatTab: React.FC = () => {
         conversationBreadcrumbs[conversationBreadcrumbs.length - 1]?.id === stage.id;
       isAutoScrollPinnedRef.current = isLastStage;
       setIsAutoScrollPinned(isLastStage);
+      if (isLastStage) {
+        setUnreadBelowCount(0);
+      }
 
       // Auto-expand collapsed 5-minute cluster if target message lives inside one
       let expandedCollapsedGroup = false;
@@ -1985,9 +2068,14 @@ export const ChatTab: React.FC = () => {
   const activeMessageRef = useRef<HTMLDivElement | null>(null);
   const isAutoScrollPinnedRef = useRef<boolean>(true);
   const isProgrammaticScrollRef = useRef<boolean>(false);
+  const lastScrollTopRef = useRef<number>(0);
+  const touchStartYRef = useRef<number | null>(null);
   const programmaticScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRafRef = useRef<number | null>(null);
   const prevMsgCountRef = useRef<number>(chatMessages.length);
+  const prevLastMsgIdRef = useRef<string | null>(
+    chatMessages[chatMessages.length - 1]?.id ?? null
+  );
   const prevSpeakingMsgIdRef = useRef<string | null>(null);
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -2137,31 +2225,100 @@ export const ChatTab: React.FC = () => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const distanceFromBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight;
+    const currentScrollTop = container.scrollTop;
+    const prevScrollTop = lastScrollTopRef.current;
+    lastScrollTopRef.current = currentScrollTop;
 
-    // Ignore scroll events triggered by our own programmatic auto-scroller unless already at bottom
-    if (isProgrammaticScrollRef.current) {
-      if (distanceFromBottom <= 80 && !isAutoScrollPinnedRef.current) {
-        isAutoScrollPinnedRef.current = true;
-        setIsAutoScrollPinned(true);
+    const distanceFromBottom =
+      container.scrollHeight - currentScrollTop - container.clientHeight;
+
+    // Detect explicit upward scroll delta by the user (even if a streaming/speech programmatic scroll was recently active)
+    const scrolledUpward = currentScrollTop < prevScrollTop - 4;
+    if (scrolledUpward && distanceFromBottom > 48) {
+      if (scrollRafRef.current) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
+      }
+      isProgrammaticScrollRef.current = false;
+      if (isAutoScrollPinnedRef.current) {
+        isAutoScrollPinnedRef.current = false;
+        setIsAutoScrollPinned(false);
       }
       return;
     }
 
-    const shouldPin = distanceFromBottom <= 96;
+    // Ignore downward scroll events triggered by our own programmatic auto-scroller unless already at bottom
+    if (isProgrammaticScrollRef.current) {
+      if (distanceFromBottom <= 72 && !isAutoScrollPinnedRef.current) {
+        isAutoScrollPinnedRef.current = true;
+        setIsAutoScrollPinned(true);
+        setUnreadBelowCount(0);
+      }
+      return;
+    }
+
+    const shouldPin = distanceFromBottom <= 88;
     if (shouldPin !== isAutoScrollPinnedRef.current) {
       isAutoScrollPinnedRef.current = shouldPin;
       setIsAutoScrollPinned(shouldPin);
+      if (shouldPin) {
+        setUnreadBelowCount(0);
+      }
     }
   }, []);
 
-  // Smooth, non-canceling auto-scroll helper that follows both high-frequency streaming/speech ticks and discrete layout transitions
+  // Immediate manual override when the user scrolls up with mouse wheel / trackpad
+  const handleUserWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (e.deltaY < -2) {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+      if (scrollRafRef.current) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
+      }
+      isProgrammaticScrollRef.current = false;
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight;
+      if (distanceFromBottom > 16 || container.scrollTop > 0) {
+        isAutoScrollPinnedRef.current = false;
+        setIsAutoScrollPinned(false);
+      }
+    }
+  }, []);
+
+  // Immediate manual override when the user drags downward (scrolling up to older messages) on touch screens
+  const handleUserTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length > 0) {
+      touchStartYRef.current = e.touches[0].clientY;
+    }
+  }, []);
+
+  const handleUserTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartYRef.current === null || e.touches.length === 0) return;
+    const deltaY = e.touches[0].clientY - touchStartYRef.current;
+    // Finger moving down (deltaY > 10) scrolls the chat viewport up toward earlier history
+    if (deltaY > 10) {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+      if (scrollRafRef.current) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
+      }
+      isProgrammaticScrollRef.current = false;
+      if (container.scrollTop > 0 && isAutoScrollPinnedRef.current) {
+        isAutoScrollPinnedRef.current = false;
+        setIsAutoScrollPinned(false);
+      }
+    }
+  }, []);
+
+  // Smooth, non-canceling auto-scroll helper that anchors to the latest message and follows streaming/speech ticks when pinned
   const scrollToActiveStreamOrBottom = useCallback(
     (mode: "follow" | "smooth" = "follow", forcePin: boolean = false) => {
       if (forcePin) {
         isAutoScrollPinnedRef.current = true;
         setIsAutoScrollPinned(true);
+        setUnreadBelowCount(0);
       }
 
       if (!isAutoScrollPinnedRef.current && !forcePin) {
@@ -2208,7 +2365,7 @@ export const ChatTab: React.FC = () => {
           const delta = targetTop - container.scrollTop;
 
           if (delta > 1) {
-            if (mode === "smooth" && delta < 900) {
+            if (mode === "smooth") {
               container.scrollTo({ top: targetTop, behavior: "smooth" });
             } else {
               // During 20Hz speech-synchronized text reveal & streaming chunks, smoothly advance scrollTop without resetting browser smooth-scroll velocity
@@ -2216,35 +2373,60 @@ export const ChatTab: React.FC = () => {
               container.scrollTop = container.scrollTop + step;
             }
           }
+          lastScrollTopRef.current = container.scrollTop;
         }
 
         programmaticScrollTimeoutRef.current = setTimeout(() => {
           isProgrammaticScrollRef.current = false;
-        }, mode === "smooth" ? 320 : 80);
+          if (scrollContainerRef.current) {
+            lastScrollTopRef.current = scrollContainerRef.current.scrollTop;
+          }
+        }, mode === "smooth" ? 360 : 80);
       });
     },
     [chatMessages, speakingMsgId]
   );
 
-  // Re-pin & smoothly scroll when a new message is added or when a message begins speaking / finishes into an envelope
+  // Smoothly anchor when a new message arrives (unless the user manually scrolled up to review history)
   useEffect(() => {
-    const msgCountChanged = chatMessages.length !== prevMsgCountRef.current;
+    const lastMsg = chatMessages[chatMessages.length - 1];
+    const lastMsgId = lastMsg?.id ?? null;
+    const msgCountIncreased = chatMessages.length > prevMsgCountRef.current;
+    const newLastMsgArrived =
+      msgCountIncreased || (lastMsgId !== null && lastMsgId !== prevLastMsgIdRef.current);
     const speakingChanged = speakingMsgId !== prevSpeakingMsgIdRef.current;
+
     prevMsgCountRef.current = chatMessages.length;
+    prevLastMsgIdRef.current = lastMsgId;
     prevSpeakingMsgIdRef.current = speakingMsgId;
 
-    if (msgCountChanged) {
-      scrollToActiveStreamOrBottom("smooth", true);
+    if (newLastMsgArrived) {
+      const isUserSentMessage =
+        lastMsg?.role === "user" && !lastMsg?.isSystemBroadcast;
+      const isConversationReset = chatMessages.length <= 1;
+
+      if (isUserSentMessage || isConversationReset) {
+        // User just sent a message or reset the chat: always re-pin and smoothly anchor to bottom
+        scrollToActiveStreamOrBottom("smooth", true);
+      } else if (isAutoScrollPinnedRef.current) {
+        // User is anchored at the bottom: smoothly scroll to the newly arrived message
+        scrollToActiveStreamOrBottom("smooth", false);
+      } else {
+        // User manually scrolled up to review previous messages: respect their override and surface unread indicator
+        setUnreadBelowCount((prev) => prev + 1);
+      }
       return;
     }
 
     if (speakingChanged) {
-      // When speech starts on a message or finishes (revealing the English statutory letter envelope), keep view aligned
-      scrollToActiveStreamOrBottom("smooth", isAutoScrollPinnedRef.current);
+      // When speech starts on a message or finishes (revealing the English statutory letter envelope), keep view aligned if pinned
+      if (isAutoScrollPinnedRef.current) {
+        scrollToActiveStreamOrBottom("smooth", false);
+      }
       return;
     }
 
-    // High-frequency streaming chunks or speech-paced character reveal
+    // High-frequency streaming chunks or speech-paced character reveal (only scrolls if isAutoScrollPinnedRef.current is true)
     scrollToActiveStreamOrBottom("follow", false);
   }, [chatMessages, isChatLoading, revealedCharsById, speakingMsgId, scrollToActiveStreamOrBottom]);
 
@@ -5129,6 +5311,9 @@ export const ChatTab: React.FC = () => {
         <div
           ref={scrollContainerRef}
           onScroll={handleScrollContainer}
+          onWheel={handleUserWheel}
+          onTouchStart={handleUserTouchStart}
+          onTouchMove={handleUserTouchMove}
           className="chat-messages-scroll flex-1 min-h-0 overflow-y-auto pr-1"
         >
           <div ref={messagesContentRef} className="space-y-3.5 pb-3">
@@ -5139,27 +5324,41 @@ export const ChatTab: React.FC = () => {
               isGroupedInsideCard: boolean
             ) => {
               if (msg.id === "msg_init") {
+                const initPeekSide = getBotBubblePeekSide(msg.id);
+                const initMarginClass =
+                  initPeekSide === "left"
+                    ? "ml-6 sm:ml-7 mr-1"
+                    : "mr-6 sm:mr-7 ml-1";
+                const initPaddingClass =
+                  initPeekSide === "left"
+                    ? "pl-6 sm:pl-7 pr-4 sm:pr-5 py-4"
+                    : "pl-4 sm:pl-5 pr-6 sm:pr-7 py-4";
+
                 return (
                   <div
                     key={msg.id}
                     ref={(el) => {
                       messageRefsMap.current[msg.id] = el;
                     }}
-                    className="rounded-2xl bg-[#131B2E] border border-white/10 p-4 sm:p-5 shadow-md"
+                    className={`chat-bubble-elon relative overflow-visible rounded-2xl shadow-xs ${initMarginClass} ${initPaddingClass}`}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#0B2038] border border-[#38B28B]/35 flex items-center justify-center shrink-0">
+                    <ElonPeekingBubbleGrip side={initPeekSide} activityState={robotState} />
+                    <div className="relative z-10 flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[var(--bg-header-accent)] border border-[var(--accent-green)]/35 flex items-center justify-center shrink-0">
                         <AskElonShieldLogo className="w-8 h-8" activityState={robotState} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h2 className="text-sm sm:text-base font-extrabold text-white tracking-tight leading-snug">
-                          {locale === "pl"
-                            ? "Ask Elon — Asystent Prawa Pracy w UK"
-                            : locale === "ro"
-                            ? "Ask Elon — Asistent Dreptul Muncii în UK"
-                            : "Ask Elon — UK Employment Rights Chat"}
-                        </h2>
-                        <p className="text-xs sm:text-sm text-[#CBD5E1] leading-relaxed mt-1.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h2 className="text-sm sm:text-base font-extrabold text-[var(--text-primary)] tracking-tight leading-snug">
+                            {locale === "pl"
+                              ? "Rozmowa z Elonem — Prawa Pracy w UK"
+                              : locale === "ro"
+                              ? "Conversație cu Elon — Dreptul Muncii în UK"
+                              : "Chat with Elon — UK Employment Rights"}
+                          </h2>
+                          <span className="badge-demo-pill">DEMO</span>
+                        </div>
+                        <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed mt-1.5">
                           {locale === "pl"
                             ? "Opisz swoją sytuację w pracy (brak wypłaty, nadgodziny, chorobowe SSP, wypowiedzenie) albo załącz payslip. Wyjaśnię Twoje prawa w UK (ACAS / ERA 1996) i od razu przygotuję oficjalne pismo po angielsku."
                             : locale === "ro"
@@ -5214,32 +5413,60 @@ export const ChatTab: React.FC = () => {
                 ? buildPersonalizedEnglishLetterForChat(prevUserMsg, msg.text, user)
                 : null;
 
+              const botPeekSide: PeekEdgeSide | null = isAI ? getBotBubblePeekSide(msg.id) : null;
+              const botActivityState = isAI
+                ? isCurrentSpeaking && !isSpeechPaused
+                  ? "speaking"
+                  : isActivelyStreaming
+                  ? "thinking"
+                  : idx === chatMessages.length - 1 &&
+                    (robotState === "typing" ||
+                      robotState === "listening" ||
+                      robotState === "happy" ||
+                      robotState === "concerned")
+                  ? robotState
+                  : analyzeAiResponseSentiment(msg.text, prevUserMsg) || "idle"
+                : "idle";
+
+              const botSidePaddingClass = isAI
+                ? botPeekSide === "left"
+                  ? "pl-6 sm:pl-7 pr-4 py-3.5"
+                  : "pl-4 pr-6 sm:pr-7 py-3.5"
+                : "px-4 py-3.5";
+
+              const botOuterMarginClass =
+                isAI && !isGroupedInsideCard
+                  ? botPeekSide === "left"
+                    ? "ml-6 sm:ml-7 mr-1"
+                    : "mr-6 sm:mr-7 ml-1"
+                  : "";
+
               const bubbleClassName = isGroupedInsideCard
-                ? `w-full px-3.5 sm:px-4 py-3 transition-colors duration-200 ${
+                ? `relative overflow-visible w-full ${botSidePaddingClass} transition-colors duration-200 ${
                     isAI
                       ? isCurrentSpeaking
                         ? isSpeechPaused
-                          ? "bg-[#112C4A]/70 border-l-2 border-l-[#38B28B] text-[#F1F5F9]"
-                          : "bg-[#123258]/75 border-l-2 border-l-[#D97724] text-[#F1F5F9]"
-                        : "text-[#F1F5F9]"
+                          ? "chat-bubble-elon !rounded-none border-l-2 !border-l-[var(--accent-green)]"
+                          : "chat-bubble-elon !rounded-none border-l-2 !border-l-[var(--accent-orange)]"
+                        : "chat-bubble-elon !rounded-none !border-0"
                       : isQueued
-                      ? "bg-[#143A66]/35 border-l-2 border-l-[#D97724]/70 text-white"
-                      : "bg-[#143A66]/30 border-l-2 border-l-[#38B28B]/60 text-white"
+                      ? "chat-bubble-user !rounded-none border-l-2 !border-l-[var(--accent-orange)]"
+                      : "chat-bubble-user !rounded-none border-l-2 !border-l-[var(--accent-green)]"
                   }`
                 : `${
-                    isAI ? "w-full sm:max-w-[97%]" : "max-w-[92%] sm:max-w-[85%]"
-                  } rounded-2xl px-4 py-3 shadow-md transition-all duration-300 ${
+                    isAI ? "w-[calc(100%-2rem)] sm:max-w-[92%]" : "max-w-[92%] sm:max-w-[85%]"
+                  } ${botOuterMarginClass} ${botSidePaddingClass} rounded-2xl transition-all duration-300 ${
                     msg.isSystemBroadcast
-                      ? "bg-gradient-to-r from-[#2B1608] via-[#122C4A] to-[#131B2E] border-2 border-[#D97724]/70 text-[#F1F5F9]"
+                      ? "bg-gradient-to-r from-[#2B1608] via-[#1E2732] to-[#141B23] border-2 border-[var(--accent-orange)]/70 text-[var(--text-primary)]"
                       : isAI
                       ? isCurrentSpeaking
                         ? isSpeechPaused
-                          ? "bg-[#112C4A] border-2 border-[#38B28B]/80 text-[#F1F5F9] shadow-[0_0_20px_rgba(46,229,157,0.2)]"
-                          : "bg-[#123258] border-2 border-[#D97724] text-[#F1F5F9] glow-orange"
-                        : "bg-[#131B2E] border border-white/10 text-[#F1F5F9]"
+                          ? "chat-bubble-elon !border-2 !border-[var(--accent-green)] shadow-[0_0_20px_rgba(82,183,152,0.2)]"
+                          : "chat-bubble-elon !border-2 !border-[var(--accent-orange)] glow-orange"
+                        : "chat-bubble-elon"
                       : isQueued
-                      ? "bg-[#143A66]/80 border border-[#D97724]/50 text-white rounded-tr-none"
-                      : "bg-[#143A66] border border-[#38B28B]/20 text-white rounded-tr-none"
+                      ? "chat-bubble-user !border-[var(--accent-orange)]/60"
+                      : "chat-bubble-user"
                   }`;
 
               return (
@@ -5255,42 +5482,115 @@ export const ChatTab: React.FC = () => {
                     isGroupedInsideCard ? "items-stretch" : isAI ? "items-start" : "items-end"
                   } gap-2.5 ${
                     highlightedStageTargetKey === msg.id
-                      ? "rounded-2xl ring-2 ring-[#38B28B] ring-offset-2 ring-offset-[#0B0F17] transition-shadow duration-300"
+                      ? "rounded-2xl ring-2 ring-[var(--accent-green)] ring-offset-2 ring-offset-[var(--bg-main)] transition-shadow duration-300"
                       : ""
                   }`}
                 >
-                  <div className={bubbleClassName}>
+                  <div
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      clearBubbleLongPress();
+                      openBubbleContextMenu(msg.id, e.clientX, e.clientY);
+                    }}
+                    onPointerDown={(e) => {
+                      if (e.button === 2) return;
+                      const targetEl = e.target as HTMLElement | null;
+                      if (targetEl?.closest("button, a, input, textarea")) return;
+                      clearBubbleLongPress();
+                      const startX = e.clientX;
+                      const startY = e.clientY;
+                      bubbleLongPressStartRef.current = { x: startX, y: startY };
+                      bubbleLongPressTimerRef.current = setTimeout(() => {
+                        bubbleLongPressTimerRef.current = null;
+                        openBubbleContextMenu(msg.id, startX, startY);
+                      }, 430);
+                    }}
+                    onPointerMove={(e) => {
+                      if (!bubbleLongPressStartRef.current || !bubbleLongPressTimerRef.current) {
+                        return;
+                      }
+                      const dx = e.clientX - bubbleLongPressStartRef.current.x;
+                      const dy = e.clientY - bubbleLongPressStartRef.current.y;
+                      if (dx * dx + dy * dy > 100) {
+                        clearBubbleLongPress();
+                      }
+                    }}
+                    onPointerUp={clearBubbleLongPress}
+                    onPointerCancel={clearBubbleLongPress}
+                    onPointerLeave={clearBubbleLongPress}
+                    className={`${bubbleClassName} ${
+                      bubbleContextMenu?.msgId === msg.id
+                        ? "ring-2 ring-[var(--accent-green)] ring-offset-1 ring-offset-[var(--bg-main)]"
+                        : ""
+                    }`}
+                  >
+                    {/* Conditional Left/Right Peeking Robot Head + Metallic Fingers Gripping the Bubble Edge */}
+                    {isAI && botPeekSide && (
+                      <ElonPeekingBubbleGrip
+                        side={botPeekSide}
+                        activityState={botActivityState}
+                      />
+                    )}
+
                     {/* Header inside bubble */}
-                    <div className="flex items-center justify-between gap-3 mb-1.5 text-[11px] text-[#94A3B8]">
+                    <div className="relative z-10 flex items-center justify-between gap-3 mb-1.5 text-[11px] text-[var(--text-secondary)]">
                       <div className="flex items-center gap-2 flex-wrap">
                         {msg.isSystemBroadcast ? (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#D97724]/20 border border-[#D97724]/50 text-[#D97724] font-extrabold text-[10px] uppercase tracking-wider">
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--accent-orange)]/20 border border-[var(--accent-orange)]/50 text-[var(--accent-orange)] font-extrabold text-[10px] uppercase tracking-wider">
                             <ShieldCheck className="w-3.5 h-3.5" />
                             <span>{msg.senderLabel || "ADMIN HUB · KOMUNIKAT SYSTEMOWY"}</span>
                           </span>
                         ) : isAI ? (
-                          <span className="inline-flex items-center gap-1.5 font-bold text-[#38B28B]">
+                          <span className="inline-flex items-center gap-1.5 font-bold text-[var(--accent-green)]">
                             <AskElonShieldLogo
                               className="w-6 h-6 shrink-0"
-                              activityState={
-                                isCurrentSpeaking && !isSpeechPaused
-                                  ? "speaking"
-                                  : isActivelyStreaming
-                                  ? "thinking"
-                                  : idx === chatMessages.length - 1 &&
-                                    (robotState === "typing" ||
-                                      robotState === "listening" ||
-                                      robotState === "happy" ||
-                                      robotState === "concerned")
-                                  ? robotState
-                                  : analyzeAiResponseSentiment(msg.text, prevUserMsg) || "idle"
-                              }
+                              activityState={botActivityState}
                             />
                             <span>Elon</span>
                           </span>
                         ) : (
-                          <span className="font-semibold text-[#38B28B]">
-                            {user.fullName || "Ty"}
+                          <span className="font-bold text-[var(--accent-green)]">
+                            {user.fullName ? user.fullName.split(" ")[0] : "Marek"}
+                          </span>
+                        )}
+
+                        {msg.pinnedToCaseId && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveCaseId(msg.pinnedToCaseId!);
+                              setActiveTab("cases");
+                            }}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[var(--accent-green)]/15 hover:bg-[var(--accent-green)]/25 border border-[var(--accent-green)]/40 text-[10px] font-bold text-[var(--accent-green)] transition-colors cursor-pointer"
+                            title={
+                              locale === "pl"
+                                ? "Otwórz przypięty element w zakładce Sprawy"
+                                : "Open pinned item in Cases workspace"
+                            }
+                          >
+                            <Pin className="w-2.5 h-2.5 shrink-0" aria-hidden="true" />
+                            <span>
+                              {locale === "pl"
+                                ? "Przypięto do sprawy"
+                                : locale === "ro"
+                                ? "Fixat la caz"
+                                : "Pinned to Case"}
+                            </span>
+                          </button>
+                        )}
+
+                        {msg.flaggedAsIncorrect && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#D97724]/20 border border-[#D97724]/50 text-[10px] font-bold text-[#FBBF24]">
+                            <Flag className="w-2.5 h-2.5 shrink-0" aria-hidden="true" />
+                            <span>
+                              {locale === "pl"
+                                ? "Zgłoszono błąd"
+                                : locale === "ro"
+                                ? "Marcat incorect"
+                                : "Flagged as incorrect"}
+                            </span>
                           </span>
                         )}
 
@@ -5323,15 +5623,37 @@ export const ChatTab: React.FC = () => {
                         )}
                       </div>
 
-                      <span className="font-mono tabular-nums shrink-0">{msg.timestamp}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="font-mono tabular-nums">{msg.timestamp}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            openBubbleContextMenu(msg.id, rect.left - 180, rect.bottom + 4);
+                          }}
+                          aria-haspopup="menu"
+                          aria-expanded={bubbleContextMenu?.msgId === msg.id}
+                          aria-label={
+                            locale === "pl"
+                              ? "Opcje wiadomości (przytrzymaj lub prawy klik)"
+                              : locale === "ro"
+                              ? "Opțiuni mesaj"
+                              : "Message options"
+                          }
+                          className="p-1 rounded-md text-[#94A3B8]/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                        >
+                          <MoreHorizontal className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Message Body synchronized with Elon's speech (strictly in user's native language) */}
-                    <div className="text-sm leading-relaxed whitespace-pre-wrap font-normal">
+                    <div className="relative z-10 text-body text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap font-normal text-[var(--text-primary)]">
                       {displayedText}
                       {(isActivelyStreaming || (isCurrentSpeaking && !isSpeechPaused && isProgressiveRevealing)) && (
                         <span
-                          className="inline-block w-1.5 h-4 ml-1 align-middle bg-[#38B28B] animate-pulse"
+                          className="inline-block w-1.5 h-4 ml-1 align-middle bg-[var(--accent-green)] animate-pulse"
                           aria-hidden="true"
                         />
                       )}
@@ -5961,10 +6283,12 @@ export const ChatTab: React.FC = () => {
               return (
                 <div
                   key={group.id}
-                  className={`w-full sm:max-w-[97%] rounded-2xl bg-[#131B2E]/95 border shadow-md overflow-hidden transition-all duration-300 ${
+                  className={`${
+                    hasAiMsg ? "mx-6 sm:mx-7 w-[calc(100%-3rem)] sm:w-[calc(100%-3.5rem)]" : "w-full sm:max-w-[97%]"
+                  } rounded-2xl bg-[var(--bg-surface)] border shadow-xs overflow-visible transition-all duration-300 ${
                     hasActiveChild
-                      ? "border-[#D97724]/55 shadow-[0_0_20px_rgba(217,119,36,0.12)]"
-                      : "border-white/10"
+                      ? "border-[var(--accent-orange)]/60 shadow-[0_0_20px_rgba(245,158,66,0.12)]"
+                      : "border-[var(--border-color)]"
                   }`}
                 >
                   {/* Unified 5-Minute Cluster Header Bar */}
@@ -6145,7 +6469,7 @@ export const ChatTab: React.FC = () => {
           </div>
         </div>
 
-        {/* Floating Follow-Stream & Active Audio Indicator Bar (Appears if user scrolls up during streaming/speech or above composer) */}
+        {/* Floating Follow-Stream & Auto-Scroll Override Pill (Appears when user manually scrolls up to review history or during active speech/stream) */}
         {(!isAutoScrollPinned || (speakingMsgId && isChatLoading)) && (
           <div className="shrink-0 flex items-center justify-center py-1 z-20">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#123258]/95 border border-[#D97724]/60 shadow-[0_6px_20px_rgba(0,0,0,0.5)] backdrop-blur-md">
@@ -6177,19 +6501,39 @@ export const ChatTab: React.FC = () => {
                 type="button"
                 onClick={() => scrollToActiveStreamOrBottom("smooth", true)}
                 className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#38B28B] hover:text-white transition-colors cursor-pointer"
-              >
-                <span>
-                  {isChatLoading || speakingMsgId
-                    ? locale === "pl"
-                      ? "Podążaj za odpowiedzią Elona"
-                      : locale === "ro"
-                      ? "Urmărește răspunsul lui Elon"
-                      : "Follow Elon's live response"
-                    : locale === "pl"
-                    ? "Przewiń na dół"
+                aria-label={
+                  locale === "pl"
+                    ? "Przewiń płynnie do najnowszej wiadomości"
                     : locale === "ro"
-                    ? "Derulează în jos"
-                    : "Scroll to bottom"}
+                    ? "Derulează la ultimul mesaj"
+                    : "Smoothly scroll to latest message"
+                }
+              >
+                {unreadBelowCount > 0 && (
+                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-[#D97724] text-[#0B0F17] font-mono text-[10px] font-extrabold leading-none">
+                    {unreadBelowCount}
+                  </span>
+                )}
+                <span>
+                  {unreadBelowCount > 0
+                    ? locale === "pl"
+                      ? unreadBelowCount === 1
+                        ? "Nowa wiadomość · Przewiń na dół"
+                        : `Nowe wiadomości (${unreadBelowCount}) · Przewiń na dół`
+                      : locale === "ro"
+                      ? `Mesaj nou (${unreadBelowCount}) · Derulează în jos`
+                      : `New message (${unreadBelowCount}) · Jump to latest`
+                    : isChatLoading || speakingMsgId
+                    ? locale === "pl"
+                      ? "Wstrzymano auto-przewijanie · Podążaj za Elonem"
+                      : locale === "ro"
+                      ? "Auto-scroll oprit · Urmărește răspunsul"
+                      : "Auto-scroll paused · Follow Elon's response"
+                    : locale === "pl"
+                    ? "Przeglądasz historię · Przewiń do najnowszej"
+                    : locale === "ro"
+                    ? "Istoric · Derulează la ultimul mesaj"
+                    : "Reviewing history · Jump to latest"}
                 </span>
                 <ChevronDown className="w-4 h-4 text-[#D97724] animate-bounce" />
               </button>
@@ -7991,6 +8335,199 @@ export const ChatTab: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Floating Chat Bubble Context Menu (Long-Press or Right-Click on any Chat Bubble) */}
+      {bubbleContextMenu && (() => {
+        const targetMsg = chatMessages.find((m) => m.id === bubbleContextMenu.msgId);
+        if (!targetMsg) return null;
+        const cleanCopyText =
+          targetMsg.role === "assistant"
+            ? stripEmbeddedEnglishLetter(targetMsg.text).trim()
+            : targetMsg.text.trim();
+        const isFlagged = Boolean(targetMsg.flaggedAsIncorrect);
+        const associatedCase =
+          (targetMsg.pinnedToCaseId && cases.find((c) => c.id === targetMsg.pinnedToCaseId)) ||
+          (targetMsg.threadId && cases.find((c) => c.id === targetMsg.threadId)) ||
+          (activeCaseId && cases.find((c) => c.id === activeCaseId)) ||
+          cases.find((c) => c.status === "open") ||
+          cases[0];
+
+        return (
+          <div
+            ref={bubbleContextMenuRef}
+            role="menu"
+            aria-label={
+              locale === "pl"
+                ? "Menu kontekstowe wiadomości"
+                : locale === "ro"
+                ? "Meniu contextual mesaj"
+                : "Message context menu"
+            }
+            style={{
+              left: `${bubbleContextMenu.x}px`,
+              top: `${bubbleContextMenu.y}px`,
+            }}
+            className="fixed z-50 w-[244px] rounded-2xl bg-[#131B2E]/98 backdrop-blur-xl border border-[#38B28B]/45 shadow-[0_18px_40px_rgba(0,0,0,0.65)] p-1.5 select-none"
+          >
+            <div className="px-2.5 py-1.5 border-b border-white/10 flex items-center justify-between gap-2 text-[10px] font-bold text-[#94A3B8]">
+              <span className="truncate">
+                {targetMsg.role === "assistant"
+                  ? "Elon · AI"
+                  : user.fullName || (locale === "pl" ? "Twoja wiadomość" : "Your message")}
+              </span>
+              <span className="font-mono tabular-nums shrink-0">{targetMsg.timestamp}</span>
+            </div>
+
+            <div className="py-1 flex flex-col gap-0.5">
+              {/* 1. Copy Text */}
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  navigator.clipboard?.writeText(cleanCopyText);
+                  setBubbleContextMenu(null);
+                  showToast(
+                    locale === "pl"
+                      ? "Skopiowano tekst wiadomości do schowka."
+                      : locale === "ro"
+                      ? "Textul mesajului a fost copiat."
+                      : "Copied message text to clipboard."
+                  );
+                }}
+                className="w-full px-2.5 py-2 rounded-xl hover:bg-white/10 text-left text-xs font-semibold text-[#F1F5F9] flex items-center gap-2.5 transition-colors cursor-pointer"
+              >
+                <Copy className="w-3.5 h-3.5 text-[#38B28B] shrink-0" aria-hidden="true" />
+                <span>
+                  {locale === "pl"
+                    ? "Kopiuj tekst"
+                    : locale === "ro"
+                    ? "Copiază textul"
+                    : "Copy text"}
+                </span>
+              </button>
+
+              {/* 2. Pin to Case */}
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  const pinnedCase = pinChatMessageToCase(targetMsg.id);
+                  setBubbleContextMenu(null);
+                  if (pinnedCase) {
+                    triggerRobotReaction("success", 1500);
+                    showToast(
+                      locale === "pl"
+                        ? `Przypięto wiadomość do sprawy: „${pinnedCase.title.slice(0, 42)}${
+                            pinnedCase.title.length > 42 ? "…" : ""
+                          }” (sekcja Pinned Items)`
+                        : locale === "ro"
+                        ? `Mesaj fixat la cazul: „${pinnedCase.title.slice(0, 42)}”`
+                        : `Pinned message to case: "${pinnedCase.title.slice(0, 42)}" (Pinned Items)`
+                    );
+                  }
+                }}
+                className="w-full px-2.5 py-2 rounded-xl hover:bg-[#38B28B]/15 text-left text-xs font-semibold text-[#F1F5F9] flex items-start gap-2.5 transition-colors cursor-pointer"
+              >
+                <Pin className="w-3.5 h-3.5 text-[#38B28B] shrink-0 mt-0.5" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <div className="leading-snug">
+                    {targetMsg.pinnedToCaseId
+                      ? locale === "pl"
+                        ? "Aktualizuj przypięcie w sprawie (Pin to Case)"
+                        : locale === "ro"
+                        ? "Actualizează în caz (Pin to Case)"
+                        : "Update in Case (Pin to Case)"
+                      : locale === "pl"
+                      ? "Przypnij do sprawy (Pin to Case)"
+                      : locale === "ro"
+                      ? "Fixează la caz (Pin to Case)"
+                      : "Pin to Case"}
+                  </div>
+                  {associatedCase && (
+                    <div className="text-[10px] font-normal text-[#94A3B8] truncate mt-0.5">
+                      → {associatedCase.title}
+                    </div>
+                  )}
+                </div>
+              </button>
+
+              {/* 3. Flag as Incorrect */}
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  const nowFlagged = toggleFlagChatMessage(targetMsg.id);
+                  setBubbleContextMenu(null);
+                  triggerRobotReaction(nowFlagged ? "concerned" : "happy", 1200);
+                  showToast(
+                    nowFlagged
+                      ? locale === "pl"
+                        ? "Wiadomość oznaczona jako niepoprawna (Flagged as incorrect)."
+                        : locale === "ro"
+                        ? "Mesaj marcat ca incorect."
+                        : "Message flagged as incorrect."
+                      : locale === "pl"
+                      ? "Usunięto oznaczenie błędu z wiadomości."
+                      : locale === "ro"
+                      ? "Marcajul de eroare a fost eliminat."
+                      : "Removed incorrect flag from message."
+                  );
+                }}
+                className={`w-full px-2.5 py-2 rounded-xl hover:bg-[#D97724]/20 text-left text-xs font-semibold flex items-center gap-2.5 transition-colors cursor-pointer ${
+                  isFlagged ? "text-[#FBBF24]" : "text-[#F1F5F9]"
+                }`}
+              >
+                <Flag className="w-3.5 h-3.5 text-[#D97724] shrink-0" aria-hidden="true" />
+                <span>
+                  {isFlagged
+                    ? locale === "pl"
+                      ? "Cofnij zgłoszenie błędu"
+                      : locale === "ro"
+                      ? "Anulează marcajul incorect"
+                      : "Unflag as incorrect"
+                    : locale === "pl"
+                    ? "Zgłoś jako niepoprawne"
+                    : locale === "ro"
+                    ? "Marchează ca incorect"
+                    : "Flag as incorrect"}
+                </span>
+              </button>
+
+              <div className="my-0.5 border-t border-white/10" />
+
+              {/* 3. Delete Message */}
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  if (speakingMsgId === targetMsg.id) {
+                    handleStopSpeech();
+                  }
+                  deleteChatMessage(targetMsg.id);
+                  setBubbleContextMenu(null);
+                  showToast(
+                    locale === "pl"
+                      ? "Usunięto wiadomość z czatu."
+                      : locale === "ro"
+                      ? "Mesajul a fost șters din conversație."
+                      : "Message deleted from chat."
+                  );
+                }}
+                className="w-full px-2.5 py-2 rounded-xl hover:bg-[#EF4444]/20 text-left text-xs font-semibold text-[#F87171] flex items-center gap-2.5 transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-[#EF4444] shrink-0" aria-hidden="true" />
+                <span>
+                  {locale === "pl"
+                    ? "Usuń wiadomość"
+                    : locale === "ro"
+                    ? "Șterge mesajul"
+                    : "Delete message"}
+                </span>
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Camera Scanner Modal for Quick Chat Document Upload */}
       <CameraScannerModal
