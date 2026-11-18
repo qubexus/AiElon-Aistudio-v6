@@ -28,6 +28,12 @@ function RootNavigator() {
         }}
       >
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="chat"
+          options={{ animation: "slide_from_bottom", presentation: "fullScreenModal" }}
+        />
+        <Stack.Screen name="glossary" />
+        <Stack.Screen name="search" />
         <Stack.Screen name="case/[id]" />
         <Stack.Screen name="template/[id]" />
         <Stack.Screen

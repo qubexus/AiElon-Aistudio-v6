@@ -111,7 +111,7 @@ export default function CaseDetailScreen() {
       .replace("{description}", item.description)
       .replace("{employer}", item.employer || t("cases.unknownEmployer"))
       .replace("{sector}", sectorLabel(t, item.sector));
-    router.push({ pathname: "/(tabs)", params: { prompt } });
+    router.push({ pathname: "/chat", params: { prompt, caseId: item.id } });
   };
 
   /** Persist a batch of picked files against this case. */
