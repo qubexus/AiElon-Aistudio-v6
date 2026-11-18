@@ -10,6 +10,7 @@ import {
 } from "../types";
 import { classifySentLetter, renderTemplateLetter } from "../data/legalTemplates";
 import { AskElonShieldLogo } from "./AskElonShieldLogo";
+import { downloadLetterAsPDF } from "../utils/pdfGenerator";
 import {
   X,
   Menu,
@@ -48,6 +49,11 @@ import {
   WifiOff,
   RefreshCw,
   CheckCircle2,
+  ArrowUpDown,
+  ArrowDownWideNarrow,
+  ArrowUpNarrowWide,
+  FileDown,
+  Headphones,
 } from "lucide-react";
 
 type DrawerTabType = "menu" | "chat_history" | "notes" | "elon_letters";
@@ -63,6 +69,7 @@ type ElonTopicId =
   | "data_gdpr";
 
 type ElonShowcaseFilterType = "all" | "correspondence" | "templates";
+type ElonSortOrder = "newest" | "oldest";
 
 interface ElonShowcaseItem {
   id: string;
@@ -76,6 +83,7 @@ interface ElonShowcaseItem {
   recipient: string;
   content: string;
   templateId: string;
+  timestamp: number;
   rawLetter?: SentLetter;
   rawTemplate?: LegalTemplate;
 }
@@ -93,6 +101,8 @@ export const MenuDrawer: React.FC = () => {
     setLocale,
     setIsMessagesModalOpen,
     setIsPaywallModalOpen,
+    setIsVoicePreferencesModalOpen,
+    voiceConfig,
     broadcastMessages,
     recentUnsavedChats,
     activeUnsavedChatId,
@@ -128,6 +138,7 @@ export const MenuDrawer: React.FC = () => {
   const [selectedElonTopic, setSelectedElonTopic] = useState<ElonTopicId>("ALL");
   const [elonShowcaseFilter, setElonShowcaseFilter] =
     useState<ElonShowcaseFilterType>("all");
+  const [elonSortOrder, setElonSortOrder] = useState<ElonSortOrder>("newest");
   const [isSyncingQueueNow, setIsSyncingQueueNow] = useState(false);
 
   // Add Note Form State inside Drawer
@@ -158,7 +169,7 @@ export const MenuDrawer: React.FC = () => {
         labelEn: "All Topics",
         labelRo: "Toate subiectele",
         statuteBadge: "UK Employment Law",
-        icon: <Tag className="w-3.5 h-3.5 text-[#FF6A00]" />,
+        icon: <Tag className="w-3.5 h-3.5 text-[#D97724]" />,
       },
       {
         id: "holiday_contract",
@@ -182,7 +193,7 @@ export const MenuDrawer: React.FC = () => {
         labelEn: "HR Grievance & Safety",
         labelRo: "Plângeri HR (Grievance)",
         statuteBadge: "ACAS Code No. 1 · s.199 TULRCA 1992",
-        icon: <ShieldAlert className="w-3.5 h-3.5 text-[#FF6A00]" />,
+        icon: <ShieldAlert className="w-3.5 h-3.5 text-[#D97724]" />,
       },
       {
         id: "settlement",
@@ -190,7 +201,7 @@ export const MenuDrawer: React.FC = () => {
         labelEn: "Settlement Proposals",
         labelRo: "Acorduri Amiabile",
         statuteBadge: "Section 111A ERA 1996 · ACAS",
-        icon: <Scale className="w-3.5 h-3.5 text-[#2EE59D]" />,
+        icon: <Scale className="w-3.5 h-3.5 text-[#38B28B]" />,
       },
       {
         id: "sick_pay",
@@ -341,6 +352,15 @@ export const MenuDrawer: React.FC = () => {
         }
       }
 
+      const parsedIdTime = parseInt(letter.id.replace("sent_", ""), 10);
+      const parsedDate = letter.date ? new Date(letter.date).getTime() : NaN;
+      const timestamp =
+        !isNaN(parsedIdTime) && parsedIdTime > 1000000000000
+          ? parsedIdTime
+          : !isNaN(parsedDate)
+          ? parsedDate
+          : Date.now();
+
       return {
         id: letter.id,
         itemKind: "correspondence",
@@ -353,11 +373,12 @@ export const MenuDrawer: React.FC = () => {
         recipient: letter.recipient,
         content: letter.content,
         templateId: letter.templateId,
+        timestamp,
         rawLetter: letter,
       };
     });
 
-    const templateItems: ElonShowcaseItem[] = templates.map((tpl) => {
+    const templateItems: ElonShowcaseItem[] = templates.map((tpl, tplIndex) => {
       const prefilledContent = renderTemplateLetter(tpl, {}, user);
       let topicId: ElonTopicId = "grievance";
       let categoryLabel = "WZÓR PISMA • SKARGA HR";
@@ -392,6 +413,9 @@ export const MenuDrawer: React.FC = () => {
           ? tpl.titleRo
           : tpl.titleEn;
 
+      // Assign realistic statutory baseline timestamp for templates (before recent user correspondence)
+      const templateTimestamp = 1704067200000 - tplIndex * 86400000;
+
       return {
         id: `tpl_showcase_${tpl.id}`,
         itemKind: "template",
@@ -404,6 +428,7 @@ export const MenuDrawer: React.FC = () => {
         recipient: user.employerName || "UK Employer HR",
         content: prefilledContent,
         templateId: tpl.id,
+        timestamp: templateTimestamp,
         rawTemplate: tpl,
       };
     });
@@ -411,9 +436,9 @@ export const MenuDrawer: React.FC = () => {
     return [...correspondenceItems, ...templateItems];
   }, [sentLetters, templates, user, locale]);
 
-  // Filter items by selected showcase filter (all / correspondence / templates) and topic
+  // Filter items by selected showcase filter (all / correspondence / templates) and topic, then sort by elonSortOrder
   const filteredElonItems = useMemo(() => {
-    return allElonShowcaseItems.filter((item) => {
+    const filtered = allElonShowcaseItems.filter((item) => {
       if (elonShowcaseFilter === "correspondence" && item.itemKind !== "correspondence") {
         return false;
       }
@@ -425,7 +450,14 @@ export const MenuDrawer: React.FC = () => {
       }
       return true;
     });
-  }, [allElonShowcaseItems, elonShowcaseFilter, selectedElonTopic]);
+
+    return [...filtered].sort((a, b) => {
+      if (elonSortOrder === "newest") {
+        return b.timestamp - a.timestamp;
+      }
+      return a.timestamp - b.timestamp;
+    });
+  }, [allElonShowcaseItems, elonShowcaseFilter, selectedElonTopic, elonSortOrder]);
 
   // Group filtered items by topic for the categorized showcase view
   const groupedElonByTopic = useMemo(() => {
@@ -533,6 +565,32 @@ export const MenuDrawer: React.FC = () => {
     showToast(t("downloadLetter"));
   };
 
+  const handleDownloadPDF = (item: ElonShowcaseItem) => {
+    try {
+      downloadLetterAsPDF(
+        {
+          title: item.displayTitle,
+          recipient: item.recipient,
+          date: item.dateLabel,
+          content: item.content,
+          statutoryReference: item.statutoryReference,
+          categoryLabel: item.categoryLabel,
+        },
+        user
+      );
+      showToast(
+        locale === "pl"
+          ? `Pobrano pismo w formacie PDF: ${item.displayTitle}`
+          : locale === "ro"
+          ? `Descărcat PDF: ${item.displayTitle}`
+          : `Downloaded PDF: ${item.displayTitle}`
+      );
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      handleDownloadItem(item);
+    }
+  };
+
   const handleOpenTemplateInBuilder = (templateId: string) => {
     setActiveTemplateId(templateId);
     setActiveTab("templates");
@@ -554,8 +612,8 @@ export const MenuDrawer: React.FC = () => {
         };
       case "grievance":
         return {
-          icon: <ShieldAlert className="w-4 h-4 text-[#FF6A00]" />,
-          bg: "bg-[#FF6A00]/15 border-[#FF6A00]/40",
+          icon: <ShieldAlert className="w-4 h-4 text-[#D97724]" />,
+          bg: "bg-[#D97724]/15 border-[#D97724]/40",
           label: locale === "pl" ? "ROZMOWA • SKARGA" : "CHAT • GRIEVANCE",
         };
       case "sick_pay":
@@ -578,8 +636,8 @@ export const MenuDrawer: React.FC = () => {
         };
       case "settlement":
         return {
-          icon: <Scale className="w-4 h-4 text-[#2EE59D]" />,
-          bg: "bg-[#2EE59D]/15 border-[#2EE59D]/40",
+          icon: <Scale className="w-4 h-4 text-[#38B28B]" />,
+          bg: "bg-[#38B28B]/15 border-[#38B28B]/40",
           label: locale === "pl" ? "ROZMOWA • UGODA" : "CHAT • SETTLEMENT",
         };
       case "data":
@@ -590,8 +648,8 @@ export const MenuDrawer: React.FC = () => {
         };
       default:
         return {
-          icon: <MessageSquare className="w-4 h-4 text-[#2EE59D]" />,
-          bg: "bg-[#2EE59D]/15 border-[#2EE59D]/35",
+          icon: <MessageSquare className="w-4 h-4 text-[#38B28B]" />,
+          bg: "bg-[#38B28B]/15 border-[#38B28B]/35",
           label: locale === "pl" ? "ROZMOWA Z ELONEM" : "CHAT WITH ELON",
         };
     }
@@ -611,8 +669,8 @@ export const MenuDrawer: React.FC = () => {
             <div className="w-7 h-[2px] bg-[#161B22] rounded-full" />
             <div className="w-5 h-[1.5px] bg-gray-400 rounded-full" />
           </div>
-          <div className="w-2.5 h-2.5 rounded-full bg-[#0B6E4F]/25 border border-[#FF6A00] flex items-center justify-center">
-            <div className="w-1 h-1 rounded-full bg-[#0B6E4F]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#1D6852]/25 border border-[#D97724] flex items-center justify-center">
+            <div className="w-1 h-1 rounded-full bg-[#1D6852]" />
           </div>
         </div>
 
@@ -622,8 +680,8 @@ export const MenuDrawer: React.FC = () => {
             variant === "letter"
               ? "bg-[#161B22]"
               : variant === "note"
-              ? "bg-[#FF6A00]"
-              : "bg-[#0B6E4F]"
+              ? "bg-[#D97724]"
+              : "bg-[#1D6852]"
           }`}
         />
 
@@ -641,7 +699,7 @@ export const MenuDrawer: React.FC = () => {
       </div>
 
       {/* Circular Ask Elon Stamp Badge overlapping bottom-right */}
-      <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-[#FFF6EF] border-2 border-[#FF6A00] shadow-md flex items-center justify-center overflow-hidden">
+      <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-[#FFF6EF] border-2 border-[#D97724] shadow-md flex items-center justify-center overflow-hidden">
         <AskElonShieldLogo className="w-5 h-5" isActive={true} />
       </div>
     </div>
@@ -649,17 +707,17 @@ export const MenuDrawer: React.FC = () => {
 
   // Storage Progress Widget (matching "Miejsce na pliki: 4,1 GB z 5 GB · 82%" from reference image)
   const renderStorageQuotaBox = () => (
-    <div className="rounded-2xl bg-[#09213A] border border-[#FF6A00]/65 px-4 py-3 shadow-md">
+    <div className="rounded-2xl bg-[#09213A] border border-[#D97724]/65 px-4 py-3 shadow-md">
       <div className="flex items-center justify-between text-xs font-extrabold">
         <div className="flex items-center gap-2 text-white">
-          <Cloud className="w-4 h-4 text-[#FF6A00] shrink-0" />
+          <Cloud className="w-4 h-4 text-[#D97724] shrink-0" />
           <span>Miejsce na pliki: 4,1 GB z 5 GB</span>
         </div>
-        <span className="text-[#FF6A00] font-black font-mono tabular-nums">82%</span>
+        <span className="text-[#D97724] font-black font-mono tabular-nums">82%</span>
       </div>
 
       <div className="w-full h-2.5 rounded-full bg-[#051221] overflow-hidden my-2 border border-white/5">
-        <div className="h-full w-[82%] rounded-full bg-gradient-to-r from-[#FF6A00] to-[#FF8533]" />
+        <div className="h-full w-[82%] rounded-full bg-gradient-to-r from-[#D97724] to-[#E08A3C]" />
       </div>
 
       <p className="text-xs font-bold text-[#DCE7F3]">Zostało Ci 921 MB miejsca</p>
@@ -671,7 +729,7 @@ export const MenuDrawer: React.FC = () => {
     switch (drawerTab) {
       case "elon_letters":
         return {
-          icon: <Files className="w-6 h-6 text-[#FF6A00]" />,
+          icon: <Files className="w-6 h-6 text-[#D97724]" />,
           title:
             locale === "pl"
               ? "Dokumenty od Elona"
@@ -681,7 +739,7 @@ export const MenuDrawer: React.FC = () => {
         };
       case "notes":
         return {
-          icon: <FileText className="w-6 h-6 text-[#FF6A00]" />,
+          icon: <FileText className="w-6 h-6 text-[#D97724]" />,
           title:
             locale === "pl"
               ? "Notatnik i dowody"
@@ -691,7 +749,7 @@ export const MenuDrawer: React.FC = () => {
         };
       case "chat_history":
         return {
-          icon: <Clock className="w-6 h-6 text-[#FF6A00]" />,
+          icon: <Clock className="w-6 h-6 text-[#D97724]" />,
           title:
             locale === "pl"
               ? "Historia czatów"
@@ -701,7 +759,7 @@ export const MenuDrawer: React.FC = () => {
         };
       default:
         return {
-          icon: <Menu className="w-6 h-6 text-[#FF6A00]" />,
+          icon: <Menu className="w-6 h-6 text-[#D97724]" />,
           title: "Menu",
         };
     }
@@ -739,8 +797,8 @@ export const MenuDrawer: React.FC = () => {
               onClick={() => setDrawerTab("menu")}
               className={`flex items-center justify-center gap-1.5 py-2.5 px-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer ${
                 drawerTab === "menu"
-                  ? "bg-[#FF6A00] text-black shadow-md"
-                  : "text-[#BACADA] hover:text-white hover:bg-white/5"
+                  ? "bg-[#D97724] text-black shadow-md"
+                  : "text-[#94A3B8] hover:text-white hover:bg-white/5"
               }`}
             >
               <Menu className="w-3.5 h-3.5 shrink-0" />
@@ -752,8 +810,8 @@ export const MenuDrawer: React.FC = () => {
               onClick={() => setDrawerTab("chat_history")}
               className={`flex items-center justify-center gap-1 py-2.5 px-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer ${
                 drawerTab === "chat_history"
-                  ? "bg-[#FF6A00] text-black shadow-md"
-                  : "text-[#BACADA] hover:text-white hover:bg-white/5"
+                  ? "bg-[#D97724] text-black shadow-md"
+                  : "text-[#94A3B8] hover:text-white hover:bg-white/5"
               }`}
             >
               <Clock className="w-3.5 h-3.5 shrink-0" />
@@ -765,8 +823,8 @@ export const MenuDrawer: React.FC = () => {
               onClick={() => setDrawerTab("notes")}
               className={`flex items-center justify-center gap-1 py-2.5 px-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer ${
                 drawerTab === "notes"
-                  ? "bg-[#FF6A00] text-black shadow-md"
-                  : "text-[#BACADA] hover:text-white hover:bg-white/5"
+                  ? "bg-[#D97724] text-black shadow-md"
+                  : "text-[#94A3B8] hover:text-white hover:bg-white/5"
               }`}
             >
               <FileText className="w-3.5 h-3.5 shrink-0" />
@@ -778,8 +836,8 @@ export const MenuDrawer: React.FC = () => {
               onClick={() => setDrawerTab("elon_letters")}
               className={`flex items-center justify-center gap-1 py-2.5 px-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer ${
                 drawerTab === "elon_letters"
-                  ? "bg-[#FF6A00] text-black shadow-md"
-                  : "text-[#BACADA] hover:text-white hover:bg-white/5"
+                  ? "bg-[#D97724] text-black shadow-md"
+                  : "text-[#94A3B8] hover:text-white hover:bg-white/5"
               }`}
             >
               <Files className="w-3.5 h-3.5 shrink-0" />
@@ -796,7 +854,7 @@ export const MenuDrawer: React.FC = () => {
             {/* User Account Card */}
             <div className="rounded-2xl bg-gradient-to-r from-[#0B2948] to-[#081E36] border border-[#1E436E]/80 p-4 shadow-lg">
               <div className="flex items-center gap-3.5">
-                <div className="w-14 h-14 rounded-full bg-[#0B6E4F] border-2 border-[#FF6A00] flex items-center justify-center font-black text-lg text-white shrink-0 shadow-md">
+                <div className="w-14 h-14 rounded-full bg-[#1D6852] border-2 border-[#D97724] flex items-center justify-center font-black text-lg text-white shrink-0 shadow-md">
                   {initials}
                 </div>
                 <div className="min-w-0">
@@ -814,7 +872,7 @@ export const MenuDrawer: React.FC = () => {
                     <span
                       className={`inline-flex items-center px-3 py-0.5 rounded-full text-xs font-extrabold border ${
                         user.isPro
-                          ? "bg-[#FF6A00]/20 border-[#FF6A00]/50 text-[#FF6A00]"
+                          ? "bg-[#D97724]/20 border-[#D97724]/50 text-[#D97724]"
                           : "bg-[#07182B]/70 border-white/25 text-white"
                       }`}
                     >
@@ -851,14 +909,14 @@ export const MenuDrawer: React.FC = () => {
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-sm font-bold transition-all cursor-pointer ${
                     activeTab === "chat"
-                      ? "bg-[#3B1D0B] border border-[#FF6A00]/25 text-[#FF6A00] shadow-md"
+                      ? "bg-[#3B1D0B] border border-[#D97724]/25 text-[#D97724] shadow-md"
                       : "text-white hover:bg-white/5"
                   }`}
                 >
                   <div className="flex items-center gap-3.5">
                     <MessageCircle
                       className={`w-5 h-5 ${
-                        activeTab === "chat" ? "text-[#FF6A00]" : "text-[#8EA4BA]"
+                        activeTab === "chat" ? "text-[#D97724]" : "text-[#8EA4BA]"
                       }`}
                     />
                     <span>
@@ -881,7 +939,7 @@ export const MenuDrawer: React.FC = () => {
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-sm font-bold transition-all cursor-pointer ${
                     activeTab === "cases"
-                      ? "bg-[#3B1D0B] border border-[#FF6A00]/25 text-[#FF6A00] shadow-md"
+                      ? "bg-[#3B1D0B] border border-[#D97724]/25 text-[#D97724] shadow-md"
                       : "text-white hover:bg-white/5"
                   }`}
                 >
@@ -889,7 +947,7 @@ export const MenuDrawer: React.FC = () => {
                     <Folder
                       className={`w-5 h-5 ${
                         activeTab === "cases"
-                          ? "text-[#FF6A00] fill-[#FF6A00]"
+                          ? "text-[#D97724] fill-[#D97724]"
                           : "text-[#8EA4BA]"
                       }`}
                     />
@@ -909,14 +967,14 @@ export const MenuDrawer: React.FC = () => {
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-sm font-bold transition-all cursor-pointer ${
                     activeTab === "templates"
-                      ? "bg-[#3B1D0B] border border-[#FF6A00]/25 text-[#FF6A00] shadow-md"
+                      ? "bg-[#3B1D0B] border border-[#D97724]/25 text-[#D97724] shadow-md"
                       : "text-white hover:bg-white/5"
                   }`}
                 >
                   <div className="flex items-center gap-3.5">
                     <FileText
                       className={`w-5 h-5 ${
-                        activeTab === "templates" ? "text-[#FF6A00]" : "text-[#8EA4BA]"
+                        activeTab === "templates" ? "text-[#D97724]" : "text-[#8EA4BA]"
                       }`}
                     />
                     <span>
@@ -935,14 +993,14 @@ export const MenuDrawer: React.FC = () => {
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-sm font-bold transition-all cursor-pointer ${
                     activeTab === "forum"
-                      ? "bg-[#3B1D0B] border border-[#FF6A00]/25 text-[#FF6A00] shadow-md"
+                      ? "bg-[#3B1D0B] border border-[#D97724]/25 text-[#D97724] shadow-md"
                       : "text-white hover:bg-white/5"
                   }`}
                 >
                   <div className="flex items-center gap-3.5">
                     <Users
                       className={`w-5 h-5 ${
-                        activeTab === "forum" ? "text-[#FF6A00]" : "text-[#8EA4BA]"
+                        activeTab === "forum" ? "text-[#D97724]" : "text-[#8EA4BA]"
                       }`}
                     />
                     <span>Forum</span>
@@ -960,7 +1018,7 @@ export const MenuDrawer: React.FC = () => {
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-sm font-bold transition-all cursor-pointer ${
                     activeTab === "profile" && profileSubTab === "details"
-                      ? "bg-[#3B1D0B] border border-[#FF6A00]/25 text-[#FF6A00] shadow-md"
+                      ? "bg-[#3B1D0B] border border-[#D97724]/25 text-[#D97724] shadow-md"
                       : "text-white hover:bg-white/5"
                   }`}
                 >
@@ -968,7 +1026,7 @@ export const MenuDrawer: React.FC = () => {
                     <UserCircle
                       className={`w-5 h-5 ${
                         activeTab === "profile" && profileSubTab === "details"
-                          ? "text-[#FF6A00]"
+                          ? "text-[#D97724]"
                           : "text-[#8EA4BA]"
                       }`}
                     />
@@ -982,19 +1040,19 @@ export const MenuDrawer: React.FC = () => {
             </div>
 
             {/* Section 2: LETTERS FROM ELON (PISMA OD ELONA) SHOWCASE */}
-            <div className="rounded-2xl bg-[#09213A] border border-[#FF6A00]/45 p-3.5 space-y-3 shadow-lg">
+            <div className="rounded-2xl bg-[#09213A] border border-[#D97724]/45 p-3.5 space-y-3 shadow-lg">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-7 h-7 rounded-full bg-[#FFF6EF] border-2 border-[#FF6A00] flex items-center justify-center shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-[#FFF6EF] border-2 border-[#D97724] flex items-center justify-center shrink-0">
                     <AskElonShieldLogo className="w-5 h-5" isActive={true} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-black uppercase tracking-wider text-[#FF6A00] truncate">
+                    <p className="text-xs font-black uppercase tracking-wider text-[#D97724] truncate">
                       {locale === "pl"
                         ? "Pisma od Elona · Wzory i Korespondencja"
                         : "Letters from Elon · Legal Correspondence"}
                     </p>
-                    <p className="text-[11px] text-[#BACADA] truncate">
+                    <p className="text-[11px] text-[#94A3B8] truncate">
                       {sentLetters.length} wygenerowane · {templates.length} szablonów UK
                     </p>
                   </div>
@@ -1006,7 +1064,7 @@ export const MenuDrawer: React.FC = () => {
                     setSelectedElonTopic("ALL");
                     setDrawerTab("elon_letters");
                   }}
-                  className="px-2.5 py-1 rounded-xl bg-[#FF6A00] hover:bg-[#FF6A00]/90 text-black text-[11px] font-black shrink-0 cursor-pointer"
+                  className="px-2.5 py-1 rounded-xl bg-[#D97724] hover:bg-[#D97724]/90 text-black text-[11px] font-black shrink-0 cursor-pointer"
                 >
                   Otwórz ({allElonShowcaseItems.length})
                 </button>
@@ -1061,7 +1119,7 @@ export const MenuDrawer: React.FC = () => {
                     <span>
                       {locale === "pl" ? "Notatki" : locale === "ro" ? "Notițe" : "Notes"}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded-md bg-white/10 border border-white/10 text-[10px] font-mono tabular-nums text-[#2EE59D]">
+                    <span className="px-1.5 py-0.5 rounded-md bg-white/10 border border-white/10 text-[10px] font-mono tabular-nums text-[#38B28B]">
                       {notes.length}
                     </span>
                   </div>
@@ -1075,7 +1133,7 @@ export const MenuDrawer: React.FC = () => {
                   className="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-sm font-bold text-white hover:bg-white/5 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-3.5">
-                    <Files className="w-5 h-5 text-[#FF6A00]" />
+                    <Files className="w-5 h-5 text-[#D97724]" />
                     <span>
                       {locale === "pl"
                         ? "Pisma Elona (Korespondencja i Wzory)"
@@ -1083,7 +1141,7 @@ export const MenuDrawer: React.FC = () => {
                         ? "Scrisori de la Elon"
                         : "Letters from Elon"}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded-md bg-[#FF6A00]/20 border border-[#FF6A00]/40 text-[10px] font-mono tabular-nums text-[#FF6A00]">
+                    <span className="px-1.5 py-0.5 rounded-md bg-[#D97724]/20 border border-[#D97724]/40 text-[10px] font-mono tabular-nums text-[#D97724]">
                       {allElonShowcaseItems.length}
                     </span>
                   </div>
@@ -1109,7 +1167,7 @@ export const MenuDrawer: React.FC = () => {
                         : "Messages"}
                     </span>
                     {unreadMessagesCount > 0 && (
-                      <span className="px-1.5 py-0.5 rounded-full bg-[#FF6A00] text-black text-[10px] font-black font-mono tabular-nums">
+                      <span className="px-1.5 py-0.5 rounded-full bg-[#D97724] text-black text-[10px] font-black font-mono tabular-nums">
                         {unreadMessagesCount}
                       </span>
                     )}
@@ -1127,7 +1185,7 @@ export const MenuDrawer: React.FC = () => {
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-sm font-bold transition-all cursor-pointer ${
                     activeTab === "profile" && profileSubTab === "docs"
-                      ? "bg-[#3B1D0B] border border-[#FF6A00]/25 text-[#FF6A00] shadow-md"
+                      ? "bg-[#3B1D0B] border border-[#D97724]/25 text-[#D97724] shadow-md"
                       : "text-white hover:bg-white/5"
                   }`}
                 >
@@ -1135,7 +1193,7 @@ export const MenuDrawer: React.FC = () => {
                     <Folder
                       className={`w-5 h-5 ${
                         activeTab === "profile" && profileSubTab === "docs"
-                          ? "text-[#FF6A00] fill-[#FF6A00]"
+                          ? "text-[#D97724] fill-[#D97724]"
                           : "text-[#8EA4BA]"
                       }`}
                     />
@@ -1165,7 +1223,7 @@ export const MenuDrawer: React.FC = () => {
                         ? "Istoric conversații"
                         : "Chat History"}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded-md bg-white/10 border border-white/10 text-[10px] font-mono tabular-nums text-[#2EE59D]">
+                    <span className="px-1.5 py-0.5 rounded-md bg-white/10 border border-white/10 text-[10px] font-mono tabular-nums text-[#38B28B]">
                       {recentUnsavedChats.length}/10
                     </span>
                   </div>
@@ -1187,10 +1245,10 @@ export const MenuDrawer: React.FC = () => {
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
                     isOnline
-                      ? "bg-[#0B6E4F]/30 border-[#2EE59D]/40 text-[#2EE59D]"
+                      ? "bg-[#1D6852]/30 border-[#38B28B]/40 text-[#38B28B]"
                       : networkStatus === "reconnecting"
                       ? "bg-[#FBBF24]/20 border-[#FBBF24]/40 text-[#FBBF24]"
-                      : "bg-[#FF6A00]/20 border-[#FF6A00]/50 text-[#FF6A00]"
+                      : "bg-[#D97724]/20 border-[#D97724]/50 text-[#D97724]"
                   }`}
                 >
                   {isOnline ? (
@@ -1242,8 +1300,8 @@ export const MenuDrawer: React.FC = () => {
                   <span
                     className={`px-2.5 py-1 rounded-xl text-[11px] font-black font-mono shrink-0 border ${
                       totalPendingQueueCount > 0
-                        ? "bg-[#FF6A00]/20 border-[#FF6A00]/50 text-[#FF6A00]"
-                        : "bg-[#2EE59D]/15 border-[#2EE59D]/35 text-[#2EE59D]"
+                        ? "bg-[#D97724]/20 border-[#D97724]/50 text-[#D97724]"
+                        : "bg-[#38B28B]/15 border-[#38B28B]/35 text-[#38B28B]"
                     }`}
                   >
                     {locale === "pl"
@@ -1285,7 +1343,7 @@ export const MenuDrawer: React.FC = () => {
                       }
                       className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer ${
                         offlineSettings.backgroundSyncEnabled
-                          ? "bg-[#2EE59D]"
+                          ? "bg-[#38B28B]"
                           : "bg-[#051221] border-white/20"
                       }`}
                     >
@@ -1329,7 +1387,7 @@ export const MenuDrawer: React.FC = () => {
                       }
                       className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer ${
                         offlineSettings.autoCacheTemplatesAndLetters
-                          ? "bg-[#2EE59D]"
+                          ? "bg-[#38B28B]"
                           : "bg-[#051221] border-white/20"
                       }`}
                     >
@@ -1368,7 +1426,7 @@ export const MenuDrawer: React.FC = () => {
                       onClick={() => setIsSimulatedOffline(!isSimulatedOffline)}
                       className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer ${
                         isSimulatedOffline
-                          ? "bg-[#FF6A00]"
+                          ? "bg-[#D97724]"
                           : "bg-[#051221] border-white/20"
                       }`}
                     >
@@ -1386,7 +1444,7 @@ export const MenuDrawer: React.FC = () => {
                 {/* PENDING ACTIONS QUEUE LIST */}
                 <div className="pt-1 space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-black uppercase tracking-wider text-[#FF6A00]">
+                    <p className="text-[11px] font-black uppercase tracking-wider text-[#D97724]">
                       {locale === "pl"
                         ? `Oczekujące akcje w kolejce (${totalPendingQueueCount})`
                         : locale === "ro"
@@ -1397,7 +1455,7 @@ export const MenuDrawer: React.FC = () => {
                     <button
                       type="button"
                       onClick={enqueueSampleOfflineAction}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[#0B2948] hover:bg-[#123A63] border border-[#FF6A00]/40 text-[10px] font-extrabold text-[#FF6A00] transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[#0B2948] hover:bg-[#123A63] border border-[#D97724]/40 text-[10px] font-extrabold text-[#D97724] transition-colors cursor-pointer"
                     >
                       <Plus className="w-3 h-3" />
                       <span>
@@ -1411,8 +1469,8 @@ export const MenuDrawer: React.FC = () => {
                   </div>
 
                   {totalPendingQueueCount === 0 ? (
-                    <div className="rounded-xl bg-[#07182B] border border-[#2EE59D]/30 p-3 flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-[#2EE59D] shrink-0" />
+                    <div className="rounded-xl bg-[#07182B] border border-[#38B28B]/30 p-3 flex items-center gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-[#38B28B] shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xs font-extrabold text-white">
                           {locale === "pl"
@@ -1436,22 +1494,22 @@ export const MenuDrawer: React.FC = () => {
                       {queuedChatMessages.map((msg) => (
                         <div
                           key={msg.id}
-                          className="rounded-xl bg-[#07182B] border border-[#FF6A00]/45 p-2.5 flex items-start justify-between gap-2.5"
+                          className="rounded-xl bg-[#07182B] border border-[#D97724]/45 p-2.5 flex items-start justify-between gap-2.5"
                         >
                           <div className="flex items-start gap-2.5 min-w-0">
-                            <div className="w-7 h-7 rounded-lg bg-[#FF6A00]/15 border border-[#FF6A00]/40 flex items-center justify-center shrink-0 mt-0.5">
-                              <MessageCircle className="w-3.5 h-3.5 text-[#FF6A00]" />
+                            <div className="w-7 h-7 rounded-lg bg-[#D97724]/15 border border-[#D97724]/40 flex items-center justify-center shrink-0 mt-0.5">
+                              <MessageCircle className="w-3.5 h-3.5 text-[#D97724]" />
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[10px] font-black uppercase text-[#FF6A00]">
+                                <span className="text-[10px] font-black uppercase text-[#D97724]">
                                   {locale === "pl"
                                     ? "CZAT Z ELONEM"
                                     : locale === "ro"
                                     ? "MESAJ CHAT"
                                     : "CHAT MESSAGE"}
                                 </span>
-                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#FF6A00]/20 text-[#FF6A00]">
+                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#D97724]/20 text-[#D97724]">
                                   {msg.status === "sending"
                                     ? locale === "pl"
                                       ? "Wysyłanie..."
@@ -1488,20 +1546,20 @@ export const MenuDrawer: React.FC = () => {
                           className="rounded-xl bg-[#07182B] border border-[#1E436E] p-2.5 flex items-start justify-between gap-2.5"
                         >
                           <div className="flex items-start gap-2.5 min-w-0">
-                            <div className="w-7 h-7 rounded-lg bg-[#2EE59D]/15 border border-[#2EE59D]/35 flex items-center justify-center shrink-0 mt-0.5">
+                            <div className="w-7 h-7 rounded-lg bg-[#38B28B]/15 border border-[#38B28B]/35 flex items-center justify-center shrink-0 mt-0.5">
                               {action.type === "letter_save" ? (
-                                <Files className="w-3.5 h-3.5 text-[#FF6A00]" />
+                                <Files className="w-3.5 h-3.5 text-[#D97724]" />
                               ) : action.type === "case_create" ? (
                                 <Folder className="w-3.5 h-3.5 text-[#38BDF8]" />
                               ) : action.type === "note_save" ? (
-                                <FileText className="w-3.5 h-3.5 text-[#2EE59D]" />
+                                <FileText className="w-3.5 h-3.5 text-[#38B28B]" />
                               ) : (
                                 <UserCircle className="w-3.5 h-3.5 text-[#FBBF24]" />
                               )}
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[10px] font-black uppercase text-[#2EE59D]">
+                                <span className="text-[10px] font-black uppercase text-[#38B28B]">
                                   {action.type === "letter_save"
                                     ? locale === "pl"
                                       ? "PISMO PRAWNE"
@@ -1518,7 +1576,7 @@ export const MenuDrawer: React.FC = () => {
                                     ? "PROFIL"
                                     : "PROFILE"}
                                 </span>
-                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#FF6A00]/20 text-[#FF6A00]">
+                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#D97724]/20 text-[#D97724]">
                                   {action.status === "syncing"
                                     ? locale === "pl"
                                       ? "Synchronizacja..."
@@ -1597,7 +1655,7 @@ export const MenuDrawer: React.FC = () => {
                     type="button"
                     onClick={handleManualSyncNow}
                     disabled={isSyncingQueueNow}
-                    className="w-full py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-[#FF6A00] to-[#FF8533] hover:opacity-95 disabled:opacity-50 text-black font-black text-xs shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    className="w-full py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-[#D97724] to-[#E08A3C] hover:opacity-95 disabled:opacity-50 text-black font-black text-xs shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
                     <RefreshCw
                       className={`w-4 h-4 ${isSyncingQueueNow ? "animate-spin" : ""}`}
@@ -1661,6 +1719,39 @@ export const MenuDrawer: React.FC = () => {
                 </div>
                 <ChevronRight className="w-4 h-4 text-[#8EA4BA] shrink-0" />
               </button>
+
+              {/* Preferencje głosu Elona */}
+              <button
+                type="button"
+                onClick={() => {
+                  closeDrawer();
+                  setIsVoicePreferencesModalOpen(true);
+                }}
+                className="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-left hover:bg-white/5 transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <Headphones className="w-5 h-5 text-[#38B28B] shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">
+                      {locale === "pl"
+                        ? "Głos Elona (TTS & Preferencje)"
+                        : locale === "ro"
+                        ? "Voce Elon (TTS & Preferințe)"
+                        : "Elon Voice Preferences (TTS)"}
+                    </p>
+                    <p className="text-xs text-[#8EA4BA] truncate mt-0.5">
+                      {voiceConfig.preset === "young_professional"
+                        ? locale === "pl"
+                          ? "Młody / Profesjonalny (~28 lat)"
+                          : "Young / Professional (~28 y/o)"
+                        : locale === "pl"
+                        ? "Standardowy asystent AI"
+                        : "Standard AI Assistant"}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#8EA4BA] shrink-0" />
+              </button>
             </div>
 
             {/* Section 5: JĘZYK APLIKACJI */}
@@ -1687,8 +1778,8 @@ export const MenuDrawer: React.FC = () => {
                     onClick={() => setLocale(item.code)}
                     className={`py-2.5 px-2 rounded-2xl text-xs font-extrabold transition-all cursor-pointer ${
                       locale === item.code
-                        ? "bg-[#3B1D0B] border-2 border-[#FF6A00] text-white shadow-md"
-                        : "bg-[#0A1E33] border border-white/15 text-[#BACADA] hover:text-white hover:bg-white/10"
+                        ? "bg-[#3B1D0B] border-2 border-[#D97724] text-white shadow-md"
+                        : "bg-[#0A1E33] border border-white/15 text-[#94A3B8] hover:text-white hover:bg-white/10"
                     }`}
                   >
                     {item.label}
@@ -1707,16 +1798,16 @@ export const MenuDrawer: React.FC = () => {
             {renderStorageQuotaBox()}
 
             {/* Auto-save banner with Ask Elon badge */}
-            <div className="rounded-2xl bg-[#3A2010] border border-[#FF6A00]/30 px-3.5 py-2.5 flex items-center justify-between gap-2.5">
+            <div className="rounded-2xl bg-[#3A2010] border border-[#D97724]/30 px-3.5 py-2.5 flex items-center justify-between gap-2.5">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-full bg-[#FFF6EF] border-2 border-[#FF6A00] flex items-center justify-center shrink-0">
+                <div className="w-7 h-7 rounded-full bg-[#FFF6EF] border-2 border-[#D97724] flex items-center justify-center shrink-0">
                   <AskElonShieldLogo className="w-5 h-5" isActive={true} />
                 </div>
                 <span className="text-xs font-bold text-[#FFF6EF] truncate">
                   Niezapisane czaty zapisują się tu same
                 </span>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-[#FF6A00] text-black text-[10px] font-black font-mono shrink-0">
+              <span className="px-2 py-0.5 rounded-full bg-[#D97724] text-black text-[10px] font-black font-mono shrink-0">
                 {recentUnsavedChats.length}/10
               </span>
             </div>
@@ -1736,8 +1827,8 @@ export const MenuDrawer: React.FC = () => {
                 <div key={group.dateISO} className="space-y-3">
                   {/* Date Header */}
                   <div className="flex items-center gap-1.5 px-1 pt-1">
-                    <Calendar className="w-3.5 h-3.5 text-[#2EE59D]" />
-                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#2EE59D]">
+                    <Calendar className="w-3.5 h-3.5 text-[#38B28B]" />
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#38B28B]">
                       {group.displayDate}
                     </span>
                     <div className="flex-1 h-px bg-white/10 ml-1" />
@@ -1753,7 +1844,7 @@ export const MenuDrawer: React.FC = () => {
                           key={chat.id}
                           className={`rounded-2xl bg-[#0B2540] border overflow-hidden shadow-lg transition-all ${
                             isCurrent
-                              ? "border-[#2EE59D]/70 ring-1 ring-[#2EE59D]/30"
+                              ? "border-[#38B28B]/70 ring-1 ring-[#38B28B]/30"
                               : "border-[#1E436E]/90"
                           }`}
                         >
@@ -1766,11 +1857,11 @@ export const MenuDrawer: React.FC = () => {
 
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[11px] font-black uppercase tracking-wider text-[#FF6A00]">
+                                <span className="text-[11px] font-black uppercase tracking-wider text-[#D97724]">
                                   {topicMeta.label}
                                 </span>
                                 {isCurrent && (
-                                  <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-[#2EE59D]/20 text-[#2EE59D] border border-[#2EE59D]/40">
+                                  <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-[#38B28B]/20 text-[#38B28B] border border-[#38B28B]/40">
                                     Aktywna
                                   </span>
                                 )}
@@ -1784,7 +1875,7 @@ export const MenuDrawer: React.FC = () => {
                                 {chat.dateLabel} · {chat.updatedAtTime} · {chat.messageCount} wiad.
                               </p>
 
-                              <p className="text-xs font-bold text-[#2EE59D] truncate mt-0.5">
+                              <p className="text-xs font-bold text-[#38B28B] truncate mt-0.5">
                                 Rozmowa: {chat.preview}
                               </p>
                             </div>
@@ -1801,16 +1892,16 @@ export const MenuDrawer: React.FC = () => {
                               }}
                               className="py-2.5 px-2 flex items-center justify-center gap-1.5 text-xs font-extrabold text-white hover:bg-white/5 transition-colors cursor-pointer"
                             >
-                              <Eye className="w-4 h-4 text-[#BACADA]" />
+                              <Eye className="w-4 h-4 text-[#94A3B8]" />
                               <span>Otwórz</span>
                             </button>
 
                             <button
                               type="button"
                               onClick={() => saveUnsavedChatAsCase(chat.id)}
-                              className="py-2.5 px-2 flex items-center justify-center gap-1.5 text-xs font-extrabold text-[#FF6A00] hover:bg-white/5 transition-colors cursor-pointer"
+                              className="py-2.5 px-2 flex items-center justify-center gap-1.5 text-xs font-extrabold text-[#D97724] hover:bg-white/5 transition-colors cursor-pointer"
                             >
-                              <BookmarkPlus className="w-4 h-4 text-[#FF6A00]" />
+                              <BookmarkPlus className="w-4 h-4 text-[#D97724]" />
                               <span>Do spraw</span>
                             </button>
 
@@ -1822,7 +1913,7 @@ export const MenuDrawer: React.FC = () => {
                               }}
                               className="py-2.5 px-2 flex items-center justify-center gap-1.5 text-xs font-extrabold text-white hover:text-[#EF4444] hover:bg-white/5 transition-colors cursor-pointer"
                             >
-                              <Trash2 className="w-4 h-4 text-[#BACADA]" />
+                              <Trash2 className="w-4 h-4 text-[#94A3B8]" />
                               <span>Usuń</span>
                             </button>
                           </div>
@@ -1847,7 +1938,7 @@ export const MenuDrawer: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsAddingNote((prev) => !prev)}
-              className="w-full py-3 px-4 rounded-2xl bg-[#FF6A00] hover:bg-[#FF6A00]/90 text-black font-black text-sm shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
+              className="w-full py-3 px-4 rounded-2xl bg-[#D97724] hover:bg-[#D97724]/90 text-black font-black text-sm shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <Plus className="w-5 h-5 stroke-[2.5]" />
               <span>{isAddingNote ? "Zamknij formularz notatki" : "Dodaj notatkę"}</span>
@@ -1857,16 +1948,16 @@ export const MenuDrawer: React.FC = () => {
             {isAddingNote && (
               <form
                 onSubmit={handleCreateNoteSubmit}
-                className="rounded-2xl bg-[#0B2540] border-2 border-[#FF6A00] p-4 space-y-3 shadow-xl animate-in fade-in"
+                className="rounded-2xl bg-[#0B2540] border-2 border-[#D97724] p-4 space-y-3 shadow-xl animate-in fade-in"
               >
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-[#FF6A00]">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-[#D97724]">
                     Nowa notatka służbowa / dowód
                   </h4>
                   <button
                     type="button"
                     onClick={() => setIsAddingNote(false)}
-                    className="text-[#BACADA] hover:text-white"
+                    className="text-[#94A3B8] hover:text-white"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -1877,13 +1968,13 @@ export const MenuDrawer: React.FC = () => {
                   value={newNoteTitle}
                   onChange={(e) => setNewNoteTitle(e.target.value)}
                   placeholder="Tytuł (np. Rozmowa z HR ws. ekwiwalentu za urlop)"
-                  className="w-full bg-[#07182B] border border-white/15 focus:border-[#2EE59D] rounded-xl px-3 py-2 text-xs text-white placeholder-[#8EA4BA] focus:outline-none"
+                  className="w-full bg-[#07182B] border border-white/15 focus:border-[#38B28B] rounded-xl px-3 py-2 text-xs text-white placeholder-[#8EA4BA] focus:outline-none"
                 />
 
                 <select
                   value={newNoteCategory}
                   onChange={(e) => setNewNoteCategory(e.target.value)}
-                  className="w-full bg-[#07182B] border border-white/15 focus:border-[#2EE59D] rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                  className="w-full bg-[#07182B] border border-white/15 focus:border-[#38B28B] rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
                 >
                   <option value="Wypłata">Kategoria: Wypłata i nadgodziny</option>
                   <option value="Urlop">Kategoria: Urlop (Holiday Pay)</option>
@@ -1898,14 +1989,14 @@ export const MenuDrawer: React.FC = () => {
                   value={newNoteDesc}
                   onChange={(e) => setNewNoteDesc(e.target.value)}
                   placeholder="Opisz dokładnie co zaszło, datę, świadków i ustalenia..."
-                  className="w-full bg-[#07182B] border border-white/15 focus:border-[#2EE59D] rounded-xl px-3 py-2 text-xs text-white placeholder-[#8EA4BA] focus:outline-none resize-none"
+                  className="w-full bg-[#07182B] border border-white/15 focus:border-[#38B28B] rounded-xl px-3 py-2 text-xs text-white placeholder-[#8EA4BA] focus:outline-none resize-none"
                 />
 
                 <div className="flex items-center gap-2">
                   <button
                     type="submit"
                     disabled={!newNoteTitle.trim() || !newNoteDesc.trim()}
-                    className="flex-1 py-2.5 px-4 rounded-xl bg-[#2EE59D] hover:bg-[#2EE59D]/90 disabled:opacity-40 text-black font-black text-xs shadow-md transition-all cursor-pointer"
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-[#38B28B] hover:bg-[#38B28B]/90 disabled:opacity-40 text-black font-black text-xs shadow-md transition-all cursor-pointer"
                   >
                     Zapisz notatkę
                   </button>
@@ -1921,8 +2012,8 @@ export const MenuDrawer: React.FC = () => {
             )}
 
             {/* Info Banner with Ask Elon Badge */}
-            <div className="rounded-2xl bg-[#3A2010] border border-[#FF6A00]/30 px-3.5 py-2.5 flex items-center gap-3">
-              <div className="w-7 h-7 rounded-full bg-[#FFF6EF] border-2 border-[#FF6A00] flex items-center justify-center shrink-0">
+            <div className="rounded-2xl bg-[#3A2010] border border-[#D97724]/30 px-3.5 py-2.5 flex items-center gap-3">
+              <div className="w-7 h-7 rounded-full bg-[#FFF6EF] border-2 border-[#D97724] flex items-center justify-center shrink-0">
                 <AskElonShieldLogo className="w-5 h-5" isActive={true} />
               </div>
               <span className="text-xs font-bold text-[#FFF6EF]">
@@ -1954,7 +2045,7 @@ export const MenuDrawer: React.FC = () => {
                       )}
 
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-black uppercase tracking-wider text-[#FF6A00]">
+                        <p className="text-[11px] font-black uppercase tracking-wider text-[#D97724]">
                           NOTATKA • {note.category.toUpperCase()}
                         </p>
 
@@ -1966,7 +2057,7 @@ export const MenuDrawer: React.FC = () => {
                           {note.date} · 1 str.
                         </p>
 
-                        <p className="text-xs font-bold text-[#2EE59D] truncate mt-0.5">
+                        <p className="text-xs font-bold text-[#38B28B] truncate mt-0.5">
                           Dowód: {note.description}
                         </p>
                       </div>
@@ -1979,7 +2070,7 @@ export const MenuDrawer: React.FC = () => {
                         onClick={() => setPreviewNote(note)}
                         className="py-2.5 px-2 flex items-center justify-center gap-1.5 text-xs font-extrabold text-white hover:bg-white/5 transition-colors cursor-pointer"
                       >
-                        <Eye className="w-4 h-4 text-[#BACADA]" />
+                        <Eye className="w-4 h-4 text-[#94A3B8]" />
                         <span>Otwórz</span>
                       </button>
 
@@ -1991,9 +2082,9 @@ export const MenuDrawer: React.FC = () => {
                             "Skopiowano notatkę do schowka"
                           )
                         }
-                        className="py-2.5 px-2 flex items-center justify-center gap-1.5 text-xs font-extrabold text-[#FF6A00] hover:bg-white/5 transition-colors cursor-pointer"
+                        className="py-2.5 px-2 flex items-center justify-center gap-1.5 text-xs font-extrabold text-[#D97724] hover:bg-white/5 transition-colors cursor-pointer"
                       >
-                        <Copy className="w-4 h-4 text-[#FF6A00]" />
+                        <Copy className="w-4 h-4 text-[#D97724]" />
                         <span>Kopiuj</span>
                       </button>
 
@@ -2002,7 +2093,7 @@ export const MenuDrawer: React.FC = () => {
                         onClick={() => removeNote(note.id)}
                         className="py-2.5 px-2 flex items-center justify-center gap-1.5 text-xs font-extrabold text-white hover:text-[#EF4444] hover:bg-white/5 transition-colors cursor-pointer"
                       >
-                        <Trash2 className="w-4 h-4 text-[#BACADA]" />
+                        <Trash2 className="w-4 h-4 text-[#94A3B8]" />
                         <span>Usuń</span>
                       </button>
                     </div>
@@ -2023,8 +2114,8 @@ export const MenuDrawer: React.FC = () => {
             {renderStorageQuotaBox()}
 
             {/* Auto-save banner with Ask Elon badge */}
-            <div className="rounded-2xl bg-[#3A2010] border border-[#FF6A00]/30 px-3.5 py-2.5 flex items-center gap-3">
-              <div className="w-7 h-7 rounded-full bg-[#FFF6EF] border-2 border-[#FF6A00] flex items-center justify-center shrink-0">
+            <div className="rounded-2xl bg-[#3A2010] border border-[#D97724]/30 px-3.5 py-2.5 flex items-center gap-3">
+              <div className="w-7 h-7 rounded-full bg-[#FFF6EF] border-2 border-[#D97724] flex items-center justify-center shrink-0">
                 <AskElonShieldLogo className="w-5 h-5" isActive={true} />
               </div>
               <span className="text-xs font-bold text-[#FFF6EF]">
@@ -2039,8 +2130,8 @@ export const MenuDrawer: React.FC = () => {
                 onClick={() => setElonShowcaseFilter("all")}
                 className={`py-1.5 px-2 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
                   elonShowcaseFilter === "all"
-                    ? "bg-[#FF6A00] text-black shadow-sm"
-                    : "text-[#BACADA] hover:text-white"
+                    ? "bg-[#D97724] text-black shadow-sm"
+                    : "text-[#94A3B8] hover:text-white"
                 }`}
               >
                 Wszystkie ({allElonShowcaseItems.length})
@@ -2050,8 +2141,8 @@ export const MenuDrawer: React.FC = () => {
                 onClick={() => setElonShowcaseFilter("correspondence")}
                 className={`py-1.5 px-2 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
                   elonShowcaseFilter === "correspondence"
-                    ? "bg-[#FF6A00] text-black shadow-sm"
-                    : "text-[#BACADA] hover:text-white"
+                    ? "bg-[#D97724] text-black shadow-sm"
+                    : "text-[#94A3B8] hover:text-white"
                 }`}
               >
                 Pisma ({sentLetters.length})
@@ -2061,12 +2152,84 @@ export const MenuDrawer: React.FC = () => {
                 onClick={() => setElonShowcaseFilter("templates")}
                 className={`py-1.5 px-2 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
                   elonShowcaseFilter === "templates"
-                    ? "bg-[#FF6A00] text-black shadow-sm"
-                    : "text-[#BACADA] hover:text-white"
+                    ? "bg-[#D97724] text-black shadow-sm"
+                    : "text-[#94A3B8] hover:text-white"
                 }`}
               >
                 Szablony ({templates.length})
               </button>
+            </div>
+
+            {/* Sorting Toggle: Newest First vs Oldest First */}
+            <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-[#081C33] border border-[#1E436E]/80 shadow-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-6 h-6 rounded-lg bg-[#D97724]/15 border border-[#D97724]/40 flex items-center justify-center shrink-0">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-[#D97724]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-extrabold text-white truncate">
+                    {locale === "pl"
+                      ? "Sortowanie pism i wzorów"
+                      : locale === "ro"
+                      ? "Sortare documente"
+                      : "Document Sorting"}
+                  </p>
+                  <p className="text-[10px] text-[#94A3B8] truncate">
+                    {elonSortOrder === "newest"
+                      ? locale === "pl"
+                        ? "Najnowsze na początku"
+                        : locale === "ro"
+                        ? "Cele mai noi primele"
+                        : "Newest First"
+                      : locale === "pl"
+                      ? "Najstarsze na początku"
+                      : locale === "ro"
+                      ? "Cele mai vechi primele"
+                      : "Oldest First"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="inline-flex rounded-lg bg-[#051221] p-1 border border-white/10 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setElonSortOrder("newest")}
+                  className={`px-2.5 py-1.5 rounded-md text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    elonSortOrder === "newest"
+                      ? "bg-[#D97724] text-black shadow-sm"
+                      : "text-[#94A3B8] hover:text-white"
+                  }`}
+                  title={locale === "pl" ? "Uporządkuj od najnowszych" : "Sort newest first"}
+                >
+                  <ArrowDownWideNarrow className="w-3.5 h-3.5" />
+                  <span>
+                    {locale === "pl"
+                      ? "Najnowsze"
+                      : locale === "ro"
+                      ? "Cele mai noi"
+                      : "Newest"}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setElonSortOrder("oldest")}
+                  className={`px-2.5 py-1.5 rounded-md text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    elonSortOrder === "oldest"
+                      ? "bg-[#D97724] text-black shadow-sm"
+                      : "text-[#94A3B8] hover:text-white"
+                  }`}
+                  title={locale === "pl" ? "Uporządkuj od najstarszych" : "Sort oldest first"}
+                >
+                  <ArrowUpNarrowWide className="w-3.5 h-3.5" />
+                  <span>
+                    {locale === "pl"
+                      ? "Najstarsze"
+                      : locale === "ro"
+                      ? "Cele mai vechi"
+                      : "Oldest"}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Topic Categorization Pills */}
@@ -2087,8 +2250,8 @@ export const MenuDrawer: React.FC = () => {
                     }
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-extrabold border transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                       isSelected
-                        ? "bg-[#3B1D0B] border-[#FF6A00] text-[#FF6A00] shadow-sm"
-                        : "bg-[#09213A] border-[#1E436E] text-[#BACADA] hover:text-white"
+                        ? "bg-[#3B1D0B] border-[#D97724] text-[#D97724] shadow-sm"
+                        : "bg-[#09213A] border-[#1E436E] text-[#94A3B8] hover:text-white"
                     }`}
                   >
                     {topic.icon}
@@ -2121,7 +2284,7 @@ export const MenuDrawer: React.FC = () => {
                           : topic.labelEn}
                       </span>
                     </div>
-                    <span className="text-[10px] font-mono text-[#2EE59D] bg-[#0B6E4F]/25 border border-[#2EE59D]/30 px-2 py-0.5 rounded-md shrink-0">
+                    <span className="text-[10px] font-mono text-[#38B28B] bg-[#1D6852]/25 border border-[#38B28B]/30 px-2 py-0.5 rounded-md shrink-0">
                       {topic.statuteBadge}
                     </span>
                   </div>
@@ -2142,13 +2305,13 @@ export const MenuDrawer: React.FC = () => {
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-1.5 flex-wrap">
-                              <p className="text-[11px] font-black uppercase tracking-wider text-[#FF6A00]">
+                              <p className="text-[11px] font-black uppercase tracking-wider text-[#D97724]">
                                 {item.categoryLabel}
                               </p>
                               <span
                                 className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded border ${
                                   item.itemKind === "correspondence"
-                                    ? "bg-[#2EE59D]/15 text-[#2EE59D] border-[#2EE59D]/40"
+                                    ? "bg-[#38B28B]/15 text-[#38B28B] border-[#38B28B]/40"
                                     : "bg-[#38BDF8]/15 text-[#7DD3FC] border-[#38BDF8]/40"
                                 }`}
                               >
@@ -2166,7 +2329,7 @@ export const MenuDrawer: React.FC = () => {
                               {item.dateLabel} · 1 str.
                             </p>
 
-                            <p className="text-xs font-bold text-[#2EE59D] truncate mt-0.5">
+                            <p className="text-xs font-bold text-[#38B28B] truncate mt-0.5">
                               {item.caseOrStatuteLine}
                             </p>
                           </div>
@@ -2179,26 +2342,33 @@ export const MenuDrawer: React.FC = () => {
                             onClick={() => setPreviewItem(item)}
                             className="py-2.5 px-2 flex items-center justify-center gap-1.5 text-xs font-extrabold text-white hover:bg-white/5 transition-colors cursor-pointer"
                           >
-                            <Eye className="w-4 h-4 text-[#BACADA]" />
+                            <Eye className="w-4 h-4 text-[#94A3B8]" />
                             <span>Otwórz</span>
                           </button>
 
                           <button
                             type="button"
-                            onClick={() => handleDownloadItem(item)}
-                            className="py-2.5 px-2 flex items-center justify-center gap-1.5 text-xs font-extrabold text-[#FF6A00] hover:bg-white/5 transition-colors cursor-pointer"
+                            onClick={() => handleDownloadPDF(item)}
+                            className="py-2.5 px-2 flex items-center justify-center gap-1.5 text-xs font-black text-[#D97724] hover:bg-[#D97724]/15 hover:text-white transition-all cursor-pointer"
+                            title={locale === "pl" ? "Pobierz pismo jako PDF" : "Download letter as PDF"}
                           >
-                            <Download className="w-4 h-4 text-[#FF6A00]" />
-                            <span>PDF</span>
+                            <FileDown className="w-4 h-4 text-[#D97724]" />
+                            <span className="truncate">
+                              {locale === "pl"
+                                ? "Pobierz PDF"
+                                : locale === "ro"
+                                ? "Descarcă PDF"
+                                : "Download PDF"}
+                            </span>
                           </button>
 
                           {item.itemKind === "template" ? (
                             <button
                               type="button"
                               onClick={() => handleOpenTemplateInBuilder(item.templateId)}
-                              className="py-2.5 px-2 flex items-center justify-center gap-1.5 text-xs font-extrabold text-[#2EE59D] hover:bg-white/5 transition-colors cursor-pointer"
+                              className="py-2.5 px-2 flex items-center justify-center gap-1.5 text-xs font-extrabold text-[#38B28B] hover:bg-white/5 transition-colors cursor-pointer"
                             >
-                              <Wand2 className="w-4 h-4 text-[#2EE59D]" />
+                              <Wand2 className="w-4 h-4 text-[#38B28B]" />
                               <span>Kreator</span>
                             </button>
                           ) : (
@@ -2208,7 +2378,7 @@ export const MenuDrawer: React.FC = () => {
                               )}&body=${encodeURIComponent(item.content)}`}
                               className="py-2.5 px-2 flex items-center justify-center gap-1.5 text-xs font-extrabold text-white hover:bg-white/5 transition-colors cursor-pointer"
                             >
-                              <Share2 className="w-4 h-4 text-[#BACADA]" />
+                              <Share2 className="w-4 h-4 text-[#94A3B8]" />
                               <span>Wyślij</span>
                             </a>
                           )}
@@ -2228,25 +2398,25 @@ export const MenuDrawer: React.FC = () => {
          ========================================================= */}
       {previewItem && (
         <div className="fixed inset-0 z-[90] flex flex-col sm:items-center sm:justify-center sm:p-4 bg-[#050C16]/95 backdrop-blur-md animate-in fade-in">
-          <div className="bg-[#0F2C4D] sm:border-2 sm:border-[#FF6A00] sm:rounded-3xl w-full h-full sm:h-[90vh] sm:max-w-3xl shadow-2xl overflow-hidden flex flex-col">
+          <div className="bg-[#131B2E] sm:border-2 sm:border-[#D97724] sm:rounded-3xl w-full h-full sm:h-[90vh] sm:max-w-3xl shadow-2xl overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-4 py-3.5 bg-[#0B2038] border-b border-white/10 shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-full bg-[#FFF6EF] border-2 border-[#FF6A00] flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-full bg-[#FFF6EF] border-2 border-[#D97724] flex items-center justify-center shrink-0">
                   <AskElonShieldLogo className="w-6 h-6" isActive={true} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[#FF6A00]">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#D97724]">
                       {previewItem.categoryLabel}
                     </span>
-                    <span className="text-[10px] font-mono text-[#BACADA]">
+                    <span className="text-[10px] font-mono text-[#94A3B8]">
                       · {previewItem.statutoryReference}
                     </span>
                   </div>
                   <h3 className="text-sm sm:text-base font-extrabold text-white truncate">
                     {previewItem.displayTitle}
                   </h3>
-                  <p className="text-[11px] text-[#2EE59D] truncate">
+                  <p className="text-[11px] text-[#38B28B] truncate">
                     Do: {previewItem.recipient} · Nadawca: {user.fullName} ({user.homeAddress})
                   </p>
                 </div>
@@ -2262,8 +2432,8 @@ export const MenuDrawer: React.FC = () => {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#070F1A]">
-              <div className="rounded-2xl bg-[#FFF6EF] text-[#161B22] p-4 sm:p-6 border-2 border-[#FF6A00]/40 shadow-xl">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#0B0F17]">
+              <div className="rounded-2xl bg-[#FFF6EF] text-[#161B22] p-4 sm:p-6 border-2 border-[#D97724]/40 shadow-xl">
                 <pre className="font-mono text-xs sm:text-sm text-[#161B22] whitespace-pre-wrap leading-relaxed select-all">
                   {previewItem.content}
                 </pre>
@@ -2275,7 +2445,7 @@ export const MenuDrawer: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleCopyText(previewItem.content)}
-                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#FF6A00] hover:bg-[#FF6A00]/90 text-xs font-extrabold text-black shadow-md cursor-pointer"
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#D97724] hover:bg-[#D97724]/90 text-xs font-extrabold text-black shadow-md cursor-pointer"
                 >
                   <Copy className="w-4 h-4" />
                   <span>Kopiuj</span>
@@ -2283,11 +2453,18 @@ export const MenuDrawer: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => handleDownloadItem(previewItem)}
-                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#0B6E4F] hover:bg-[#0B6E4F]/90 text-xs font-extrabold text-white border border-[#2EE59D]/40 shadow-md cursor-pointer"
+                  onClick={() => handleDownloadPDF(previewItem)}
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#1D6852] hover:bg-[#1D6852]/90 text-xs font-extrabold text-white border border-[#38B28B]/40 shadow-md cursor-pointer"
+                  title="Pobierz pismo w formacie PDF"
                 >
-                  <Download className="w-4 h-4 text-[#2EE59D]" />
-                  <span>Pobierz PDF / TXT</span>
+                  <FileDown className="w-4 h-4 text-[#38B28B]" />
+                  <span>
+                    {locale === "pl"
+                      ? "Pobierz PDF"
+                      : locale === "ro"
+                      ? "Descarcă PDF"
+                      : "Download PDF"}
+                  </span>
                 </button>
 
                 {previewItem.itemKind === "template" && (
@@ -2302,7 +2479,7 @@ export const MenuDrawer: React.FC = () => {
                       });
                       setElonShowcaseFilter("correspondence");
                     }}
-                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#2EE59D] hover:bg-[#2EE59D]/90 text-xs font-extrabold text-black shadow-md cursor-pointer"
+                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#38B28B] hover:bg-[#38B28B]/90 text-xs font-extrabold text-black shadow-md cursor-pointer"
                   >
                     <Sparkles className="w-4 h-4" />
                     <span>Zapisz w moich pismach</span>
@@ -2313,7 +2490,7 @@ export const MenuDrawer: React.FC = () => {
                   href={`mailto:?subject=${encodeURIComponent(
                     `${previewItem.displayTitle} - ${user.fullName}`
                   )}&body=${encodeURIComponent(previewItem.content)}`}
-                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#143A66] hover:bg-[#19477d] text-xs font-extrabold text-[#2EE59D] border border-[#2EE59D]/40 shadow-md cursor-pointer"
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#143A66] hover:bg-[#19477d] text-xs font-extrabold text-[#38B28B] border border-[#38B28B]/40 shadow-md cursor-pointer"
                 >
                   <Mail className="w-4 h-4" />
                   <span>Wyślij e-mail</span>
@@ -2338,14 +2515,14 @@ export const MenuDrawer: React.FC = () => {
          ========================================================= */}
       {previewNote && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-[#050C16]/90 backdrop-blur-md animate-in fade-in">
-          <div className="bg-[#0F2C4D] border-2 border-[#FF6A00] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+          <div className="bg-[#131B2E] border-2 border-[#D97724] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-4 py-3.5 bg-[#0B2038] border-b border-white/10">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-[#FFF6EF] border-2 border-[#FF6A00] flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-full bg-[#FFF6EF] border-2 border-[#D97724] flex items-center justify-center shrink-0">
                   <AskElonShieldLogo className="w-5 h-5" isActive={true} />
                 </div>
                 <div className="min-w-0">
-                  <span className="text-[10px] font-black uppercase text-[#FF6A00]">
+                  <span className="text-[10px] font-black uppercase text-[#D97724]">
                     NOTATKA • {previewNote.category}
                   </span>
                   <h3 className="text-sm font-extrabold text-white truncate">
@@ -2362,7 +2539,7 @@ export const MenuDrawer: React.FC = () => {
               </button>
             </div>
 
-            <div className="p-5 space-y-3 bg-[#070F1A]">
+            <div className="p-5 space-y-3 bg-[#0B0F17]">
               <p className="text-xs text-[#9BB0C5]">Data wpisu: {previewNote.date}</p>
               <div className="p-4 rounded-2xl bg-[#0B2540] border border-white/10 text-xs sm:text-sm text-white leading-relaxed whitespace-pre-wrap">
                 {previewNote.description}
@@ -2378,7 +2555,7 @@ export const MenuDrawer: React.FC = () => {
                     "Skopiowano notatkę"
                   )
                 }
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF6A00] text-black font-extrabold text-xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#D97724] text-black font-extrabold text-xs cursor-pointer"
               >
                 <Copy className="w-3.5 h-3.5" />
                 <span>Kopiuj notatkę</span>

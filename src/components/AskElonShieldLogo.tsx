@@ -1,175 +1,481 @@
-import React, { useId } from "react";
-import { TabType } from "../context/AppContext";
+import React from "react";
+import { RobotActivityState } from "../types";
+import { useApp } from "../context/AppContext";
 
 interface AskElonShieldLogoProps {
   className?: string;
+  active?: boolean;
   isActive?: boolean;
-  tabVariant?: TabType;
+  activityState?: RobotActivityState;
+  variant?: "shield" | "head-only";
 }
 
 /**
- * Official "ASK Elon" Shield / Order Badge with the Cyber-Monocle Robot inside.
- * Tightly framed viewBox without any inner green border so the badge appears large and clean.
+ * Analyzes the sentiment of the AI's generated response (and optional user context)
+ * to determine whether the robot should enter the 'happy' or 'concerned' state.
  */
-export const AskElonShieldLogo: React.FC<AskElonShieldLogoProps> = ({
-  className = "w-20 h-20",
-  isActive = true,
-  tabVariant = "chat",
-}) => {
-  const uid = useId().replace(/:/g, "");
-  const glowId = `elon-glow-${uid}`;
-  const faceClipId = `elon-face-clip-${uid}`;
-  const helmetClipId = `elon-helmet-clip-${uid}`;
+export function analyzeAiResponseSentiment(
+  aiText: string,
+  userText: string = ""
+): "happy" | "concerned" | null {
+  const combined = `${aiText || ""} ${userText || ""}`.toLowerCase();
+  if (!combined.trim()) return null;
 
-  const facePath =
-    "M 50 40.5 C 63 40.5, 69.5 44.5, 69.5 55.5 C 69.5 68.5, 60.5 76.5, 50 81.5 C 39.5 76.5, 30.5 68.5, 30.5 55.5 C 30.5 44.5, 37 40.5, 50 40.5 Z";
+  // Concerned signals: unlawful deductions, unfair dismissal, discrimination, urgent deadlines, violations, refusal
+  const concernedMatches =
+    combined.match(
+      /\b(bezprawn\w*|naruszeni\w*|zwolni\w*|wyrzuc\w*|mobbing\w*|dyskryminac\w*|potrąc\w*|piln\w*|natychmiast\w*|termin\w*|3 miesiąc\w*|unlawful\w*|unfair\w*|dismiss\w*|breach\w*|violat\w*|harass\w*|bully\w*|discriminat\w*|deduct\w*|refus\w*|disciplinary|tribunal|warning|zagroż\w*|odmow\w*|nielegaln\w*|skarg\w*|grievance|wypad\w*|withheld|unpaid)\b/gi
+    ) || [];
+
+  // Happy / Encouraging signals: strong entitlement, prepared letter ready, resolved issue, good news, profile updated
+  const happyMatches =
+    combined.match(
+      /\b(masz pełne prawo|przysługuje ci|dobra wiadomość|przygotowałem|gotowe pismo|sporządziłem|zabezpiecz\w*|odzysk\w*|ugod\w*|sukces\w*|rozwiązan\w*|entitled|good news|prepared|official letter|settlement|protected|resolved|completed|congrat\w*|świetnie|gratul\w*|pomogę ci|zapisano|\[english_letter_start\])\b/gi
+    ) || [];
+
+  if (concernedMatches.length > 0 && concernedMatches.length > happyMatches.length) {
+    return "concerned";
+  }
+  if (happyMatches.length > 0) {
+    return "happy";
+  }
+  if (concernedMatches.length > 0) {
+    return "concerned";
+  }
+  return "happy";
+}
+
+export const AskElonShieldLogo: React.FC<AskElonShieldLogoProps> = ({
+  className = "w-10 h-10",
+  active = false,
+  isActive = false,
+  activityState,
+  variant = "shield",
+}) => {
+  // Connect to global app context so every logo instance reacts to user activity & AI sentiment automatically
+  let contextRobotState: RobotActivityState = "idle";
+  try {
+    const app = useApp();
+    contextRobotState = app.robotState;
+  } catch {
+    // Fallback if rendered outside provider
+  }
+
+  const currentActivity: RobotActivityState = activityState || contextRobotState || "idle";
+  const isHighlighted = active || isActive || currentActivity !== "idle";
+
+  // Distinct CSS animation classes for the robot SVG head
+  const headAnimClass =
+    currentActivity === "happy"
+      ? "robot-svg-head-happy"
+      : currentActivity === "concerned"
+      ? "robot-svg-head-concerned"
+      : currentActivity === "speaking"
+      ? "robot-svg-head-speaking"
+      : currentActivity === "listening"
+      ? "robot-svg-head-listening"
+      : currentActivity === "thinking"
+      ? "robot-svg-head-thinking"
+      : currentActivity === "typing"
+      ? "robot-svg-head-typing"
+      : currentActivity === "success"
+      ? "robot-svg-head-success"
+      : "robot-svg-head-idle";
+
+  const eyesAnimClass =
+    currentActivity === "typing"
+      ? "robot-svg-eyes-typing"
+      : currentActivity === "idle"
+      ? "robot-svg-eyes-idle"
+      : "";
+
+  const earAnimClass =
+    currentActivity === "listening" ||
+    currentActivity === "speaking" ||
+    currentActivity === "happy" ||
+    currentActivity === "concerned"
+      ? "robot-svg-ear-active"
+      : "";
+
+  const antennaColor =
+    currentActivity === "concerned"
+      ? "#F59E0B"
+      : currentActivity === "listening" || currentActivity === "speaking"
+      ? "#D97724"
+      : currentActivity === "thinking"
+      ? "#F59E0B"
+      : "#38B28B";
+
+  const isHeadOnly = variant === "head-only";
 
   return (
     <svg
-      viewBox="6 1 88 103"
-      className={className}
+      viewBox={isHeadOnly ? "16 0 88 76" : "0 0 120 128"}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      data-robot-state={currentActivity}
+      aria-label={`ask Elon Logo - ${currentActivity}`}
     >
       <defs>
-        {/* Neon Golden-Amber Glow */}
-        <filter id={glowId} x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow
-            dx="0"
-            dy="0"
-            stdDeviation={isActive ? "2.8" : "1.8"}
-            floodColor="#F59E0B"
-            floodOpacity={isActive ? "0.9" : "0.6"}
-          />
-        </filter>
+        <linearGradient id="shieldBorderGrad" x1="12" y1="6" x2="108" y2="122" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#38B28B" />
+          <stop offset="50%" stopColor="#1D6852" />
+          <stop offset="100%" stopColor="#D97724" />
+        </linearGradient>
 
-        <clipPath id={faceClipId}>
-          <path d={facePath} />
-        </clipPath>
+        <linearGradient id="shieldBodyGrad" x1="60" y1="10" x2="60" y2="120" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#162238" />
+          <stop offset="55%" stopColor="#11192B" />
+          <stop offset="100%" stopColor="#0B0F17" />
+        </linearGradient>
 
-        <clipPath id={helmetClipId}>
-          <path d="M 50 33.5 C 67 33.5, 76.5 39.5, 76.5 55.5 C 76.5 68, 69 75.5, 61 78.5 L 50 81.5 L 39 78.5 C 31 75.5, 23.5 68, 23.5 55.5 C 23.5 39.5, 33 33.5, 50 33.5 Z" />
-        </clipPath>
+        <linearGradient id="visorDarkGrad" x1="36" y1="31" x2="84" y2="55" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#09111E" />
+          <stop offset="100%" stopColor="#13233A" />
+        </linearGradient>
+
+        <linearGradient id="robotShellGrad" x1="36" y1="22" x2="84" y2="74" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#F8FAFC" />
+          <stop offset="70%" stopColor="#E2E8F0" />
+          <stop offset="100%" stopColor="#CBD5E1" />
+        </linearGradient>
       </defs>
 
-      {/* Outer Glowing Golden Shield / Order Crest (no green inner border) */}
+      {!isHeadOnly && (
+        <>
+          {/* Outer Shield Frame */}
+          <path
+            d="M60 5L14 23V59C14 89.5 33.8 114.6 60 123C86.2 114.6 106 89.5 106 59V23L60 5Z"
+            fill="url(#shieldBodyGrad)"
+            stroke="url(#shieldBorderGrad)"
+            strokeWidth={isHighlighted ? "4.2" : "3"}
+          />
+
+          {/* Subtle Inner Shield Trim */}
+          <path
+            d="M60 11L20 26.8V58.5C20 85.2 37.1 107.6 60 115.4C82.9 107.6 100 85.2 100 58.5V26.8L60 11Z"
+            stroke={
+              currentActivity === "concerned" ||
+              currentActivity === "speaking" ||
+              currentActivity === "listening"
+                ? "#D97724"
+                : "#38B28B"
+            }
+            strokeOpacity={isHighlighted ? "0.48" : "0.24"}
+            strokeWidth="1.3"
+          />
+        </>
+      )}
+
+      {/* Robot Collar / Neck Base */}
       <path
-        d="M 50 5.5 C 64 5.5, 77.5 9.5, 88.5 15.5 C 90 50.5, 81.5 78.5, 50 99.5 C 18.5 78.5, 10 50.5, 11.5 15.5 C 22.5 9.5, 36 5.5, 50 5.5 Z"
-        fill="#111C24"
-        stroke="#F5A623"
-        strokeWidth="3.2"
-        strokeLinejoin="round"
-        filter={`url(#${glowId})`}
+        d="M45 66H75L79 74H41L45 66Z"
+        fill="#1D6852"
+        stroke="#38B28B"
+        strokeOpacity="0.45"
+        strokeWidth="1"
       />
 
-      {/* Bold "ASK" Typography in Upper Shield Arch */}
-      <text
-        x="50"
-        y="29.5"
-        textAnchor="middle"
-        fill="#F5A623"
-        fontSize="16.5"
-        fontWeight="900"
-        fontFamily="Inter, Montserrat, system-ui, sans-serif"
-        letterSpacing="0.8"
-      >
-        ASK
-      </text>
+      {/* ACTIVE MOVING & HEAD-STRETCHING ROBOT HEAD GROUP */}
+      <g className={headAnimClass}>
+        {/* Antenna Signal Waves when Listening / Thinking / Speaking / Happy / Concerned */}
+        {(currentActivity === "listening" ||
+          currentActivity === "thinking" ||
+          currentActivity === "speaking" ||
+          currentActivity === "happy" ||
+          currentActivity === "concerned") && (
+          <>
+            <circle
+              cx="60"
+              cy="13"
+              r="7.5"
+              stroke={antennaColor}
+              strokeOpacity="0.6"
+              strokeWidth="1.4"
+              strokeDasharray="3 2"
+            />
+            <circle
+              cx="60"
+              cy="13"
+              r="11"
+              stroke={antennaColor}
+              strokeOpacity="0.3"
+              strokeWidth="1"
+            />
+          </>
+        )}
 
-      {/* Left & Right Ear Pads */}
-      <path
-        d="M 21.5 47 C 17 47.5, 15.2 51, 15.2 56 C 15.2 61, 17 64.5, 21.5 65 Z"
-        fill={tabVariant === "forum" ? "#F5A623" : "#316B4E"}
-      />
-      <path
-        d="M 78.5 47 C 83 47.5, 84.8 51, 84.8 56 C 84.8 61, 83 64.5, 78.5 65 Z"
-        fill={tabVariant === "forum" ? "#F5A623" : "#23503A"}
-      />
+        {/* Robot Antenna */}
+        <line x1="60" y1="14" x2="60" y2="23" stroke="#D97724" strokeWidth="3" strokeLinecap="round" />
+        <circle cx="60" cy="13" r="3.8" fill={antennaColor} stroke="#0B0F17" strokeWidth="1.2" />
 
-      {/* Two-Tone Robot Helmet Arch */}
-      <g clipPath={`url(#${helmetClipId})`}>
-        <rect x="20" y="32" width="30" height="52" fill="#316B4E" />
-        <rect x="50" y="32" width="30" height="52" fill="#23503A" />
+        {/* Soundwave / Reaction Arcs next to Headphones */}
+        {(currentActivity === "listening" ||
+          currentActivity === "speaking" ||
+          currentActivity === "happy") && (
+          <g
+            stroke={currentActivity === "happy" ? "#38B28B" : "#D97724"}
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            opacity="0.85"
+          >
+            <path d="M23 39C20.5 42.5 20.5 47.5 23 51" />
+            <path d="M97 39C99.5 42.5 99.5 47.5 97 51" />
+          </g>
+        )}
+
+        {/* Robot Ear / Headphones (Warm Ochre) */}
+        <g className={earAnimClass}>
+          <rect x="26.5" y="36.5" width="6.5" height="17" rx="3.2" fill="#D97724" />
+          <rect x="87" y="36.5" width="6.5" height="17" rx="3.2" fill="#D97724" />
+        </g>
+
+        {/* Robot Head Shell */}
+        <rect
+          x="32"
+          y="22.5"
+          width="56"
+          height="44"
+          rx="18"
+          fill="url(#robotShellGrad)"
+          stroke="#0B0F17"
+          strokeWidth="2.2"
+        />
+
+        {/* Visor Screen */}
+        <rect
+          x="37.5"
+          y="30"
+          width="45"
+          height="23.5"
+          rx="9.5"
+          fill="url(#visorDarkGrad)"
+          stroke={
+            currentActivity === "concerned"
+              ? "#F59E0B"
+              : currentActivity === "speaking" || currentActivity === "listening"
+              ? "#D97724"
+              : "#38B28B"
+          }
+          strokeOpacity="0.65"
+          strokeWidth="1.3"
+        />
+
+        {/* Thinking Visor Scanner Beam */}
+        {currentActivity === "thinking" && (
+          <rect
+            x="53"
+            y="32"
+            width="14"
+            height="19.5"
+            rx="4"
+            fill="#D97724"
+            fillOpacity="0.28"
+            className="robot-svg-visor-beam"
+          />
+        )}
+
+        {/* DYNAMIC EYES BY ACTIVITY & SENTIMENT STATE */}
+        <g className={eyesAnimClass}>
+          {currentActivity === "happy" || currentActivity === "success" ? (
+            /* Happy Stretched Smiling ^ ^ Eyes + Warm Cheek Glow */
+            <>
+              <path
+                d="M44.5 41.5C46.5 37.5 51.5 37.5 53.5 41.5"
+                stroke="#38B28B"
+                strokeWidth="2.8"
+                strokeLinecap="round"
+              />
+              <path
+                d="M66.5 41.5C68.5 37.5 73.5 37.5 75.5 41.5"
+                stroke="#38B28B"
+                strokeWidth="2.8"
+                strokeLinecap="round"
+              />
+              <circle cx="43.5" cy="44.5" r="2" fill="#D97724" fillOpacity="0.55" />
+              <circle cx="76.5" cy="44.5" r="2" fill="#D97724" fillOpacity="0.55" />
+            </>
+          ) : currentActivity === "concerned" ? (
+            /* Concerned Empathetic Eyes with Furrowed Eyebrows */
+            <>
+              <line
+                x1="44"
+                y1="36.8"
+                x2="53.5"
+                y2="34.2"
+                stroke="#F59E0B"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <line
+                x1="66.5"
+                y1="34.2"
+                x2="76"
+                y2="36.8"
+                stroke="#F59E0B"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <circle cx="49.5" cy="41.5" r="4.1" fill="#F59E0B" />
+              <circle cx="48.5" cy="40.3" r="1.4" fill="#FFFFFF" />
+              <circle cx="70.5" cy="41.5" r="4.1" fill="#F59E0B" />
+              <circle cx="69.5" cy="40.3" r="1.4" fill="#FFFFFF" />
+            </>
+          ) : currentActivity === "thinking" ? (
+            /* Analytical Focused Ring Eyes when Thinking */
+            <>
+              <circle cx="49.5" cy="40.5" r="4.2" stroke="#D97724" strokeWidth="2.2" fill="#09111E" />
+              <circle cx="49.5" cy="40.5" r="1.6" fill="#38B28B" />
+              <circle cx="70.5" cy="40.5" r="4.2" stroke="#D97724" strokeWidth="2.2" fill="#09111E" />
+              <circle cx="70.5" cy="40.5" r="1.6" fill="#38B28B" />
+            </>
+          ) : currentActivity === "listening" ? (
+            /* Wide Attentive Eyes when Listening to Microphone */
+            <>
+              <circle cx="49.5" cy="40.5" r="4.8" fill="#38B28B" />
+              <circle cx="49.5" cy="40.5" r="2" fill="#FFFFFF" />
+              <circle cx="70.5" cy="40.5" r="4.8" fill="#38B28B" />
+              <circle cx="70.5" cy="40.5" r="2" fill="#FFFFFF" />
+            </>
+          ) : (
+            /* Standard / Typing / Speaking Expressive Glowing Eyes */
+            <>
+              <circle cx="49.5" cy="40.5" r="4.2" fill="#38B28B" />
+              <circle cx="48.2" cy="39.2" r="1.4" fill="#FFFFFF" />
+              <circle cx="70.5" cy="40.5" r="4.2" fill="#38B28B" />
+              <circle cx="69.2" cy="39.2" r="1.4" fill="#FFFFFF" />
+            </>
+          )}
+
+          {/* Subtle Eyebrow Indicator when Typing / Reacting to User Info */}
+          {currentActivity === "typing" && (
+            <>
+              <line x1="45" y1="34.2" x2="53.5" y2="35" stroke="#38B28B" strokeWidth="1.6" strokeLinecap="round" />
+              <line x1="66.5" y1="35" x2="75" y2="34.2" stroke="#38B28B" strokeWidth="1.6" strokeLinecap="round" />
+            </>
+          )}
+        </g>
+
+        {/* DYNAMIC MOUTH / VOICE GRILL BY ACTIVITY & SENTIMENT STATE */}
+        {currentActivity === "speaking" ? (
+          /* Animated Talking Mouth / Equalizer when Elon Speaks */
+          <g className="robot-svg-mouth-speaking">
+            <rect x="51" y="45.5" width="2.6" height="5" rx="1.3" fill="#D97724" />
+            <rect x="55" y="44.2" width="2.8" height="7.5" rx="1.4" fill="#38B28B" />
+            <rect x="59" y="43.8" width="2.8" height="8.2" rx="1.4" fill="#FFFFFF" />
+            <rect x="63" y="44.2" width="2.8" height="7.5" rx="1.4" fill="#38B28B" />
+            <rect x="67" y="45.5" width="2.6" height="5" rx="1.3" fill="#D97724" />
+          </g>
+        ) : currentActivity === "happy" || currentActivity === "success" ? (
+          /* Wide Stretched Joyful Smile */
+          <path
+            d="M51.5 46.2C54.5 51.5 65.5 51.5 68.5 46.2"
+            stroke="#38B28B"
+            strokeWidth="2.6"
+            strokeLinecap="round"
+          />
+        ) : currentActivity === "concerned" ? (
+          /* Concerned Empathetic Curve */
+          <path
+            d="M54 49.5C56.5 46.8 63.5 46.8 66 49.5"
+            stroke="#F59E0B"
+            strokeWidth="2.3"
+            strokeLinecap="round"
+          />
+        ) : currentActivity === "listening" ? (
+          /* Attentive Open Receiver Mouth when User Dictates */
+          <rect
+            x="53.5"
+            y="45.8"
+            width="13"
+            height="4.4"
+            rx="2.2"
+            fill="#D97724"
+            stroke="#FFFFFF"
+            strokeWidth="0.8"
+          />
+        ) : currentActivity === "thinking" ? (
+          /* Thoughtful Processing Dots */
+          <g fill="#D97724">
+            <circle cx="55" cy="48" r="1.5" />
+            <circle cx="60" cy="48" r="1.5" fill="#38B28B" />
+            <circle cx="65" cy="48" r="1.5" />
+          </g>
+        ) : currentActivity === "typing" ? (
+          /* Curious Reading Smile when Reacting to User Information */
+          <path
+            d="M53.5 47.2C56 50.2 64 50.2 66.5 47.2"
+            stroke="#38B28B"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          />
+        ) : (
+          /* Friendly Confident Smile (Idle) */
+          <path
+            d="M53.5 47.2C56 50.2 64 50.2 66.5 47.2"
+            stroke="#38B28B"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+          />
+        )}
       </g>
 
-      {/* Bottom Chin / Neck Guard Piece */}
-      <path
-        d="M 37.5 82.5 Q 44 86.2 50 86.5 L 50 90.8 Q 41.5 89.8 37.5 82.5 Z"
-        fill="#316B4E"
-      />
-      <path
-        d="M 62.5 82.5 Q 56 86.2 50 86.5 L 50 90.8 Q 58.5 89.8 62.5 82.5 Z"
-        fill="#23503A"
-      />
+      {!isHeadOnly && (
+        <>
+          {/* "ask" Ribbon Pill */}
+          <rect
+            x="43"
+            y="59.5"
+            width="34"
+            height="13"
+            rx="6.5"
+            fill="#D97724"
+            stroke="#0B0F17"
+            strokeWidth="1.5"
+          />
+          <text
+            x="60"
+            y="68.8"
+            textAnchor="middle"
+            fill="#FFFFFF"
+            fontSize="9.5"
+            fontWeight="900"
+            fontFamily="'Plus Jakarta Sans', sans-serif"
+            letterSpacing="0.6"
+          >
+            ask
+          </text>
 
-      {/* Two-Tone Dark Face Interior */}
-      <g clipPath={`url(#${faceClipId})`}>
-        <rect x="28" y="38" width="22" height="46" fill="#244B3B" />
-        <rect x="50" y="38" width="22" height="46" fill="#18352B" />
-      </g>
+          {/* "ELON" Typography */}
+          <text
+            x="60"
+            y="93.5"
+            textAnchor="middle"
+            fill="#F1F5F9"
+            fontSize="20"
+            fontWeight="900"
+            fontFamily="'Plus Jakarta Sans', sans-serif"
+            letterSpacing="1.2"
+          >
+            ELON
+          </text>
 
-      {/* Glowing Golden Face Visor Outline */}
-      <path
-        d={facePath}
-        stroke="#F5A623"
-        strokeWidth="2.8"
-        strokeLinejoin="round"
-        filter={`url(#${glowId})`}
-      />
-
-      {/* Left Eye — Cheerful Wink Arc */}
-      <path
-        d="M 37.5 54.5 C 39.5 50.2, 44.5 50.2, 46.5 54.5"
-        stroke="#F5A623"
-        strokeWidth="2.8"
-        strokeLinecap="round"
-      />
-
-      {/* Right Eye — Cybernetic Monocle with 3 Circuit Lines */}
-      <line
-        x1="58.5"
-        y1="41.2"
-        x2="58.5"
-        y2="47.8"
-        stroke="#F5A623"
-        strokeWidth="2.6"
-        strokeLinecap="round"
-      />
-      <line
-        x1="58.5"
-        y1="61.2"
-        x2="58.5"
-        y2="75.8"
-        stroke="#F5A623"
-        strokeWidth="2.6"
-        strokeLinecap="round"
-      />
-      <line
-        x1="65.2"
-        y1="54.5"
-        x2="69.2"
-        y2="54.5"
-        stroke="#F5A623"
-        strokeWidth="2.6"
-        strokeLinecap="round"
-      />
-      <circle
-        cx="58.5"
-        cy="54.5"
-        r="6.6"
-        fill="#18352B"
-        stroke="#F5A623"
-        strokeWidth="2.6"
-      />
-      <circle cx="58.5" cy="54.5" r="2.7" fill="#F5A623" />
-
-      {/* Center Smile Arc */}
-      <path
-        d="M 44 65.5 C 47 69.2, 53 69.2, 56 65.5"
-        stroke="#F5A623"
-        strokeWidth="2.8"
-        strokeLinecap="round"
-      />
+          {/* Bottom Status Dot */}
+          <circle
+            cx="60"
+            cy="105.5"
+            r="2.6"
+            fill={
+              currentActivity === "concerned"
+                ? "#F59E0B"
+                : currentActivity === "speaking" || currentActivity === "listening"
+                ? "#D97724"
+                : "#38B28B"
+            }
+          />
+        </>
+      )}
     </svg>
   );
 };

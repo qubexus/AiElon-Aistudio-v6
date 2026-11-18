@@ -169,6 +169,9 @@ export const initialDocuments: UserDocument[] = [
     id: "doc_01",
     name: "Payslip_September_2026_Amazon.pdf",
     type: "payslip",
+    categoryTag: "PDF Paystub",
+    uploadSource: "sample",
+    mimeType: "application/pdf",
     uploadDate: "2026-10-12",
     fileSize: "284 KB",
     auditResult: {
@@ -195,6 +198,9 @@ export const initialDocuments: UserDocument[] = [
     id: "doc_02",
     name: "Employment_Contract_Permanent_FullTime.pdf",
     type: "contract",
+    categoryTag: "Employment Contract",
+    uploadSource: "sample",
+    mimeType: "application/pdf",
     uploadDate: "2024-03-20",
     fileSize: "1.2 MB",
     auditResult: {

@@ -8,6 +8,14 @@ import {
   LegalDeadlineItem,
 } from "../types";
 
+export interface AIAttachedDocumentContext {
+  name: string;
+  categoryTag?: string;
+  detectedSignals?: string[];
+  contentSummary?: string;
+  extractedTextSnippet?: string;
+}
+
 export interface AIUserContext {
   name?: string;
   email?: string;
@@ -22,6 +30,7 @@ export interface AIUserContext {
   hoursPerWeek?: number;
   contractType?: string;
   accountId?: string;
+  attachedDocuments?: AIAttachedDocumentContext[];
 }
 
 export async function askElonAI(

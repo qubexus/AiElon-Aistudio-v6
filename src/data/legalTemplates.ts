@@ -1409,10 +1409,10 @@ export function getSentLetterTagMeta(
             ? "Grievance (Plângere)"
             : "Grievance",
         badgeLabel: locale === "pl" ? "Grievance · Skarga" : "Grievance",
-        bgClass: "bg-[#FF6A00]/20",
+        bgClass: "bg-[#D97724]/20",
         textClass: "text-[#FF9E58]",
-        borderClass: "border-[#FF6A00]/50",
-        activeChipClass: "bg-[#FF6A00] text-black border-[#FF6A00]",
+        borderClass: "border-[#D97724]/50",
+        activeChipClass: "bg-[#D97724] text-black border-[#D97724]",
       };
     case "Settlement":
       return {
@@ -1424,10 +1424,10 @@ export function getSentLetterTagMeta(
             ? "Settlement (Acord)"
             : "Settlement",
         badgeLabel: locale === "pl" ? "Settlement · Ugoda" : "Settlement",
-        bgClass: "bg-[#2EE59D]/20",
-        textClass: "text-[#2EE59D]",
-        borderClass: "border-[#2EE59D]/50",
-        activeChipClass: "bg-[#2EE59D] text-black border-[#2EE59D]",
+        bgClass: "bg-[#38B28B]/20",
+        textClass: "text-[#38B28B]",
+        borderClass: "border-[#38B28B]/50",
+        activeChipClass: "bg-[#38B28B] text-black border-[#38B28B]",
       };
     case "Contract":
       return {

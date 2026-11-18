@@ -326,17 +326,17 @@ export const AdminModal: React.FC = () => {
       {/* Global Marketing Campaign Pop-up (Displayed to users on app entry when active, or when previewed) */}
       {isMarketingPopupVisible && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-          <div className="relative bg-gradient-to-b from-[#0F2C4D] to-[#070F1A] border-2 border-[#FF6A00]/60 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-5 sm:p-6 space-y-4">
+          <div className="relative bg-gradient-to-b from-[#131B2E] to-[#0B0F17] border-2 border-[#D97724]/60 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-5 sm:p-6 space-y-4">
             <button
               type="button"
               onClick={() => setIsMarketingPopupVisible(false)}
-              className="absolute top-3.5 right-3.5 z-10 p-1.5 rounded-lg bg-black/50 hover:bg-white/15 text-[#BACADA] hover:text-white transition-colors"
+              className="absolute top-3.5 right-3.5 z-10 p-1.5 rounded-lg bg-black/50 hover:bg-white/15 text-[#94A3B8] hover:text-white transition-colors"
               aria-label="Zamknij"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FF6A00]/20 border border-[#FF6A00]/40 text-[10px] font-extrabold uppercase tracking-wider text-[#FF6A00]">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#D97724]/20 border border-[#D97724]/40 text-[10px] font-extrabold uppercase tracking-wider text-[#D97724]">
               <Sparkles className="w-3.5 h-3.5" />
               <span>Oferta Specjalna ask Elon</span>
             </div>
@@ -348,7 +348,7 @@ export const AdminModal: React.FC = () => {
               <h3 className="text-lg font-black text-white leading-snug">
                 {marketingPopupConfig.title}
               </h3>
-              <p className="text-xs text-[#BACADA] leading-relaxed mt-1.5 whitespace-pre-wrap">
+              <p className="text-xs text-[#94A3B8] leading-relaxed mt-1.5 whitespace-pre-wrap">
                 {marketingPopupConfig.content}
               </p>
             </div>
@@ -360,14 +360,14 @@ export const AdminModal: React.FC = () => {
                   setIsMarketingPopupVisible(false);
                   setIsPaywallModalOpen(true);
                 }}
-                className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#FF6A00] to-[#FFA726] text-black font-black text-xs shadow-lg hover:opacity-95 transition-opacity"
+                className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#D97724] to-[#FFA726] text-black font-black text-xs shadow-lg hover:opacity-95 transition-opacity"
               >
                 {marketingPopupConfig.ctaText || "Sprawdź ofertę PRO"}
               </button>
               <button
                 type="button"
                 onClick={() => setIsMarketingPopupVisible(false)}
-                className="py-3 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-[#BACADA] hover:text-white transition-colors"
+                className="py-3 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-[#94A3B8] hover:text-white transition-colors"
               >
                 Zamknij
               </button>
@@ -383,7 +383,7 @@ export const AdminModal: React.FC = () => {
             {/* Admin Hub Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 bg-[#0B2038] border-b border-white/10 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#FF6A00] to-[#FFA726] flex items-center justify-center text-black shadow-lg shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#D97724] to-[#FFA726] flex items-center justify-center text-black shadow-lg shrink-0">
                   <Shield className="w-5 h-5" />
                 </div>
                 <div>
@@ -391,7 +391,7 @@ export const AdminModal: React.FC = () => {
                     <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
                       Admin Hub · Centrum Zarządzania ask Elon
                     </h2>
-                    <span className="px-2 py-0.5 rounded-md bg-[#2EE59D]/15 border border-[#2EE59D]/40 text-[10px] font-extrabold text-[#2EE59D] uppercase">
+                    <span className="px-2 py-0.5 rounded-md bg-[#38B28B]/15 border border-[#38B28B]/40 text-[10px] font-extrabold text-[#38B28B] uppercase">
                       ROLE: ADMIN
                     </span>
                   </div>
@@ -407,7 +407,7 @@ export const AdminModal: React.FC = () => {
                   setSelectedUserId(null);
                   setIsAdminModalOpen(false);
                 }}
-                className="self-end sm:self-auto p-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#BACADA] hover:text-white transition-colors"
+                className="self-end sm:self-auto p-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors"
                 aria-label="Zamknij Admin Hub"
               >
                 <X className="w-5 h-5" />
@@ -421,8 +421,8 @@ export const AdminModal: React.FC = () => {
                 onClick={() => setActiveSection("users")}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all ${
                   activeSection === "users"
-                    ? "bg-[#FF6A00] text-black shadow-md"
-                    : "bg-[#0F2C4D]/60 text-[#BACADA] hover:text-white hover:bg-[#0F2C4D]"
+                    ? "bg-[#D97724] text-black shadow-md"
+                    : "bg-[#131B2E]/60 text-[#94A3B8] hover:text-white hover:bg-[#131B2E]"
                 }`}
               >
                 <Users className="w-4 h-4" />
@@ -434,8 +434,8 @@ export const AdminModal: React.FC = () => {
                 onClick={() => setActiveSection("marketing")}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all ${
                   activeSection === "marketing"
-                    ? "bg-[#FF6A00] text-black shadow-md"
-                    : "bg-[#0F2C4D]/60 text-[#BACADA] hover:text-white hover:bg-[#0F2C4D]"
+                    ? "bg-[#D97724] text-black shadow-md"
+                    : "bg-[#131B2E]/60 text-[#94A3B8] hover:text-white hover:bg-[#131B2E]"
                 }`}
               >
                 <Tag className="w-4 h-4" />
@@ -447,8 +447,8 @@ export const AdminModal: React.FC = () => {
                 onClick={() => setActiveSection("communication")}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all ${
                   activeSection === "communication"
-                    ? "bg-[#FF6A00] text-black shadow-md"
-                    : "bg-[#0F2C4D]/60 text-[#BACADA] hover:text-white hover:bg-[#0F2C4D]"
+                    ? "bg-[#D97724] text-black shadow-md"
+                    : "bg-[#131B2E]/60 text-[#94A3B8] hover:text-white hover:bg-[#131B2E]"
                 }`}
               >
                 <Megaphone className="w-4 h-4" />
@@ -466,10 +466,10 @@ export const AdminModal: React.FC = () => {
                   {/* Top Analytics Overview Bar */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                     {/* Card 1: Session / Login Counter with Period Filter */}
-                    <div className="rounded-2xl bg-[#0F2C4D] border border-white/10 p-4 space-y-2.5">
+                    <div className="rounded-2xl bg-[#131B2E] border border-white/10 p-4 space-y-2.5">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-extrabold text-white flex items-center gap-1.5">
-                          <Activity className="w-4 h-4 text-[#2EE59D]" />
+                          <Activity className="w-4 h-4 text-[#38B28B]" />
                           <span>Licznik logowań / sesji</span>
                         </span>
                         <div className="flex items-center bg-[#071424] rounded-lg p-0.5 border border-white/10">
@@ -486,7 +486,7 @@ export const AdminModal: React.FC = () => {
                               onClick={() => setSessionPeriod(p.id)}
                               className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold transition-colors ${
                                 sessionPeriod === p.id
-                                  ? "bg-[#2EE59D] text-black"
+                                  ? "bg-[#38B28B] text-black"
                                   : "text-[#9BB0C5] hover:text-white"
                               }`}
                             >
@@ -510,13 +510,13 @@ export const AdminModal: React.FC = () => {
                     </div>
 
                     {/* Card 2: Daily Queries Generated */}
-                    <div className="rounded-2xl bg-[#0F2C4D] border border-white/10 p-4 space-y-2.5">
+                    <div className="rounded-2xl bg-[#131B2E] border border-white/10 p-4 space-y-2.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-extrabold text-white flex items-center gap-1.5">
-                          <BarChart3 className="w-4 h-4 text-[#FF6A00]" />
+                          <BarChart3 className="w-4 h-4 text-[#D97724]" />
                           <span>Dzienna liczba zapytań</span>
                         </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#FF6A00]/20 text-[#FF6A00]">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#D97724]/20 text-[#D97724]">
                           Na żywo
                         </span>
                       </div>
@@ -531,10 +531,10 @@ export const AdminModal: React.FC = () => {
                     </div>
 
                     {/* Card 3: Query Categorization (Chat vs Formal Cases) */}
-                    <div className="rounded-2xl bg-[#0F2C4D] border border-white/10 p-4 space-y-2.5">
+                    <div className="rounded-2xl bg-[#131B2E] border border-white/10 p-4 space-y-2.5">
                       <div className="flex items-center justify-between text-xs font-extrabold text-white">
                         <span>Kategoryzacja zapytań</span>
-                        <span className="text-[11px] font-mono text-[#2EE59D]">
+                        <span className="text-[11px] font-mono text-[#38B28B]">
                           {platformAnalytics.totalChatQueries +
                             platformAnalytics.totalFormalCases}{" "}
                           łącznie
@@ -544,21 +544,21 @@ export const AdminModal: React.FC = () => {
                       {/* Progress Bar */}
                       <div className="w-full h-2.5 rounded-full bg-[#071424] overflow-hidden flex border border-white/10">
                         <div
-                          className="bg-[#2EE59D] h-full transition-all"
+                          className="bg-[#38B28B] h-full transition-all"
                           style={{ width: `${platformAnalytics.chatPercent}%` }}
                         />
                         <div
-                          className="bg-[#FF6A00] h-full transition-all"
+                          className="bg-[#D97724] h-full transition-all"
                           style={{ width: `${platformAnalytics.casesPercent}%` }}
                         />
                       </div>
 
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-[#2EE59D] font-bold">
+                        <span className="text-[#38B28B] font-bold">
                           ● Rozmowy (Czat): {platformAnalytics.totalChatQueries} (
                           {platformAnalytics.chatPercent}%)
                         </span>
-                        <span className="text-[#FF6A00] font-bold">
+                        <span className="text-[#D97724] font-bold">
                           ● Sprawy: {platformAnalytics.totalFormalCases} (
                           {platformAnalytics.casesPercent}%)
                         </span>
@@ -575,13 +575,13 @@ export const AdminModal: React.FC = () => {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Szukaj po imieniu, nazwisku, e-mailu, mieście lub ID konta..."
-                        className="w-full bg-[#071424] border border-white/10 rounded-xl pl-10 pr-3.5 py-2 text-xs text-white placeholder-[#9BB0C5]/60 focus:outline-none focus:border-[#2EE59D]"
+                        className="w-full bg-[#071424] border border-white/10 rounded-xl pl-10 pr-3.5 py-2 text-xs text-white placeholder-[#9BB0C5]/60 focus:outline-none focus:border-[#38B28B]"
                       />
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="flex items-center gap-1.5 bg-[#071424] border border-white/10 rounded-xl px-2.5 py-1.5">
-                        <Filter className="w-3.5 h-3.5 text-[#2EE59D]" />
+                        <Filter className="w-3.5 h-3.5 text-[#38B28B]" />
                         <select
                           value={roleFilter}
                           onChange={(e) =>
@@ -637,7 +637,7 @@ export const AdminModal: React.FC = () => {
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="bg-[#0F2C4D] border-b border-white/10 text-[11px] font-extrabold uppercase tracking-wider text-[#9BB0C5]">
+                          <tr className="bg-[#131B2E] border-b border-white/10 text-[11px] font-extrabold uppercase tracking-wider text-[#9BB0C5]">
                             <th className="py-3 px-4">Imię i nazwisko</th>
                             <th className="py-3 px-4">E-mail</th>
                             <th className="py-3 px-3">Data rejestracji</th>
@@ -656,7 +656,7 @@ export const AdminModal: React.FC = () => {
                             >
                               <td className="py-3 px-4">
                                 <div className="flex items-center gap-2.5">
-                                  <div className="w-8 h-8 rounded-full bg-[#0B6E4F] border border-[#FF6A00] flex items-center justify-center font-extrabold text-[11px] text-white shrink-0">
+                                  <div className="w-8 h-8 rounded-full bg-[#1D6852] border border-[#D97724] flex items-center justify-center font-extrabold text-[11px] text-white shrink-0">
                                     {u.fullName
                                       .split(" ")
                                       .map((n) => n[0])
@@ -665,7 +665,7 @@ export const AdminModal: React.FC = () => {
                                       .toUpperCase()}
                                   </div>
                                   <div>
-                                    <p className="font-extrabold text-white group-hover:text-[#2EE59D] transition-colors">
+                                    <p className="font-extrabold text-white group-hover:text-[#38B28B] transition-colors">
                                       {u.fullName}
                                     </p>
                                     <p className="text-[10px] font-mono text-[#9BB0C5]">
@@ -674,13 +674,13 @@ export const AdminModal: React.FC = () => {
                                   </div>
                                 </div>
                               </td>
-                              <td className="py-3 px-4 text-[#BACADA]">{u.email}</td>
-                              <td className="py-3 px-3 font-mono text-[#BACADA]">
+                              <td className="py-3 px-4 text-[#94A3B8]">{u.email}</td>
+                              <td className="py-3 px-3 font-mono text-[#94A3B8]">
                                 {u.registeredAt}
                               </td>
                               <td className="py-3 px-3 text-white">
                                 <span className="inline-flex items-center gap-1">
-                                  <MapPin className="w-3 h-3 text-[#FF6A00]" />
+                                  <MapPin className="w-3 h-3 text-[#D97724]" />
                                   {u.city}
                                 </span>
                               </td>
@@ -688,8 +688,8 @@ export const AdminModal: React.FC = () => {
                                 <span
                                   className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase border ${
                                     u.role === "admin"
-                                      ? "bg-[#FF6A00]/20 border-[#FF6A00]/50 text-[#FF6A00]"
-                                      : "bg-white/5 border-white/15 text-[#BACADA]"
+                                      ? "bg-[#D97724]/20 border-[#D97724]/50 text-[#D97724]"
+                                      : "bg-white/5 border-white/15 text-[#94A3B8]"
                                   }`}
                                 >
                                   {u.role}
@@ -697,12 +697,12 @@ export const AdminModal: React.FC = () => {
                               </td>
                               <td className="py-3 px-3">
                                 {u.free_access ? (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#2EE59D]/20 border border-[#2EE59D]/50 text-[#2EE59D] text-[10px] font-extrabold">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#38B28B]/20 border border-[#38B28B]/50 text-[#38B28B] text-[10px] font-extrabold">
                                     <Unlock className="w-3 h-3" />
                                     <span>Free Access VIP</span>
                                   </span>
                                 ) : u.isPro ? (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FF6A00]/20 border border-[#FF6A00]/50 text-[#FF6A00] text-[10px] font-extrabold">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#D97724]/20 border border-[#D97724]/50 text-[#D97724] text-[10px] font-extrabold">
                                     <CheckCircle2 className="w-3 h-3" />
                                     <span>PRO (£9.99/m)</span>
                                   </span>
@@ -719,7 +719,7 @@ export const AdminModal: React.FC = () => {
                                     e.stopPropagation();
                                     handleSelectUser(u);
                                   }}
-                                  className="px-2.5 py-1 rounded-lg bg-[#0F2C4D] group-hover:bg-[#FF6A00] text-white group-hover:text-black text-[11px] font-extrabold transition-colors"
+                                  className="px-2.5 py-1 rounded-lg bg-[#131B2E] group-hover:bg-[#D97724] text-white group-hover:text-black text-[11px] font-extrabold transition-colors"
                                 >
                                   Szczegóły / Edytuj
                                 </button>
@@ -742,7 +742,7 @@ export const AdminModal: React.FC = () => {
                   <div className="bg-[#0B2038] border border-white/10 rounded-2xl p-5 space-y-4 shadow-xl">
                     <div className="flex items-center justify-between gap-2 pb-3 border-b border-white/10">
                       <div className="flex items-center gap-2">
-                        <Video className="w-4 h-4 text-[#FF6A00]" />
+                        <Video className="w-4 h-4 text-[#D97724]" />
                         <h3 className="text-sm font-extrabold text-white">
                           Konfigurator Pop-upa Kampanii
                         </h3>
@@ -758,13 +758,13 @@ export const AdminModal: React.FC = () => {
                         }}
                         className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-extrabold border transition-all ${
                           popupIsActive
-                            ? "bg-[#2EE59D]/20 border-[#2EE59D] text-[#2EE59D]"
+                            ? "bg-[#38B28B]/20 border-[#38B28B] text-[#38B28B]"
                             : "bg-white/5 border-white/15 text-[#9BB0C5]"
                         }`}
                       >
                         <span
                           className={`w-2 h-2 rounded-full ${
-                            popupIsActive ? "bg-[#2EE59D]" : "bg-[#9BB0C5]"
+                            popupIsActive ? "bg-[#38B28B]" : "bg-[#9BB0C5]"
                           }`}
                         />
                         <span>{popupIsActive ? "Aktywny na starcie" : "Wyłączony"}</span>
@@ -773,7 +773,7 @@ export const AdminModal: React.FC = () => {
 
                     <form onSubmit={handleSavePopupConfig} className="space-y-3.5">
                       <div>
-                        <label className="block text-xs font-bold text-[#BACADA] mb-1">
+                        <label className="block text-xs font-bold text-[#94A3B8] mb-1">
                           Tytuł Pop-upa
                         </label>
                         <input
@@ -781,12 +781,12 @@ export const AdminModal: React.FC = () => {
                           value={popupTitle}
                           onChange={(e) => setPopupTitle(e.target.value)}
                           placeholder="np. Odzyskaj swoje pieniądze z ask Elon PRO!"
-                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D]"
+                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B]"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-[#BACADA] mb-1">
+                        <label className="block text-xs font-bold text-[#94A3B8] mb-1">
                           Treść tekstowa
                         </label>
                         <textarea
@@ -794,12 +794,12 @@ export const AdminModal: React.FC = () => {
                           value={popupContent}
                           onChange={(e) => setPopupContent(e.target.value)}
                           placeholder="Treść komunikatu marketingowego lub promocji..."
-                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D] resize-none"
+                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B] resize-none"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-[#BACADA] mb-1">
+                        <label className="block text-xs font-bold text-[#94A3B8] mb-1">
                           URL do grafiki lub wideo (.mp4 / YouTube embed)
                         </label>
                         <input
@@ -807,12 +807,12 @@ export const AdminModal: React.FC = () => {
                           value={popupMediaUrl}
                           onChange={(e) => setPopupMediaUrl(e.target.value)}
                           placeholder="/assets/aistudio/grok_video_2026-10-24-04-59-56_1fc97f08.mp4 lub https://youtu.be/..."
-                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-[#2EE59D]"
+                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-[#38B28B]"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-[#BACADA] mb-1">
+                        <label className="block text-xs font-bold text-[#94A3B8] mb-1">
                           Tekst przycisku akcji (CTA)
                         </label>
                         <input
@@ -820,14 +820,14 @@ export const AdminModal: React.FC = () => {
                           value={popupCtaText}
                           onChange={(e) => setPopupCtaText(e.target.value)}
                           placeholder="np. Odbierz rabat PRO"
-                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D]"
+                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B]"
                         />
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 pt-1">
                         <button
                           type="submit"
-                          className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#0B6E4F] to-[#2EE59D] text-black font-black text-xs shadow-md hover:opacity-95 transition-opacity"
+                          className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#1D6852] to-[#38B28B] text-black font-black text-xs shadow-md hover:opacity-95 transition-opacity"
                         >
                           Zapisz konfigurację Pop-upa
                         </button>
@@ -843,9 +843,9 @@ export const AdminModal: React.FC = () => {
                             });
                             setIsMarketingPopupVisible(true);
                           }}
-                          className="inline-flex items-center gap-1.5 py-2.5 px-3.5 rounded-xl bg-[#0F2C4D] hover:bg-[#163a5f] border border-white/15 text-xs font-extrabold text-white transition-colors"
+                          className="inline-flex items-center gap-1.5 py-2.5 px-3.5 rounded-xl bg-[#131B2E] hover:bg-[#163a5f] border border-white/15 text-xs font-extrabold text-white transition-colors"
                         >
-                          <Eye className="w-3.5 h-3.5 text-[#FF6A00]" />
+                          <Eye className="w-3.5 h-3.5 text-[#D97724]" />
                           <span>Podgląd na żywo</span>
                         </button>
                       </div>
@@ -856,7 +856,7 @@ export const AdminModal: React.FC = () => {
                   <div className="bg-[#0B2038] border border-white/10 rounded-2xl p-5 space-y-4 shadow-xl">
                     <div className="flex items-center justify-between pb-3 border-b border-white/10">
                       <div className="flex items-center gap-2">
-                        <Tag className="w-4 h-4 text-[#2EE59D]" />
+                        <Tag className="w-4 h-4 text-[#38B28B]" />
                         <h3 className="text-sm font-extrabold text-white">
                           Kody Promocyjne i Rabatowe
                         </h3>
@@ -872,7 +872,7 @@ export const AdminModal: React.FC = () => {
                       className="bg-[#071424] border border-white/10 rounded-xl p-3.5 space-y-3"
                     >
                       <p className="text-xs font-extrabold text-white flex items-center gap-1.5">
-                        <Plus className="w-3.5 h-3.5 text-[#FF6A00]" />
+                        <Plus className="w-3.5 h-3.5 text-[#D97724]" />
                         <span>Utwórz nowy kod rabatowy</span>
                       </p>
 
@@ -886,7 +886,7 @@ export const AdminModal: React.FC = () => {
                             value={newPromoCode}
                             onChange={(e) => setNewPromoCode(e.target.value)}
                             placeholder="np. ZIMA50"
-                            className="w-full bg-[#0B2038] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase font-mono focus:outline-none focus:border-[#2EE59D]"
+                            className="w-full bg-[#0B2038] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase font-mono focus:outline-none focus:border-[#38B28B]"
                           />
                         </div>
 
@@ -901,7 +901,7 @@ export const AdminModal: React.FC = () => {
                                 e.target.value as "percentage" | "fixed"
                               )
                             }
-                            className="w-full bg-[#0B2038] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#2EE59D]"
+                            className="w-full bg-[#0B2038] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38B28B]"
                           >
                             <option value="percentage">Procentowy (%)</option>
                             <option value="fixed">Kwotowy (£)</option>
@@ -919,7 +919,7 @@ export const AdminModal: React.FC = () => {
                             max={newDiscountType === "percentage" ? "100" : "9.99"}
                             value={newDiscountValue}
                             onChange={(e) => setNewDiscountValue(e.target.value)}
-                            className="w-full bg-[#0B2038] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#2EE59D]"
+                            className="w-full bg-[#0B2038] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#38B28B]"
                           />
                         </div>
 
@@ -931,7 +931,7 @@ export const AdminModal: React.FC = () => {
                             type="date"
                             value={newExpiresAt}
                             onChange={(e) => setNewExpiresAt(e.target.value)}
-                            className="w-full bg-[#0B2038] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#2EE59D]"
+                            className="w-full bg-[#0B2038] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#38B28B]"
                           />
                         </div>
                       </div>
@@ -939,7 +939,7 @@ export const AdminModal: React.FC = () => {
                       <button
                         type="submit"
                         disabled={!newPromoCode.trim()}
-                        className="w-full py-2 rounded-lg bg-[#FF6A00] hover:bg-[#FF6A00]/90 text-black font-black text-xs disabled:opacity-40 transition-colors"
+                        className="w-full py-2 rounded-lg bg-[#D97724] hover:bg-[#D97724]/90 text-black font-black text-xs disabled:opacity-40 transition-colors"
                       >
                         Dodaj kod rabatowy
                       </button>
@@ -959,10 +959,10 @@ export const AdminModal: React.FC = () => {
                           >
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-mono font-black text-[#2EE59D] px-2 py-0.5 rounded bg-[#0B6E4F]/25 border border-[#2EE59D]/30">
+                                <span className="font-mono font-black text-[#38B28B] px-2 py-0.5 rounded bg-[#1D6852]/25 border border-[#38B28B]/30">
                                   {p.code}
                                 </span>
-                                <span className="font-extrabold text-[#FF6A00]">
+                                <span className="font-extrabold text-[#D97724]">
                                   {p.discountType === "percentage"
                                     ? `-${p.discountValue}%`
                                     : `-£${p.discountValue.toFixed(2)}`}
@@ -971,7 +971,7 @@ export const AdminModal: React.FC = () => {
                                   → £{finalPrice.toFixed(2)}/m
                                 </span>
                               </div>
-                              <p className="text-[11px] text-[#BACADA] truncate mt-1">
+                              <p className="text-[11px] text-[#94A3B8] truncate mt-1">
                                 Ważny do: <strong className="text-white">{p.expiresAt}</strong> · Użyto:{" "}
                                 <strong className="text-white">{p.usedCount}x</strong>
                               </p>
@@ -1001,7 +1001,7 @@ export const AdminModal: React.FC = () => {
                   {/* Composer Card */}
                   <div className="bg-[#0B2038] border border-white/10 rounded-2xl p-5 space-y-4 shadow-xl">
                     <div className="flex items-center gap-2 pb-3 border-b border-white/10">
-                      <Radio className="w-4 h-4 text-[#2EE59D]" />
+                      <Radio className="w-4 h-4 text-[#38B28B]" />
                       <div>
                         <h3 className="text-sm font-extrabold text-white">
                           Wyślij komunikat bezpośrednio na główny Czat
@@ -1015,7 +1015,7 @@ export const AdminModal: React.FC = () => {
                     <form onSubmit={handleSendSystemChatMsg} className="space-y-4">
                       {/* Recipient Type Selector */}
                       <div>
-                        <label className="block text-xs font-bold text-[#BACADA] mb-1.5">
+                        <label className="block text-xs font-bold text-[#94A3B8] mb-1.5">
                           Wybór odbiorcy
                         </label>
                         <div className="grid grid-cols-2 gap-2.5">
@@ -1024,7 +1024,7 @@ export const AdminModal: React.FC = () => {
                             onClick={() => setCommTargetType("broadcast")}
                             className={`py-2.5 px-3 rounded-xl text-xs font-extrabold border flex items-center justify-center gap-2 transition-all ${
                               commTargetType === "broadcast"
-                                ? "bg-[#FF6A00]/20 border-[#FF6A00] text-[#FF6A00]"
+                                ? "bg-[#D97724]/20 border-[#D97724] text-[#D97724]"
                                 : "bg-[#071424] border-white/10 text-[#9BB0C5] hover:text-white"
                             }`}
                           >
@@ -1037,7 +1037,7 @@ export const AdminModal: React.FC = () => {
                             onClick={() => setCommTargetType("direct")}
                             className={`py-2.5 px-3 rounded-xl text-xs font-extrabold border flex items-center justify-center gap-2 transition-all ${
                               commTargetType === "direct"
-                                ? "bg-[#2EE59D]/20 border-[#2EE59D] text-[#2EE59D]"
+                                ? "bg-[#38B28B]/20 border-[#38B28B] text-[#38B28B]"
                                 : "bg-[#071424] border-white/10 text-[#9BB0C5] hover:text-white"
                             }`}
                           >
@@ -1050,13 +1050,13 @@ export const AdminModal: React.FC = () => {
                       {/* Target User Dropdown when Direct */}
                       {commTargetType === "direct" && (
                         <div>
-                          <label className="block text-xs font-bold text-[#BACADA] mb-1">
+                          <label className="block text-xs font-bold text-[#94A3B8] mb-1">
                             Wybierz użytkownika docelowego
                           </label>
                           <select
                             value={commTargetUserId}
                             onChange={(e) => setCommTargetUserId(e.target.value)}
-                            className="w-full bg-[#071424] border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D]"
+                            className="w-full bg-[#071424] border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B]"
                           >
                             {adminUsers.map((u) => (
                               <option key={u.id} value={u.id} className="bg-[#071424]">
@@ -1068,7 +1068,7 @@ export const AdminModal: React.FC = () => {
                       )}
 
                       <div>
-                        <label className="block text-xs font-bold text-[#BACADA] mb-1">
+                        <label className="block text-xs font-bold text-[#94A3B8] mb-1">
                           Nagłówek / Tytuł komunikatu
                         </label>
                         <input
@@ -1080,12 +1080,12 @@ export const AdminModal: React.FC = () => {
                               ? "np. Ważna aktualizacja stawek National Living Wage"
                               : "np. Informacja dot. Twojej sprawy i dokumentów"
                           }
-                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D]"
+                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B]"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-[#BACADA] mb-1">
+                        <label className="block text-xs font-bold text-[#94A3B8] mb-1">
                           Treść wiadomości systemowej na czat
                         </label>
                         <textarea
@@ -1093,7 +1093,7 @@ export const AdminModal: React.FC = () => {
                           value={commMessage}
                           onChange={(e) => setCommMessage(e.target.value)}
                           placeholder="Wpisz treść wiadomości, która wyświetli się bezpośrednio w głównym oknie czatu..."
-                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D] resize-none"
+                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B] resize-none"
                         />
                       </div>
 
@@ -1101,7 +1101,7 @@ export const AdminModal: React.FC = () => {
                         <button
                           type="submit"
                           disabled={!commMessage.trim()}
-                          className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-[#FF6A00] to-[#FFA726] text-black font-black text-xs shadow-lg disabled:opacity-40 transition-opacity"
+                          className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-[#D97724] to-[#FFA726] text-black font-black text-xs shadow-lg disabled:opacity-40 transition-opacity"
                         >
                           <Send className="w-4 h-4" />
                           <span>
@@ -1117,7 +1117,7 @@ export const AdminModal: React.FC = () => {
                             setIsAdminModalOpen(false);
                             setActiveTab("chat");
                           }}
-                          className="py-3 px-3.5 rounded-xl bg-[#0F2C4D] hover:bg-[#163a5f] border border-white/15 text-xs font-extrabold text-white transition-colors"
+                          className="py-3 px-3.5 rounded-xl bg-[#131B2E] hover:bg-[#163a5f] border border-white/15 text-xs font-extrabold text-white transition-colors"
                         >
                           Przejdź do Czatu
                         </button>
@@ -1129,7 +1129,7 @@ export const AdminModal: React.FC = () => {
                   <div className="bg-[#0B2038] border border-white/10 rounded-2xl p-5 space-y-4 shadow-xl">
                     <div className="flex items-center justify-between pb-3 border-b border-white/10">
                       <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-                        <MessageSquare className="w-4 h-4 text-[#FF6A00]" />
+                        <MessageSquare className="w-4 h-4 text-[#D97724]" />
                         <span>Historia doręczonych komunikatów czatu</span>
                       </h3>
                       <span className="text-xs font-mono text-[#9BB0C5]">
@@ -1158,8 +1158,8 @@ export const AdminModal: React.FC = () => {
                               <span
                                 className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
                                   log.targetType === "broadcast"
-                                    ? "bg-[#FF6A00]/20 text-[#FF6A00] border border-[#FF6A00]/40"
-                                    : "bg-[#2EE59D]/20 text-[#2EE59D] border border-[#2EE59D]/40"
+                                    ? "bg-[#D97724]/20 text-[#D97724] border border-[#D97724]/40"
+                                    : "bg-[#38B28B]/20 text-[#38B28B] border border-[#38B28B]/40"
                                 }`}
                               >
                                 {log.targetType === "broadcast"
@@ -1173,7 +1173,7 @@ export const AdminModal: React.FC = () => {
                             <p className="text-xs font-extrabold text-white">
                               {log.title}
                             </p>
-                            <p className="text-xs text-[#BACADA] whitespace-pre-wrap leading-relaxed">
+                            <p className="text-xs text-[#94A3B8] whitespace-pre-wrap leading-relaxed">
                               {log.message}
                             </p>
                           </div>
@@ -1191,11 +1191,11 @@ export const AdminModal: React.FC = () => {
           {/* ===================================================================== */}
           {selectedUser && editUserForm && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-              <div className="bg-[#0B2038] border-2 border-[#2EE59D]/40 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
+              <div className="bg-[#0B2038] border-2 border-[#38B28B]/40 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
                 {/* Modal Header */}
-                <div className="flex items-center justify-between px-5 py-4 bg-[#0F2C4D] border-b border-white/10">
+                <div className="flex items-center justify-between px-5 py-4 bg-[#131B2E] border-b border-white/10">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-[#0B6E4F] border-2 border-[#FF6A00] flex items-center justify-center font-black text-sm text-white">
+                    <div className="w-11 h-11 rounded-full bg-[#1D6852] border-2 border-[#D97724] flex items-center justify-center font-black text-sm text-white">
                       {selectedUser.fullName
                         .split(" ")
                         .map((n) => n[0])
@@ -1217,7 +1217,7 @@ export const AdminModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setSelectedUserId(null)}
-                    className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[#BACADA] hover:text-white transition-colors"
+                    className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -1228,7 +1228,7 @@ export const AdminModal: React.FC = () => {
                   {/* 1. User Individual Analytics & Metrics */}
                   <div className="rounded-2xl bg-[#071424] border border-white/10 p-4 space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs font-extrabold text-[#2EE59D] uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="text-xs font-extrabold text-[#38B28B] uppercase tracking-wider flex items-center gap-1.5">
                         <BarChart3 className="w-4 h-4" />
                         <span>Statystyki i Analityka Użytkownika</span>
                       </span>
@@ -1247,7 +1247,7 @@ export const AdminModal: React.FC = () => {
                             onClick={() => setUserSessionPeriod(p.id)}
                             className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold transition-colors ${
                               userSessionPeriod === p.id
-                                ? "bg-[#2EE59D] text-black"
+                                ? "bg-[#38B28B] text-black"
                                 : "text-[#9BB0C5] hover:text-white"
                             }`}
                           >
@@ -1281,7 +1281,7 @@ export const AdminModal: React.FC = () => {
                         <p className="text-[11px] text-[#9BB0C5]">
                           Dzienna liczba zapytań
                         </p>
-                        <p className="text-xl font-black font-mono text-[#FF6A00] mt-0.5">
+                        <p className="text-xl font-black font-mono text-[#D97724] mt-0.5">
                           {selectedUser.dailyQueriesCount} / dzień
                         </p>
                       </div>
@@ -1291,12 +1291,12 @@ export const AdminModal: React.FC = () => {
                           Czat vs Sprawy formalne
                         </p>
                         <div className="flex items-center gap-2 mt-1 text-xs font-extrabold">
-                          <span className="text-[#2EE59D] flex items-center gap-1">
+                          <span className="text-[#38B28B] flex items-center gap-1">
                             <MessageSquare className="w-3.5 h-3.5" />
                             {selectedUser.chatQueriesCount} czat
                           </span>
                           <span className="text-[#9BB0C5]">/</span>
-                          <span className="text-[#FF6A00] flex items-center gap-1">
+                          <span className="text-[#D97724] flex items-center gap-1">
                             <FolderKanban className="w-3.5 h-3.5" />
                             {selectedUser.formalCasesCount} spraw
                           </span>
@@ -1327,8 +1327,8 @@ export const AdminModal: React.FC = () => {
                         }}
                         className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase border transition-all ${
                           editUserForm.role === "admin"
-                            ? "bg-[#FF6A00] text-black border-[#FF6A00]"
-                            : "bg-[#0F2C4D] text-white border-white/15"
+                            ? "bg-[#D97724] text-black border-[#D97724]"
+                            : "bg-[#131B2E] text-white border-white/15"
                         }`}
                       >
                         {editUserForm.role === "admin" ? "ADMIN" : "USER"}
@@ -1363,7 +1363,7 @@ export const AdminModal: React.FC = () => {
                         }}
                         className={`px-3 py-1.5 rounded-xl text-xs font-black border transition-all ${
                           editUserForm.free_access
-                            ? "bg-[#2EE59D] text-black border-[#2EE59D]"
+                            ? "bg-[#38B28B] text-black border-[#38B28B]"
                             : "bg-white/5 text-[#9BB0C5] border-white/15 hover:text-white"
                         }`}
                       >
@@ -1377,7 +1377,7 @@ export const AdminModal: React.FC = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <p className="text-xs font-extrabold text-white flex items-center gap-1.5">
-                          <KeyRound className="w-4 h-4 text-[#FF6A00]" />
+                          <KeyRound className="w-4 h-4 text-[#D97724]" />
                           <span>Reset hasła użytkownika</span>
                         </p>
                         <p className="text-[11px] text-[#9BB0C5]">
@@ -1387,15 +1387,15 @@ export const AdminModal: React.FC = () => {
                       <button
                         type="button"
                         onClick={handleTriggerPasswordReset}
-                        className="px-3.5 py-2 rounded-xl bg-[#FF6A00]/20 hover:bg-[#FF6A00] text-[#FF6A00] hover:text-black border border-[#FF6A00]/50 text-xs font-extrabold transition-colors shrink-0"
+                        className="px-3.5 py-2 rounded-xl bg-[#D97724]/20 hover:bg-[#D97724] text-[#D97724] hover:text-black border border-[#D97724]/50 text-xs font-extrabold transition-colors shrink-0"
                       >
                         Wyślij link resetujący hasło
                       </button>
                     </div>
 
                     {passwordResetResult && (
-                      <div className="rounded-xl bg-[#0B2038] border border-[#2EE59D]/40 p-3 space-y-2 text-xs animate-in fade-in">
-                        <div className="flex items-center justify-between text-[#2EE59D] font-bold">
+                      <div className="rounded-xl bg-[#0B2038] border border-[#38B28B]/40 p-3 space-y-2 text-xs animate-in fade-in">
+                        <div className="flex items-center justify-between text-[#38B28B] font-bold">
                           <span>
                             ✓ Wysłano wiadomość e-mail na adres:{" "}
                             {passwordResetResult.email}
@@ -1413,7 +1413,7 @@ export const AdminModal: React.FC = () => {
                           >
                             {copiedResetToken ? (
                               <>
-                                <Check className="w-3 h-3 text-[#2EE59D]" />
+                                <Check className="w-3 h-3 text-[#38B28B]" />
                                 <span>Skopiowano</span>
                               </>
                             ) : (
@@ -1425,12 +1425,12 @@ export const AdminModal: React.FC = () => {
                           </button>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono">
-                          <div className="p-2 rounded bg-[#071424] text-[#BACADA]">
+                          <div className="p-2 rounded bg-[#071424] text-[#94A3B8]">
                             Token: <strong className="text-white">{passwordResetResult.token}</strong>
                           </div>
-                          <div className="p-2 rounded bg-[#071424] text-[#BACADA]">
+                          <div className="p-2 rounded bg-[#071424] text-[#94A3B8]">
                             Hasło tymczasowe:{" "}
-                            <strong className="text-[#FF6A00]">
+                            <strong className="text-[#D97724]">
                               {passwordResetResult.tempPassword}
                             </strong>
                           </div>
@@ -1459,13 +1459,13 @@ export const AdminModal: React.FC = () => {
                               fullName: e.target.value,
                             })
                           }
-                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D]"
+                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B]"
                         />
                       </div>
 
                       <div>
                         <label className="block text-[11px] font-bold text-[#9BB0C5] mb-1 flex items-center gap-1">
-                          <Mail className="w-3 h-3 text-[#2EE59D]" />
+                          <Mail className="w-3 h-3 text-[#38B28B]" />
                           <span>E-mail</span>
                         </label>
                         <input
@@ -1477,13 +1477,13 @@ export const AdminModal: React.FC = () => {
                               email: e.target.value,
                             })
                           }
-                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D]"
+                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B]"
                         />
                       </div>
 
                       <div>
                         <label className="block text-[11px] font-bold text-[#9BB0C5] mb-1 flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-[#FF6A00]" />
+                          <MapPin className="w-3 h-3 text-[#D97724]" />
                           <span>Miasto / Lokalizacja</span>
                         </label>
                         <input
@@ -1495,13 +1495,13 @@ export const AdminModal: React.FC = () => {
                               city: e.target.value,
                             })
                           }
-                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D]"
+                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B]"
                         />
                       </div>
 
                       <div>
                         <label className="block text-[11px] font-bold text-[#9BB0C5] mb-1 flex items-center gap-1">
-                          <Phone className="w-3 h-3 text-[#2EE59D]" />
+                          <Phone className="w-3 h-3 text-[#38B28B]" />
                           <span>Telefon</span>
                         </label>
                         <input
@@ -1513,13 +1513,13 @@ export const AdminModal: React.FC = () => {
                               phone: e.target.value,
                             })
                           }
-                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D]"
+                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B]"
                         />
                       </div>
 
                       <div>
                         <label className="block text-[11px] font-bold text-[#9BB0C5] mb-1 flex items-center gap-1">
-                          <Building2 className="w-3 h-3 text-[#FF6A00]" />
+                          <Building2 className="w-3 h-3 text-[#D97724]" />
                           <span>Pracodawca</span>
                         </label>
                         <input
@@ -1531,13 +1531,13 @@ export const AdminModal: React.FC = () => {
                               employerName: e.target.value,
                             })
                           }
-                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D]"
+                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B]"
                         />
                       </div>
 
                       <div>
                         <label className="block text-[11px] font-bold text-[#9BB0C5] mb-1 flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-[#2EE59D]" />
+                          <Calendar className="w-3 h-3 text-[#38B28B]" />
                           <span>Data rejestracji</span>
                         </label>
                         <input
@@ -1549,7 +1549,7 @@ export const AdminModal: React.FC = () => {
                               registeredAt: e.target.value,
                             })
                           }
-                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-[#2EE59D]"
+                          className="w-full bg-[#071424] border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-[#38B28B]"
                         />
                       </div>
                     </div>
@@ -1563,7 +1563,7 @@ export const AdminModal: React.FC = () => {
                           setSelectedUserId(null);
                           setActiveSection("communication");
                         }}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#0F2C4D] hover:bg-[#163a5f] border border-white/15 text-xs font-extrabold text-[#2EE59D] transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#131B2E] hover:bg-[#163a5f] border border-white/15 text-xs font-extrabold text-[#38B28B] transition-colors"
                       >
                         <Send className="w-3.5 h-3.5" />
                         <span>Wyślij wiadomość Direct na czat</span>
@@ -1573,13 +1573,13 @@ export const AdminModal: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setSelectedUserId(null)}
-                          className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-[#BACADA] hover:text-white transition-colors"
+                          className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-[#94A3B8] hover:text-white transition-colors"
                         >
                           Zamknij
                         </button>
                         <button
                           type="submit"
-                          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#0B6E4F] to-[#2EE59D] text-black font-black text-xs shadow-lg hover:opacity-95 transition-opacity"
+                          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#1D6852] to-[#38B28B] text-black font-black text-xs shadow-lg hover:opacity-95 transition-opacity"
                         >
                           Zapisz zmiany w bazie
                         </button>

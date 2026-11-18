@@ -112,18 +112,18 @@ export const EmployerLookupModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-[#0F2C4D] border border-white/15 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-[#131B2E] border border-white/15 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-white/10">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#0B6E4F] flex items-center justify-center text-[#2EE59D]">
+            <div className="w-8 h-8 rounded-xl bg-[#1D6852] flex items-center justify-center text-[#38B28B]">
               <Search className="w-4.5 h-4.5" />
             </div>
             <div>
               <h2 className="text-base font-extrabold text-white">
                 {t("lookupTitle")}
               </h2>
-              <p className="text-[11px] text-[#BACADA]">
+              <p className="text-[11px] text-[#94A3B8]">
                 {t("lookupSub")}
               </p>
             </div>
@@ -131,7 +131,7 @@ export const EmployerLookupModal: React.FC = () => {
 
           <button
             onClick={() => setIsEmployerLookupModalOpen(false)}
-            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#BACADA] hover:text-white transition-colors"
+            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -141,27 +141,27 @@ export const EmployerLookupModal: React.FC = () => {
         <div className="p-5 border-b border-white/10">
           <form onSubmit={handleSearch} className="flex gap-2">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-3 text-[#BACADA]" />
+              <Search className="w-4 h-4 absolute left-3 top-3 text-[#94A3B8]" />
               <input
                 type="text"
                 autoFocus
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t("searchPlaceholder")}
-                className="w-full bg-[#12304F] border border-white/15 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-[#BACADA]/50 focus:outline-none focus:border-[#2EE59D]"
+                className="w-full bg-[#1A243B] border border-white/15 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-[#94A3B8]/50 focus:outline-none focus:border-[#38B28B]"
               />
             </div>
             <button
               type="submit"
               disabled={isSearching || !searchQuery.trim()}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#0B6E4F] to-[#2EE59D] text-black font-extrabold text-xs disabled:opacity-40 shadow-md"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#1D6852] to-[#38B28B] text-black font-extrabold text-xs disabled:opacity-40 shadow-md"
             >
               {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : t("searchBtn")}
             </button>
           </form>
 
           {/* Quick suggestions */}
-          <div className="flex flex-wrap items-center gap-1.5 mt-2.5 text-[11px] text-[#BACADA]">
+          <div className="flex flex-wrap items-center gap-1.5 mt-2.5 text-[11px] text-[#94A3B8]">
             <span>Przykłady:</span>
             {["RM18 7AN", "B37 7YN", "EC1A 1BB", "Amazon", "DHL", "Tesco"].map((chip) => (
               <button
@@ -170,7 +170,7 @@ export const EmployerLookupModal: React.FC = () => {
                 onClick={() => {
                   setSearchQuery(chip);
                 }}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-[#2EE59D] font-medium"
+                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-[#38B28B] font-medium"
               >
                 {chip}
               </button>
@@ -185,40 +185,40 @@ export const EmployerLookupModal: React.FC = () => {
               <div
                 key={idx}
                 onClick={() => handleSelectEmployer(emp)}
-                className="p-3.5 rounded-xl bg-[#12304F] hover:bg-[#153a5e] border border-white/10 hover:border-[#2EE59D]/40 cursor-pointer transition-all flex items-center justify-between gap-3 group"
+                className="p-3.5 rounded-xl bg-[#1A243B] hover:bg-[#153a5e] border border-white/10 hover:border-[#38B28B]/40 cursor-pointer transition-all flex items-center justify-between gap-3 group"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-[#FF6A00]" />
-                    <h4 className="text-xs font-bold text-white group-hover:text-[#2EE59D] transition-colors">
+                    <Building2 className="w-4 h-4 text-[#D97724]" />
+                    <h4 className="text-xs font-bold text-white group-hover:text-[#38B28B] transition-colors">
                       {emp.name}
                     </h4>
                   </div>
-                  <div className="flex items-center gap-1 text-[11px] text-[#BACADA]">
-                    <MapPin className="w-3.5 h-3.5 text-[#2EE59D]" />
+                  <div className="flex items-center gap-1 text-[11px] text-[#94A3B8]">
+                    <MapPin className="w-3.5 h-3.5 text-[#38B28B]" />
                     <span>{emp.address}, {emp.postcode}</span>
                   </div>
                   {emp.companyNumber && (
-                    <span className="inline-block text-[10px] text-[#BACADA]/80">
+                    <span className="inline-block text-[10px] text-[#94A3B8]/80">
                       Companies House: #{emp.companyNumber}
                     </span>
                   )}
                 </div>
 
-                <button className="px-2.5 py-1 rounded-lg bg-[#0B6E4F]/40 border border-[#2EE59D]/30 text-[#2EE59D] text-[11px] font-bold shrink-0">
+                <button className="px-2.5 py-1 rounded-lg bg-[#1D6852]/40 border border-[#38B28B]/30 text-[#38B28B] text-[11px] font-bold shrink-0">
                   {t("useAddress")}
                 </button>
               </div>
             ))
           ) : hasSearched && !isSearching ? (
-            <p className="text-center text-xs text-[#BACADA] py-8">
+            <p className="text-center text-xs text-[#94A3B8] py-8">
               {t("noResults")}
             </p>
           ) : (
-            <div className="text-center text-xs text-[#BACADA] py-8 space-y-1">
-              <Building2 className="w-8 h-8 text-[#BACADA]/40 mx-auto mb-2" />
+            <div className="text-center text-xs text-[#94A3B8] py-8 space-y-1">
+              <Building2 className="w-8 h-8 text-[#94A3B8]/40 mx-auto mb-2" />
               <p>Wpisz kod pocztowy lub nazwę firmy powyżej.</p>
-              <p className="text-[11px] text-[#BACADA]/70">
+              <p className="text-[11px] text-[#94A3B8]/70">
                 Dane adresowe są weryfikowane z oficjalnym rejestrem Companies House oraz mapą kodów pocztowych UK.
               </p>
             </div>

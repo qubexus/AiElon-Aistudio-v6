@@ -91,21 +91,21 @@ export const PaywallModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in overflow-y-auto">
-      <div className="relative bg-gradient-to-b from-[#0F2C4D] to-[#070F1A] border border-[#FF6A00]/40 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-5 sm:p-6 my-auto">
+      <div className="relative bg-gradient-to-b from-[#131B2E] to-[#0B0F17] border border-[#D97724]/40 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-5 sm:p-6 my-auto">
         {/* Glow behind */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-[#FF6A00]/20 blur-3xl -z-10 rounded-full"></div>
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-[#D97724]/20 blur-3xl -z-10 rounded-full"></div>
 
         {/* Close Button */}
         <button
           onClick={() => setIsPaywallModalOpen(false)}
-          className="absolute top-4 right-4 z-10 p-1.5 rounded-lg bg-black/40 hover:bg-white/10 text-[#BACADA] hover:text-white transition-colors"
+          className="absolute top-4 right-4 z-10 p-1.5 rounded-lg bg-black/40 hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Hero Badge */}
         <div className="flex flex-col items-center text-center mb-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#FF6A00] to-[#FFA726] flex items-center justify-center text-black shadow-lg mb-2.5">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#D97724] to-[#FFA726] flex items-center justify-center text-black shadow-lg mb-2.5">
             <ShieldCheck className="w-7 h-7" />
           </div>
 
@@ -117,22 +117,22 @@ export const PaywallModal: React.FC = () => {
           <div className="flex items-baseline justify-center gap-2 mt-1">
             {appliedPromo ? (
               <>
-                <span className="text-sm font-bold font-mono tabular-nums text-[#BACADA] line-through">
+                <span className="text-sm font-bold font-mono tabular-nums text-[#94A3B8] line-through">
                   £{basePrice.toFixed(2)}
                 </span>
-                <span className="text-2xl font-black font-mono tabular-nums text-[#2EE59D]">
+                <span className="text-2xl font-black font-mono tabular-nums text-[#38B28B]">
                   £{effectivePrice.toFixed(2)} / miesiąc
                 </span>
               </>
             ) : (
-              <span className="text-2xl font-black font-mono tabular-nums text-[#FF6A00]">
+              <span className="text-2xl font-black font-mono tabular-nums text-[#D97724]">
                 {t("proPrice")}
               </span>
             )}
           </div>
 
           {appliedPromo && (
-            <div className="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#2EE59D]/15 border border-[#2EE59D]/40 text-[11px] font-extrabold text-[#2EE59D]">
+            <div className="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#38B28B]/15 border border-[#38B28B]/40 text-[11px] font-extrabold text-[#38B28B]">
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>
                 Aktywny kod {appliedPromo.promo.code} (
@@ -144,7 +144,7 @@ export const PaywallModal: React.FC = () => {
             </div>
           )}
 
-          <p className="text-xs text-[#BACADA] mt-1">
+          <p className="text-xs text-[#94A3B8] mt-1">
             Możesz anulować w dowolnym momencie. Bez ukrytych opłat.
           </p>
         </div>
@@ -153,7 +153,7 @@ export const PaywallModal: React.FC = () => {
         <div className="mb-4 rounded-2xl bg-[#091A2E] border border-white/10 p-3.5 space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-extrabold text-white flex items-center gap-1.5">
-              <Gauge className="w-3.5 h-3.5 text-[#2EE59D]" />
+              <Gauge className="w-3.5 h-3.5 text-[#38B28B]" />
               <span>
                 Twoje limity konta (
                 {user.free_access
@@ -167,8 +167,8 @@ export const PaywallModal: React.FC = () => {
             <span
               className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
                 hasProOrFreeAccess
-                  ? "bg-[#2EE59D]/20 text-[#2EE59D] border border-[#2EE59D]/40"
-                  : "bg-white/10 text-[#BACADA]"
+                  ? "bg-[#38B28B]/20 text-[#38B28B] border border-[#38B28B]/40"
+                  : "bg-white/10 text-[#94A3B8]"
               }`}
             >
               {hasProOrFreeAccess ? "BEZ LIMITU" : "STANDARD"}
@@ -176,27 +176,27 @@ export const PaywallModal: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-[11px]">
-            <div className="rounded-xl bg-[#0F2C4D]/70 border border-white/5 p-2.5">
+            <div className="rounded-xl bg-[#131B2E]/70 border border-white/5 p-2.5">
               <p className="text-[#9BB0C5]">Wygenerowane pisma</p>
               <p className="text-sm font-black font-mono tabular-nums text-white mt-0.5">
                 {sentLetters.length} / {hasProOrFreeAccess ? "∞" : "5 mies."}
               </p>
             </div>
-            <div className="rounded-xl bg-[#0F2C4D]/70 border border-white/5 p-2.5">
+            <div className="rounded-xl bg-[#131B2E]/70 border border-white/5 p-2.5">
               <p className="text-[#9BB0C5]">Aktywne sprawy</p>
               <p className="text-sm font-black font-mono tabular-nums text-white mt-0.5">
                 {cases.length} / {hasProOrFreeAccess ? "∞" : "3"}
               </p>
             </div>
-            <div className="rounded-xl bg-[#0F2C4D]/70 border border-white/5 p-2.5">
+            <div className="rounded-xl bg-[#131B2E]/70 border border-white/5 p-2.5">
               <p className="text-[#9BB0C5]">Audyty Payslipów</p>
               <p className="text-sm font-black font-mono tabular-nums text-white mt-0.5">
                 {documents.length} / {hasProOrFreeAccess ? "∞" : "3 mies."}
               </p>
             </div>
-            <div className="rounded-xl bg-[#0F2C4D]/70 border border-white/5 p-2.5">
+            <div className="rounded-xl bg-[#131B2E]/70 border border-white/5 p-2.5">
               <p className="text-[#9BB0C5]">Historia czatów</p>
-              <p className="text-sm font-black font-mono tabular-nums text-[#2EE59D] mt-0.5">
+              <p className="text-sm font-black font-mono tabular-nums text-[#38B28B] mt-0.5">
                 {recentUnsavedChats.length} / 10
               </p>
             </div>
@@ -204,13 +204,13 @@ export const PaywallModal: React.FC = () => {
         </div>
 
         {/* Features Checklist */}
-        <div className="space-y-2 mb-4 bg-[#12304F]/60 p-3.5 rounded-2xl border border-white/5">
+        <div className="space-y-2 mb-4 bg-[#1A243B]/60 p-3.5 rounded-2xl border border-white/5">
           {features.map((feat, idx) => (
             <div key={idx} className="flex items-start gap-2.5">
-              <div className="w-4 h-4 rounded-full bg-[#2EE59D]/20 text-[#2EE59D] flex items-center justify-center shrink-0 mt-0.5">
+              <div className="w-4 h-4 rounded-full bg-[#38B28B]/20 text-[#38B28B] flex items-center justify-center shrink-0 mt-0.5">
                 <Check className="w-3 h-3 stroke-[3]" />
               </div>
-              <span className="text-xs text-[#F4F8FB] leading-relaxed font-medium">
+              <span className="text-xs text-[#F1F5F9] leading-relaxed font-medium">
                 {feat}
               </span>
             </div>
@@ -221,7 +221,7 @@ export const PaywallModal: React.FC = () => {
         <div className="mb-4">
           <form onSubmit={handleRedeemPromo} className="flex gap-2">
             <div className="relative flex-1">
-              <Tag className="w-3.5 h-3.5 text-[#FF6A00] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Tag className="w-3.5 h-3.5 text-[#D97724] absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={promoInput}
@@ -230,7 +230,7 @@ export const PaywallModal: React.FC = () => {
                   if (promoError) setPromoError(null);
                 }}
                 placeholder="Kod rabatowy (np. SOLIDARITY, UNITE, ELON3M)"
-                className="w-full bg-[#091A2E] border border-white/15 rounded-xl pl-8 pr-3 py-2 text-xs text-white uppercase placeholder-[#BACADA]/50 focus:outline-none focus:border-[#2EE59D]"
+                className="w-full bg-[#091A2E] border border-white/15 rounded-xl pl-8 pr-3 py-2 text-xs text-white uppercase placeholder-[#94A3B8]/50 focus:outline-none focus:border-[#38B28B]"
               />
             </div>
             <button
@@ -258,7 +258,7 @@ export const PaywallModal: React.FC = () => {
             </div>
             <button
               onClick={handleCancelPro}
-              className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-[#BACADA] hover:text-[#EF4444] transition-colors"
+              className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-[#94A3B8] hover:text-[#EF4444] transition-colors"
             >
               Anuluj subskrypcję PRO
             </button>
@@ -266,7 +266,7 @@ export const PaywallModal: React.FC = () => {
         ) : (
           <button
             onClick={handleActivatePro}
-            className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#FF6A00] to-[#FFA726] hover:opacity-95 text-black font-black text-xs sm:text-sm shadow-xl transition-all"
+            className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#D97724] to-[#FFA726] hover:opacity-95 text-black font-black text-xs sm:text-sm shadow-xl transition-all"
           >
             <CreditCard className="w-4 h-4" />
             <span>
@@ -277,8 +277,8 @@ export const PaywallModal: React.FC = () => {
           </button>
         )}
 
-        <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#BACADA]/70 mt-4">
-          <Lock className="w-3 h-3 text-[#2EE59D]" />
+        <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#94A3B8]/70 mt-4">
+          <Lock className="w-3 h-3 text-[#38B28B]" />
           <span>Płatność zabezpieczona PayPal & Stripe. Zgodność z PCI-DSS.</span>
         </div>
       </div>

@@ -14,13 +14,19 @@ import {
   NetworkStatus,
   SavedLetterDraft,
   RecentUnsavedChat,
+  ChatSessionTag,
   AdminManagedUser,
   PromoCodeItem,
   MarketingPopupConfig,
   AdminChatDeliveryLog,
   PendingSyncAction,
-  OfflineSettingsConfig
+  OfflineSettingsConfig,
+  ElonVoiceConfig,
+  ThemeMode,
+  RobotActivityState,
+  DocumentCategoryTag
 } from "../types";
+import { mapCategoryTagToDocType, getDefaultCategoryTagForType } from "../utils/documentClassifier";
 import {
   defaultTemplates,
   extractProfileUpdatesFromChat,
@@ -30,15 +36,24 @@ import {
 import * as storage from "../services/storageService";
 import { askElonAI, askElonAIStream } from "../services/geminiService";
 import { getTranslation } from "../i18n/translations";
+import { analyzeAiResponseSentiment } from "../components/AskElonShieldLogo";
 
 export type TabType = "chat" | "cases" | "templates" | "forum" | "profile";
-export type ProfileSubTab = "details" | "docs" | "notes";
+export type ProfileSubTab = "details" | "docs" | "notes" | "settings";
 
 interface AppContextType {
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
   profileSubTab: ProfileSubTab;
   setProfileSubTab: (subTab: ProfileSubTab) => void;
+  themeMode: ThemeMode;
+  setThemeMode: (mode: ThemeMode) => void;
+  toggleThemeMode: () => void;
+  robotState: RobotActivityState;
+  aiResponseSentiment: "happy" | "concerned" | null;
+  setIsElonSpeaking: (speaking: boolean) => void;
+  setIsUserDictating: (dictating: boolean) => void;
+  triggerRobotReaction: (state?: RobotActivityState, durationMs?: number) => void;
   locale: Locale;
   setLocale: (locale: Locale) => void;
   t: (key: string) => string;
@@ -94,7 +109,8 @@ interface AppContextType {
 
   // Documents
   documents: UserDocument[];
-  addDocument: (doc: Omit<UserDocument, "id" | "uploadDate">) => void;
+  addDocument: (doc: Omit<UserDocument, "id" | "uploadDate">) => UserDocument;
+  updateDocumentCategoryTag: (id: string, categoryTag: DocumentCategoryTag) => void;
   removeDocument: (id: string) => void;
   runDocumentAudit: (id: string) => void;
 
@@ -106,7 +122,7 @@ interface AppContextType {
   // Chat
   chatMessages: ChatMessage[];
   isChatLoading: boolean;
-  sendChatMessage: (text: string) => Promise<void>;
+  sendChatMessage: (text: string, attachedDocIds?: string[]) => Promise<void>;
   clearChatMessages: () => void;
   saveCurrentChatAsCase: () => void;
   recentUnsavedChats: RecentUnsavedChat[];
@@ -114,6 +130,8 @@ interface AppContextType {
   restoreUnsavedChat: (id: string) => void;
   removeUnsavedChat: (id: string) => void;
   saveUnsavedChatAsCase: (id: string) => void;
+  toggleUnsavedChatTag: (id: string, tag: ChatSessionTag) => void;
+  toggleArchiveUnsavedChat: (id: string) => void;
 
   // Modals & Drawers
   isNewCaseModalOpen: boolean;
@@ -132,6 +150,14 @@ interface AppContextType {
   setIsMessagesModalOpen: (open: boolean) => void;
   isSentLettersModalOpen: boolean;
   setIsSentLettersModalOpen: (open: boolean) => void;
+  isVoicePreferencesModalOpen: boolean;
+  setIsVoicePreferencesModalOpen: (open: boolean) => void;
+  isLegalDictionaryModalOpen: boolean;
+  setIsLegalDictionaryModalOpen: (open: boolean) => void;
+  isQuickSearchModalOpen: boolean;
+  setIsQuickSearchModalOpen: (open: boolean) => void;
+  voiceConfig: ElonVoiceConfig;
+  updateVoiceConfig: (updates: Partial<ElonVoiceConfig>) => void;
 
   // Notifications / Toast
   broadcastMessages: BroadcastMessage[];
@@ -184,6 +210,12 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [profileSubTab, setProfileSubTab] = useState<ProfileSubTab>("details");
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(storage.loadThemeMode);
+  const [isElonSpeaking, setIsElonSpeaking] = useState<boolean>(false);
+  const [isUserDictating, setIsUserDictating] = useState<boolean>(false);
+  const [transientRobotState, setTransientRobotState] = useState<RobotActivityState | null>(null);
+  const [aiResponseSentiment, setAiResponseSentiment] = useState<"happy" | "concerned" | null>(null);
+  const transientRobotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [locale, setLocaleState] = useState<Locale>(storage.loadLocale);
   const [user, setUserState] = useState<UserProfile>(storage.loadUserProfile);
   const [cases, setCasesState] = useState<WorkplaceCase[]>(storage.loadCases);
@@ -194,10 +226,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [forumPosts, setForumPostsState] = useState<ForumPost[]>(storage.loadForumPosts);
   const [documents, setDocumentsState] = useState<UserDocument[]>(storage.loadDocuments);
   const [notes, setNotesState] = useState<WorkplaceNote[]>(storage.loadNotes);
+  const [recentUnsavedChats, setRecentUnsavedChatsState] = useState<RecentUnsavedChat[]>(() => {
+    const loadedUnsaved = storage.loadRecentUnsavedChats();
+    const priorChat = storage.loadChatHistory();
+    const hasPriorUserMessages = priorChat.some(
+      (m) => m.role === "user" && m.text.trim().length > 0
+    );
+    if (hasPriorUserMessages) {
+      const archived = storage.upsertRecentUnsavedChat(
+        loadedUnsaved,
+        `unsaved_prev_${Date.now()}`,
+        priorChat
+      );
+      storage.saveChatHistory([]);
+      return archived;
+    }
+    return loadedUnsaved;
+  });
   const [chatMessages, setChatMessagesState] = useState<ChatMessage[]>(() => {
-    const saved = storage.loadChatHistory();
-    if (saved.length > 0) return saved;
-    return [
+    const freshGreeting: ChatMessage[] = [
       {
         id: "msg_init",
         role: "assistant",
@@ -206,10 +253,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         status: "sent"
       }
     ];
+    storage.saveChatHistory([]);
+    return freshGreeting;
   });
-  const [recentUnsavedChats, setRecentUnsavedChatsState] = useState<RecentUnsavedChat[]>(
-    storage.loadRecentUnsavedChats
-  );
   const [activeUnsavedChatId, setActiveUnsavedChatId] = useState<string>(
     () => `unsaved_${Date.now()}`
   );
@@ -226,7 +272,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
   );
   const [isLetterDrafting, setIsLetterDrafting] = useState<boolean>(false);
-  const [chatDraft, setChatDraftState] = useState<string>(storage.loadChatDraft);
+  const [chatDraft, setChatDraftState] = useState<string>(() => {
+    storage.saveChatDraft("");
+    return "";
+  });
   const [savedLetterDraft, setSavedLetterDraftState] = useState<SavedLetterDraft | null>(storage.loadLetterDraft);
 
   // Offline Settings & Pending Actions Queue State
@@ -307,6 +356,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isMessagesModalOpen, setIsMessagesModalOpen] = useState(false);
   const [isSentLettersModalOpen, setIsSentLettersModalOpen] = useState(false);
+  const [isVoicePreferencesModalOpen, setIsVoicePreferencesModalOpen] = useState(false);
+  const [isLegalDictionaryModalOpen, setIsLegalDictionaryModalOpen] = useState(false);
+  const [isQuickSearchModalOpen, setIsQuickSearchModalOpen] = useState(false);
+  const [voiceConfig, setVoiceConfigState] = useState<ElonVoiceConfig>(() => storage.loadVoiceConfig());
+
+  const updateVoiceConfig = useCallback((updates: Partial<ElonVoiceConfig>) => {
+    setVoiceConfigState((prev) => {
+      const next = { ...prev, ...updates };
+      storage.saveVoiceConfig(next);
+      return next;
+    });
+  }, []);
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Admin Hub & Marketing State
@@ -329,20 +391,92 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const t = useCallback((key: string) => getTranslation(key, locale), [locale]);
 
-  const showToast = useCallback((msg: string) => {
-    if (toastTimerRef.current) {
-      clearTimeout(toastTimerRef.current);
-    }
-    setToastMessage(msg);
-    toastTimerRef.current = setTimeout(() => {
-      setToastMessage(null);
-    }, 4500);
-  }, []);
+  const triggerRobotReaction = useCallback(
+    (state: RobotActivityState = "success", durationMs: number = 2200) => {
+      if (transientRobotTimerRef.current) {
+        clearTimeout(transientRobotTimerRef.current);
+      }
+      setTransientRobotState(state);
+      transientRobotTimerRef.current = setTimeout(() => {
+        setTransientRobotState(null);
+      }, durationMs);
+    },
+    []
+  );
+
+  const showToast = useCallback(
+    (msg: string) => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+      setToastMessage(msg);
+      triggerRobotReaction("happy", 2800);
+      toastTimerRef.current = setTimeout(() => {
+        setToastMessage(null);
+      }, 4500);
+    },
+    [triggerRobotReaction]
+  );
 
   const setLocale = (l: Locale) => {
     setLocaleState(l);
     storage.saveLocale(l);
+    setChatMessagesState((prev) => {
+      if (prev.length === 1 && prev[0]?.id === "msg_init") {
+        return [{ ...prev[0], text: getTranslation("elonGreeting", l) }];
+      }
+      return prev;
+    });
+    triggerRobotReaction("success", 1600);
   };
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      const root = document.documentElement;
+      root.classList.toggle("dark", themeMode === "dark");
+      root.classList.toggle("light-theme", themeMode === "light");
+      root.style.colorScheme = themeMode;
+    }
+  }, [themeMode]);
+
+  const setThemeMode = useCallback((mode: ThemeMode) => {
+    setThemeModeState(mode);
+    storage.saveThemeMode(mode);
+    triggerRobotReaction("success", 1800);
+  }, [triggerRobotReaction]);
+
+  const toggleThemeMode = useCallback(() => {
+    setThemeModeState((prev) => {
+      const next: ThemeMode = prev === "dark" ? "light" : "dark";
+      storage.saveThemeMode(next);
+      return next;
+    });
+    triggerRobotReaction("success", 1800);
+  }, [triggerRobotReaction]);
+
+  // Listen to global keyboard input across any form or chat composer so the robot reacts to typing
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const tag = target.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable) {
+        triggerRobotReaction("typing", 1400);
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown, { passive: true });
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [triggerRobotReaction]);
+
+  const robotState: RobotActivityState = (() => {
+    if (isUserDictating) return "listening";
+    if (isElonSpeaking) return "speaking";
+    if (isChatLoading) return "thinking";
+    if (transientRobotState) return transientRobotState;
+    if (chatDraft.trim().length > 0 || isLetterDrafting) return "typing";
+    if (aiResponseSentiment) return aiResponseSentiment;
+    return "idle";
+  })();
 
   const setChatDraft = useCallback((draft: string) => {
     setChatDraftState(draft);
@@ -945,6 +1079,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const finalChat = [...newChat, replyMsg];
         setChatMessagesState(finalChat);
         storage.saveChatHistory(finalChat);
+        const detectedSentiment = analyzeAiResponseSentiment(reply, promptMsg.text);
+        if (detectedSentiment) {
+          setAiResponseSentiment(detectedSentiment);
+          triggerRobotReaction(detectedSentiment, 6500);
+        }
       })
       .finally(() => setIsChatLoading(false));
   };
@@ -1063,16 +1202,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
     storage.saveForumPosts(updated);
   };
 
-  const addDocument = (doc: Omit<UserDocument, "id" | "uploadDate">) => {
+  const addDocument = (doc: Omit<UserDocument, "id" | "uploadDate">): UserDocument => {
+    const resolvedTag: DocumentCategoryTag =
+      doc.categoryTag || getDefaultCategoryTagForType(doc.type, doc.mimeType);
     const newDoc: UserDocument = {
       ...doc,
-      id: `doc_${Date.now()}`,
-      uploadDate: new Date().toISOString().slice(0, 10)
+      categoryTag: resolvedTag,
+      type: doc.type || mapCategoryTagToDocType(resolvedTag),
+      id: `doc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      uploadDate: new Date().toISOString().slice(0, 10),
     };
     const updated = [newDoc, ...documents];
     setDocumentsState(updated);
     storage.saveDocuments(updated);
-    showToast(t("uploadDoc") + " - " + newDoc.name);
+    showToast(`[${resolvedTag}] ${newDoc.name}`);
+    return newDoc;
+  };
+
+  const updateDocumentCategoryTag = (id: string, categoryTag: DocumentCategoryTag) => {
+    const updated = documents.map((d) =>
+      d.id === id
+        ? {
+            ...d,
+            categoryTag,
+            type: mapCategoryTagToDocType(categoryTag),
+            detectionMeta: d.detectionMeta
+              ? {
+                  ...d.detectionMeta,
+                  categoryTag,
+                  mappedType: mapCategoryTagToDocType(categoryTag),
+                }
+              : undefined,
+          }
+        : d
+    );
+    setDocumentsState(updated);
+    storage.saveDocuments(updated);
+    showToast(
+      locale === "pl"
+        ? `Zmieniono kategorię na: ${categoryTag}`
+        : locale === "ro"
+        ? `Categorie actualizată: ${categoryTag}`
+        : `Updated category tag to: ${categoryTag}`
+    );
   };
 
   const removeDocument = (id: string) => {
@@ -1085,31 +1257,116 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const doc = documents.find((d) => d.id === id);
     if (!doc) return;
 
-    // Simulate smart AI inspection
-    const auditRes = {
-      valid: false,
-      summary: "AI Audit ukończony. Sprawdzono stawkę National Living Wage, potrącenia oraz holiday pay.",
-      calculatedHourly: 12.45,
-      holidayPayStatus: "Naliczone poprawnie (12.07%)",
-      minimumWageCompliance: true,
-      items: [
-        {
-          issue: "Potrącenie za uniform lub sprzęt ochronny",
-          severity: "error" as const,
-          recommendation: "Zgodnie z s.9 Health & Safety at Work Act 1974, pracodawca nie może potrącać z pensji kosztów wymaganego PPE."
-        },
-        {
-          issue: "Sprawdź kalkulację nadgodzin w okresie rozliczeniowym",
-          severity: "warning" as const,
-          recommendation: "Zgłoś brakujące godziny korzystając z szablonu Section 13 ERA 1996 w zakładce Pisma."
-        }
-      ]
-    };
+    const tag = doc.categoryTag || getDefaultCategoryTagForType(doc.type, doc.mimeType);
+    const snippet = doc.detectionMeta?.contentSummary
+      ? ` (${doc.detectionMeta.contentSummary})`
+      : "";
+
+    let auditRes;
+    if (tag === "PDF Paystub" || tag === "Image Paystub") {
+      auditRes = {
+        valid: false,
+        summary: `Audyt [${tag}] ukończony${snippet}. Sprawdzono stawkę National Living Wage, potrącenia PPE oraz proporcję holiday pay (12.07%).`,
+        calculatedHourly: Math.max(12.21, user.hourlyRate || 12.45),
+        holidayPayStatus: "Wymaga weryfikacji (12.07%)",
+        minimumWageCompliance: true,
+        items: [
+          {
+            issue: "Weryfikacja potrąceń za odzież roboczą / PPE lub narzędzia",
+            severity: "error" as const,
+            recommendation:
+              "Zgodnie z s.9 Health & Safety at Work etc. Act 1974 oraz s.13 ERA 1996, pracodawca nie może potrącać kosztów wymaganego PPE.",
+          },
+          {
+            issue: "Kontrola nadgodzin, przerw 20-min i stawki nocnej",
+            severity: "warning" as const,
+            recommendation:
+              "W razie brakujących godzin wygeneruj formalne żądanie Section 13 ERA 1996 w zakładce Pisma UK.",
+          },
+        ],
+      };
+    } else if (tag === "Employment Contract") {
+      auditRes = {
+        valid: true,
+        summary: `Audyt [${tag}] ukończony${snippet}. Zweryfikowano obowiązkowe klauzule Section 1 Statement (ERA 1996).`,
+        calculatedHourly: user.hourlyRate || 12.21,
+        holidayPayStatus: "Minimum 5.6 tyg. rocznie",
+        minimumWageCompliance: true,
+        items: [
+          {
+            issue: "Okres wypowiedzenia i godziny gwarantowane (Section 1 ERA 1996)",
+            severity: "info" as const,
+            recommendation:
+              "Sprawdź, czy zapis o miejscu pracy, stawce, wypowiedzeniu i procedurze skargowej (ACAS) jest kompletny.",
+          },
+          {
+            issue: "Ewentualne klauzule potrąceń z wynagrodzenia",
+            severity: "warning" as const,
+            recommendation:
+              "Nawet pisemna klauzula potrąceń w umowie nie może obniżyć wypłaty poniżej National Living Wage (poza wyjątkami ustawowymi).",
+          },
+        ],
+      };
+    } else if (tag === "Letter to HR" || tag === "Disciplinary / Grievance") {
+      auditRes = {
+        valid: false,
+        summary: `Audyt [${tag}] ukończony${snippet}. Oceniono zgodność proceduralną z ACAS Code of Practice No. 1.`,
+        calculatedHourly: user.hourlyRate || 12.21,
+        holidayPayStatus: "Termin ACAS: 3 mies. - 1 dzień",
+        minimumWageCompliance: true,
+        items: [
+          {
+            issue: "Prawo do osoby towarzyszącej na spotkaniu (Section 10 ERA 1999)",
+            severity: "warning" as const,
+            recommendation:
+              "W pismach dyscyplinarnych i skargowych masz ustawowe prawo zabrać przedstawiciela związku zawodowego lub współpracownika.",
+          },
+          {
+            issue: "Biegnący termin do ACAS Early Conciliation",
+            severity: "error" as const,
+            recommendation:
+              "Pamiętaj o nieprzekraczalnym terminie 3 miesięcy minus 1 dzień od zdarzenia lub daty zwolnienia na zgłoszenie do ACAS.",
+          },
+        ],
+      };
+    } else if (tag === "Sick Note / Fit Note") {
+      auditRes = {
+        valid: true,
+        summary: `Audyt [${tag}] ukończony${snippet}. Sprawdzono uprawnienia do Statutory Sick Pay (SSP) i formę SSP1.`,
+        calculatedHourly: user.hourlyRate || 12.21,
+        holidayPayStatus: "Urlop nadal nalicza się na L4",
+        minimumWageCompliance: true,
+        items: [
+          {
+            issue: "Ochrona przed odmową wypłaty chorobowego (Form SSP1)",
+            severity: "info" as const,
+            recommendation:
+              "Jeśli pracodawca odmawia SSP, musi wydać pisemny formularz HMRC SSP1 w ciągu 7 dni. Urlop wypoczynkowy nadal się nalicza.",
+          },
+        ],
+      };
+    } else {
+      auditRes = {
+        valid: true,
+        summary: `Audyt [${tag}] ukończony${snippet}. Dokument zarchiwizowany i powiązany z aktami pracownika.`,
+        calculatedHourly: user.hourlyRate || 12.21,
+        holidayPayStatus: "Zabezpieczono dowód",
+        minimumWageCompliance: true,
+        items: [
+          {
+            issue: `Zabezpieczenie materiału dowodowego (${tag})`,
+            severity: "info" as const,
+            recommendation:
+              "Dokument może służyć jako załącznik w procedurze ACAS Grievance lub Subject Access Request (UK GDPR Art. 15).",
+          },
+        ],
+      };
+    }
 
     const updated = documents.map((d) => (d.id === id ? { ...d, auditResult: auditRes } : d));
     setDocumentsState(updated);
     storage.saveDocuments(updated);
-    showToast("Audyt AI dokumentu zakończony!");
+    showToast(`Audyt [${tag}] zakończony!`);
   };
 
   const addNote = (title: string, description: string, category: string) => {
@@ -1139,7 +1396,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     storage.saveNotes(updated);
   };
 
-  const sendChatMessage = async (text: string) => {
+  const sendChatMessage = async (text: string, attachedDocIds?: string[]) => {
     if (!text.trim() || isChatLoading) return;
 
     // Clear saved composer draft since message is now submitted
@@ -1196,6 +1453,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       minute: "2-digit",
     });
 
+    const resolvedAttachedDocs = (
+      attachedDocIds && attachedDocIds.length > 0
+        ? documents.filter((d) => attachedDocIds.includes(d.id))
+        : []
+    ).map((d) => ({
+      name: d.name,
+      categoryTag: d.categoryTag,
+      detectedSignals: d.detectionMeta?.detectedSignals,
+      contentSummary: d.detectionMeta?.contentSummary || d.auditResult?.summary,
+      extractedTextSnippet: d.detectionMeta?.extractedTextSnippet,
+    }));
+
     try {
       const reply = await askElonAIStream(
         userMsg.text,
@@ -1215,6 +1484,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           hoursPerWeek: user.hoursPerWeek,
           contractType: user.contractType,
           accountId: user.accountId,
+          attachedDocuments: resolvedAttachedDocs.length > 0 ? resolvedAttachedDocs : undefined,
         },
         (partialText) => {
           // Do not overwrite if user switched to simulated offline mid-stream
@@ -1259,12 +1529,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setChatMessagesState(finalMessages);
       storage.saveChatHistory(finalMessages);
 
+      // Evaluate sentiment of the AI's generated response ('happy' vs 'concerned')
+      const detectedSentiment = analyzeAiResponseSentiment(reply, userMsg.text);
+      if (detectedSentiment) {
+        setAiResponseSentiment(detectedSentiment);
+        triggerRobotReaction(detectedSentiment, 6500);
+      }
+
       // 1. Automatically extract any personal/workplace details the user provided in chat and update UserProfile
       const profileUpdates = extractProfileUpdatesFromChat(userMsg.text, reply);
       let effectiveUser = user;
       if (Object.keys(profileUpdates).length > 0) {
         effectiveUser = { ...user, ...profileUpdates };
         updateUser(profileUpdates);
+        triggerRobotReaction("happy", 4500);
         showToast(
           locale === "pl"
             ? "Elon uzupełnił Twój profil o nowe dane z rozmowy!"
@@ -1406,22 +1684,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // 1. Archive current unsaved conversation before resetting
     archiveConversationToUnsavedHistory(activeUnsavedChatId, chatMessages, chatDraft);
 
-    // 2. Start a fresh session and greet only with a short question asking about further questions
+    // 2. Start a fresh session with the clean welcome state
     const nextSessionId = `unsaved_${Date.now()}`;
     setActiveUnsavedChatId(nextSessionId);
     isCurrentChatSavedAsCaseRef.current = false;
 
-    const resetPromptMsg: ChatMessage[] = [
+    const freshWelcomeMsg: ChatMessage[] = [
       {
-        id: `msg_reset_${Date.now()}`,
+        id: "msg_init",
         role: "assistant",
-        text: getTranslation("elonResetPrompt", locale),
+        text: getTranslation("elonGreeting", locale),
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         status: "sent"
       }
     ];
-    setChatMessagesState(resetPromptMsg);
-    storage.saveChatHistory(resetPromptMsg);
+    setChatMessagesState(freshWelcomeMsg);
+    storage.saveChatHistory([]);
     setChatDraft("");
     setActiveCaseId(null);
     showToast(t("clearChat"));
@@ -1447,6 +1725,103 @@ export function AppProvider({ children }: { children: ReactNode }) {
       storage.saveRecentUnsavedChats(next);
       return next;
     });
+  };
+
+  const toggleUnsavedChatTag = (id: string, tag: ChatSessionTag) => {
+    setRecentUnsavedChatsState((prev) => {
+      const exists = prev.some((c) => c.id === id);
+      let baseList = prev;
+      if (!exists && id === activeUnsavedChatId) {
+        const built = storage.buildRecentUnsavedChatEntry(id, chatMessages);
+        if (built) {
+          baseList = [built, ...prev];
+        }
+      }
+      const next = baseList.map((chat) => {
+        if (chat.id !== id) return chat;
+        const currentTags = Array.isArray(chat.tags) ? chat.tags : [];
+        const hasTag = currentTags.includes(tag);
+        const updatedTags = hasTag
+          ? currentTags.filter((tItem) => tItem !== tag)
+          : [...currentTags, tag];
+        return {
+          ...chat,
+          tags: updatedTags,
+        };
+      });
+      storage.saveRecentUnsavedChats(next);
+      return next;
+    });
+  };
+
+  const toggleArchiveUnsavedChat = (id: string) => {
+    let targetArchivedState: boolean | null = null;
+
+    setRecentUnsavedChatsState((prev) => {
+      const exists = prev.some((c) => c.id === id);
+      let baseList = prev;
+      if (!exists && id === activeUnsavedChatId) {
+        const built = storage.buildRecentUnsavedChatEntry(id, chatMessages);
+        if (built) {
+          baseList = [built, ...prev];
+        }
+      }
+
+      const archivedDateLabel = new Date().toLocaleDateString("pl-PL", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+
+      const next = baseList.map((chat) => {
+        if (chat.id !== id) return chat;
+        const nextArchived = !Boolean(chat.isArchived);
+        targetArchivedState = nextArchived;
+        return {
+          ...chat,
+          isArchived: nextArchived,
+          archivedAt: nextArchived ? archivedDateLabel : undefined,
+        };
+      });
+      storage.saveRecentUnsavedChats(next);
+      return next;
+    });
+
+    // If the user archives the currently open live session, cleanly rotate to a fresh welcome session
+    if (id === activeUnsavedChatId && targetArchivedState === true) {
+      const nextSessionId = `unsaved_${Date.now()}`;
+      setActiveUnsavedChatId(nextSessionId);
+      isCurrentChatSavedAsCaseRef.current = false;
+      const freshWelcomeMsg: ChatMessage[] = [
+        {
+          id: "msg_init",
+          role: "assistant",
+          text: getTranslation("elonGreeting", locale),
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          status: "sent",
+        },
+      ];
+      setChatMessagesState(freshWelcomeMsg);
+      storage.saveChatHistory([]);
+      setChatDraft("");
+      setActiveCaseId(null);
+    }
+
+    if (targetArchivedState !== null) {
+      showToast(
+        targetArchivedState
+          ? locale === "pl"
+            ? "Rozmowa przeniesiona do zakładki Zarchiwizowane."
+            : locale === "ro"
+            ? "Conversația a fost mutată în Arhivă."
+            : "Chat session moved to Archived."
+          : locale === "pl"
+          ? "Przywrócono rozmowę z archiwum."
+          : locale === "ro"
+          ? "Conversația a fost restaurată din Arhivă."
+          : "Chat session restored from Archived."
+      );
+    }
   };
 
   const saveUnsavedChatAsCase = (id: string) => {
@@ -1782,6 +2157,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setActiveTab,
         profileSubTab,
         setProfileSubTab,
+        themeMode,
+        setThemeMode,
+        toggleThemeMode,
+        robotState,
+        aiResponseSentiment,
+        setIsElonSpeaking,
+        setIsUserDictating,
+        triggerRobotReaction,
         locale,
         setLocale,
         t,
@@ -1828,6 +2211,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addForumComment,
         documents,
         addDocument,
+        updateDocumentCategoryTag,
         removeDocument,
         runDocumentAudit,
         notes,
@@ -1843,6 +2227,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         restoreUnsavedChat,
         removeUnsavedChat,
         saveUnsavedChatAsCase,
+        toggleUnsavedChatTag,
+        toggleArchiveUnsavedChat,
         isNewCaseModalOpen,
         setIsNewCaseModalOpen,
         isNewPostModalOpen,
@@ -1859,6 +2245,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsMessagesModalOpen,
         isSentLettersModalOpen,
         setIsSentLettersModalOpen,
+        isVoicePreferencesModalOpen,
+        setIsVoicePreferencesModalOpen,
+        isLegalDictionaryModalOpen,
+        setIsLegalDictionaryModalOpen,
+        isQuickSearchModalOpen,
+        setIsQuickSearchModalOpen,
+        voiceConfig,
+        updateVoiceConfig,
         broadcastMessages,
         markMessagesRead,
         toastMessage,

@@ -15,6 +15,11 @@ export const translations: Record<string, Record<Locale, string>> = {
   tabTemplates: { pl: "Pisma", en: "Letters", ro: "Scrisori" },
   tabForum: { pl: "Forum", en: "Forum", ro: "Forum" },
   tabProfile: { pl: "Profil", en: "Profile", ro: "Profil" },
+  navChat: { pl: "Czat", en: "Chat", ro: "Chat" },
+  navCases: { pl: "Sprawy", en: "Cases", ro: "Cazuri" },
+  navTemplates: { pl: "Pisma", en: "Letters", ro: "Scrisori" },
+  navForum: { pl: "Forum", en: "Forum", ro: "Forum" },
+  navProfile: { pl: "Profil", en: "Profile", ro: "Profil" },
 
   // Chat
   elonGreeting: {
@@ -51,6 +56,11 @@ export const translations: Record<string, Record<Locale, string>> = {
   dictate: { pl: "Dyktuj", en: "Dictate", ro: "Dictează" },
   listening: { pl: "Słucham...", en: "Listening...", ro: "Ascult..." },
   autoRead: { pl: "Auto-czytanie", en: "Auto-read", ro: "Auto-citire" },
+  elonVoicePreferences: {
+    pl: "Preferencje głosu Elona",
+    en: "Elon Voice Preferences",
+    ro: "Preferințe voce Elon",
+  },
   aiDisclaimer: {
     pl: "Elon to asystent AI oparty na brytyjskim prawie pracy (ACAS Code, ERA 1996). Nie zastępuje formalnego radcy prawnego (solicitora).",
     en: "Elon is an AI assistant grounded in UK employment law (ACAS Code, ERA 1996). Does not replace a formal solicitor.",
@@ -107,6 +117,7 @@ export const translations: Record<string, Record<Locale, string>> = {
   downloadLetter: { pl: "Pobierz pismo (.txt)", en: "Download letter (.txt)", ro: "Descarcă scrisoarea" },
   saveToSent: { pl: "Zapisz w wysłanych", en: "Save to sent archive", ro: "Salvează în arhiva trimise" },
   sentLettersTitle: { pl: "Wysłane i wygenerowane pisma", en: "Generated Letters Archive", ro: "Arhiva de scrisori generate" },
+  sentLettersHeaderBtn: { pl: "Pisma", en: "Letters", ro: "Scrisori" },
   noSentLetters: { pl: "Nie zapisałeś jeszcze żadnych wygenerowanych pism.", en: "You haven't saved any generated letters yet.", ro: "Nu ai salvat încă nicio scrisoare generată." },
   statutoryRef: { pl: "Podstawa prawna", en: "Statutory Reference", ro: "Temei legal" },
   sentimentGuardTitle: {

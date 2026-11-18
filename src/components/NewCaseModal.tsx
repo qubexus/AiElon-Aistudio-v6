@@ -31,11 +31,11 @@ export const NewCaseModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-[#0F2C4D] border border-white/15 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+      <div className="bg-[#131B2E] border border-white/15 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-white/10">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#FF6A00] flex items-center justify-center text-black">
+            <div className="w-8 h-8 rounded-xl bg-[#D97724] flex items-center justify-center text-black">
               <FolderPlus className="w-4.5 h-4.5" />
             </div>
             <h2 className="text-base font-extrabold text-white">
@@ -45,7 +45,7 @@ export const NewCaseModal: React.FC = () => {
 
           <button
             onClick={() => setIsNewCaseModalOpen(false)}
-            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#BACADA] hover:text-white transition-colors"
+            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -63,7 +63,7 @@ export const NewCaseModal: React.FC = () => {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="np. Bezprawne potrącenie z wypłaty za wrzesień"
-              className="w-full bg-[#12304F] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D]"
+              className="w-full bg-[#1A243B] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B]"
             />
           </div>
 
@@ -75,7 +75,7 @@ export const NewCaseModal: React.FC = () => {
               <select
                 value={sector}
                 onChange={(e) => setSector(e.target.value)}
-                className="w-full bg-[#12304F] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D]"
+                className="w-full bg-[#1A243B] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B]"
               >
                 <option value="Logistyka / Magazyn">Logistyka / Magazyn</option>
                 <option value="Opieka / NHS">Opieka / NHS</option>
@@ -94,7 +94,7 @@ export const NewCaseModal: React.FC = () => {
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as "low" | "medium" | "high")}
-                className="w-full bg-[#12304F] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D]"
+                className="w-full bg-[#1A243B] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B]"
               >
                 <option value="low">{t("priorityLow")}</option>
                 <option value="medium">{t("priorityMedium")}</option>
@@ -113,7 +113,7 @@ export const NewCaseModal: React.FC = () => {
               value={employer}
               onChange={(e) => setEmployer(e.target.value)}
               placeholder="np. Amazon Fulfilment LCY2"
-              className="w-full bg-[#12304F] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D]"
+              className="w-full bg-[#1A243B] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B]"
             />
           </div>
 
@@ -127,7 +127,7 @@ export const NewCaseModal: React.FC = () => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Opisz dokładnie sytuację, kwoty, daty oraz co powiedział pracodawca..."
-              className="w-full bg-[#12304F] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2EE59D] resize-none"
+              className="w-full bg-[#1A243B] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38B28B] resize-none"
             />
           </div>
 
@@ -135,14 +135,14 @@ export const NewCaseModal: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsNewCaseModalOpen(false)}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#BACADA] hover:text-white"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#94A3B8] hover:text-white"
             >
               {t("cancel")}
             </button>
 
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#0B6E4F] to-[#2EE59D] text-black font-extrabold text-xs shadow-md hover:opacity-95 transition-opacity"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#1D6852] to-[#38B28B] text-black font-extrabold text-xs shadow-md hover:opacity-95 transition-opacity"
             >
               {t("createCaseBtn")}
             </button>

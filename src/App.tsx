@@ -15,6 +15,9 @@ import { MenuDrawer } from "./components/MenuDrawer";
 import { AdminModal } from "./components/AdminModal";
 import { MessagesModal } from "./components/MessagesModal";
 import { SentLettersModal } from "./components/SentLettersModal";
+import { VoicePreferencesModal } from "./components/VoicePreferencesModal";
+import { LegalDictionaryModal } from "./components/LegalDictionaryModal";
+import { QuickSearchModal } from "./components/QuickSearchModal";
 import { Toast } from "./components/Toast";
 
 const AppContent: React.FC = () => {
@@ -23,8 +26,10 @@ const AppContent: React.FC = () => {
   return (
     <div
       className={`${
-        activeTab === "chat" ? "h-[100dvh] overflow-hidden" : "min-h-screen"
-      } bg-[#070F1A] text-[#F4F8FB] flex flex-col font-sans selection:bg-[#0B6E4F] selection:text-white pb-16`}
+        activeTab === "chat"
+          ? "app-chat-shell"
+          : "min-h-screen pb-28 sm:pb-32"
+      } bg-[#F4F6F9] dark:bg-[#0B0F17] text-[#0F172A] dark:text-[#F1F5F9] flex flex-col font-sans selection:bg-[#1D6852] selection:text-white transition-colors duration-200`}
     >
       {/* Top Header */}
       <Header />
@@ -56,6 +61,9 @@ const AppContent: React.FC = () => {
       <AdminModal />
       <MessagesModal />
       <SentLettersModal />
+      <VoicePreferencesModal />
+      <LegalDictionaryModal />
+      <QuickSearchModal />
       <Toast />
     </div>
   );

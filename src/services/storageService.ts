@@ -11,10 +11,13 @@ import {
   SavedLetterDraft,
   RecentUnsavedChat,
   UnsavedChatIconType,
+  ChatSessionTag,
   AdminManagedUser,
   PromoCodeItem,
   MarketingPopupConfig,
-  AdminChatDeliveryLog
+  AdminChatDeliveryLog,
+  ElonVoiceConfig,
+  ThemeMode
 } from "../types";
 import {
   initialUserProfile,
@@ -47,10 +50,12 @@ const STORAGE_KEYS = {
   ADMIN_USERS: "ask_elon_admin_users",
   PROMO_CODES: "ask_elon_promo_codes",
   MARKETING_POPUP: "ask_elon_marketing_popup",
-  ADMIN_CHAT_LOGS: "ask_elon_admin_chat_logs"
+  ADMIN_CHAT_LOGS: "ask_elon_admin_chat_logs",
+  VOICE_CONFIG: "ask_elon_voice_config",
+  THEME: "ask_elon_theme_mode"
 };
 
-export const MAX_RECENT_UNSAVED_CHATS = 10;
+export const MAX_RECENT_UNSAVED_CHATS = 30;
 
 export function loadUserProfile(): UserProfile {
   try {
@@ -243,11 +248,35 @@ export function saveBroadcastMessages(msgs: BroadcastMessage[]): void {
 /**
  * Classifies a conversation's messages into a topic icon and concise title/preview
  */
+export function getDefaultTagsForIconType(iconType: UnsavedChatIconType): ChatSessionTag[] {
+  switch (iconType) {
+    case "wages":
+      return ["Pay Dispute"];
+    case "grievance":
+      return ["Grievance"];
+    case "contract":
+      return ["Contract"];
+    case "dismissal":
+      return ["Dismissal"];
+    case "sick_pay":
+      return ["Sick Pay"];
+    case "settlement":
+      return ["Settlement"];
+    case "data":
+      return ["GDPR"];
+    default:
+      return [];
+  }
+}
+
 export function buildRecentUnsavedChatEntry(
   sessionId: string,
   messages: ChatMessage[],
   existingDateISO?: string,
-  existingDateLabel?: string
+  existingDateLabel?: string,
+  existingTags?: ChatSessionTag[],
+  existingIsArchived?: boolean,
+  existingArchivedAt?: string
 ): RecentUnsavedChat | null {
   const userMessages = messages.filter((m) => m.role === "user" && m.text.trim().length > 0);
   if (userMessages.length === 0) return null;
@@ -300,122 +329,13 @@ export function buildRecentUnsavedChatEntry(
     dateLabel,
     updatedAtTime,
     iconType,
+    tags: existingTags !== undefined ? existingTags : getDefaultTagsForIconType(iconType),
+    isArchived: Boolean(existingIsArchived),
+    archivedAt: existingArchivedAt,
     messages,
     messageCount: messages.length,
   };
 }
-
-const initialRecentUnsavedChats: RecentUnsavedChat[] = (() => {
-  const today = new Date();
-  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-  const twoDaysAgo = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000);
-
-  const fmtISO = (d: Date) => d.toISOString().slice(0, 10);
-  const fmtLabel = (d: Date) =>
-    d.toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric" });
-
-  return [
-    {
-      id: "unsaved_seed_1",
-      title: "Brak wypłaty za 8 godzin nocnej zmiany i potrącenie za buty BHP",
-      preview: "Zgodnie z Section 13 Employment Rights Act 1996 pracodawca nie może potrącić za PPE...",
-      dateISO: fmtISO(today),
-      dateLabel: fmtLabel(today),
-      updatedAtTime: "09:40",
-      iconType: "wages",
-      messageCount: 3,
-      messages: [
-        {
-          id: "m_s1_1",
-          role: "assistant",
-          text: "Czy masz jeszcze jakieś dalsze pytania? Powiedz, o co jeszcze chcesz zapytać.",
-          timestamp: "09:38",
-          status: "sent",
-        },
-        {
-          id: "m_s1_2",
-          role: "user",
-          text: "Brak wypłaty za 8 godzin nocnej zmiany i potrącenie za buty BHP",
-          timestamp: "09:39",
-          status: "sent",
-        },
-        {
-          id: "m_s1_3",
-          role: "assistant",
-          text: "Rozumiem sytuację. Zgodnie z Section 13 Employment Rights Act 1996 pracodawca nie ma prawa potrącać z wynagrodzenia kosztów obuwia ochronnego PPE (Section 9 Health and Safety at Work Act 1974) ani pomijać przepracowanych godzin nocnych.",
-          timestamp: "09:40",
-          status: "sent",
-        },
-      ],
-    },
-    {
-      id: "unsaved_seed_2",
-      title: "Obcięcie godzin na kontrakcie agencyjnym bez wcześniejszego uprzedzenia",
-      preview: "Sprawdźmy zapisy Twojej umowy oraz prawo do ekwiwalentu za wypracowany urlop...",
-      dateISO: fmtISO(yesterday),
-      dateLabel: fmtLabel(yesterday),
-      updatedAtTime: "18:15",
-      iconType: "contract",
-      messageCount: 3,
-      messages: [
-        {
-          id: "m_s2_1",
-          role: "assistant",
-          text: "Czy masz jeszcze jakieś dalsze pytania? Powiedz, o co jeszcze chcesz zapytać.",
-          timestamp: "18:12",
-          status: "sent",
-        },
-        {
-          id: "m_s2_2",
-          role: "user",
-          text: "Obcięcie godzin na kontrakcie agencyjnym bez wcześniejszego uprzedzenia",
-          timestamp: "18:14",
-          status: "sent",
-        },
-        {
-          id: "m_s2_3",
-          role: "assistant",
-          text: "W przypadku odwołania zmiany w ostatniej chwili lub zmiany grafiku wbrew umowie (40h/tydz.), przysługuje Ci ochrona wynikająca z warunków kontraktu oraz Working Time Regulations 1998.",
-          timestamp: "18:15",
-          status: "sent",
-        },
-      ],
-    },
-    {
-      id: "unsaved_seed_3",
-      title: "Odmowa przyjęcia zwolnienia lekarskiego Fit Note przez kierownika zmiany",
-      preview: "Po 3 dniach wyczekiwania przysługuje Ci ustawowe Statutory Sick Pay (SSP)...",
-      dateISO: fmtISO(twoDaysAgo),
-      dateLabel: fmtLabel(twoDaysAgo),
-      updatedAtTime: "14:20",
-      iconType: "sick_pay",
-      messageCount: 3,
-      messages: [
-        {
-          id: "m_s3_1",
-          role: "assistant",
-          text: "Czy masz jeszcze jakieś dalsze pytania? Powiedz, o co jeszcze chcesz zapytać.",
-          timestamp: "14:18",
-          status: "sent",
-        },
-        {
-          id: "m_s3_2",
-          role: "user",
-          text: "Odmowa przyjęcia zwolnienia lekarskiego Fit Note przez kierownika zmiany",
-          timestamp: "14:19",
-          status: "sent",
-        },
-        {
-          id: "m_s3_3",
-          role: "assistant",
-          text: "Kierownik nie może zignorować zaświadczenia GP Fit Note. Na mocy Section 151 Social Security Contributions and Benefits Act 1992 pracodawca musi wypłacić SSP lub wydać formularz SSP1 w ciągu 7 dni.",
-          timestamp: "14:20",
-          status: "sent",
-        },
-      ],
-    },
-  ];
-})();
 
 export function loadRecentUnsavedChats(): RecentUnsavedChat[] {
   try {
@@ -423,11 +343,18 @@ export function loadRecentUnsavedChats(): RecentUnsavedChat[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        return parsed.slice(0, MAX_RECENT_UNSAVED_CHATS);
+        return parsed
+          .filter((item: RecentUnsavedChat) => item && typeof item.id === "string" && !item.id.startsWith("unsaved_seed_"))
+          .slice(0, MAX_RECENT_UNSAVED_CHATS)
+          .map((item: RecentUnsavedChat) => ({
+            ...item,
+            tags: Array.isArray(item.tags) ? item.tags : getDefaultTagsForIconType(item.iconType),
+            isArchived: Boolean(item.isArchived),
+          }));
       }
     }
   } catch {}
-  return initialRecentUnsavedChats;
+  return [];
 }
 
 export function saveRecentUnsavedChats(chats: RecentUnsavedChat[]): void {
@@ -440,7 +367,7 @@ export function saveRecentUnsavedChats(chats: RecentUnsavedChat[]): void {
 }
 
 /**
- * Inserts or updates an unsaved conversation in the 10-item history list
+ * Inserts or updates an unsaved conversation in the history list, keeping up to 10 active chats and preserving archived cases
  */
 export function upsertRecentUnsavedChat(
   currentList: RecentUnsavedChat[],
@@ -452,12 +379,18 @@ export function upsertRecentUnsavedChat(
     sessionId,
     messages,
     existing?.dateISO,
-    existing?.dateLabel
+    existing?.dateLabel,
+    existing?.tags,
+    existing?.isArchived,
+    existing?.archivedAt
   );
   if (!entry) return currentList;
 
   const filtered = currentList.filter((c) => c.id !== sessionId);
-  const next = [entry, ...filtered].slice(0, MAX_RECENT_UNSAVED_CHATS);
+  const merged = [entry, ...filtered];
+  const activeItems = merged.filter((c) => !c.isArchived).slice(0, 10);
+  const archivedItems = merged.filter((c) => c.isArchived).slice(0, 20);
+  const next = [...activeItems, ...archivedItems].slice(0, MAX_RECENT_UNSAVED_CHATS);
   saveRecentUnsavedChats(next);
   return next;
 }
@@ -526,6 +459,44 @@ export function loadAdminChatDeliveryLogs(): AdminChatDeliveryLog[] {
 export function saveAdminChatDeliveryLogs(logs: AdminChatDeliveryLog[]): void {
   try {
     localStorage.setItem(STORAGE_KEYS.ADMIN_CHAT_LOGS, JSON.stringify(logs));
+  } catch {}
+}
+
+export const defaultVoiceConfig: ElonVoiceConfig = {
+  preset: "young_professional",
+  pitch: 0.98,
+  speed: 1.0,
+  autoReadAloud: true,
+};
+
+export function loadVoiceConfig(): ElonVoiceConfig {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.VOICE_CONFIG);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { ...defaultVoiceConfig, ...parsed };
+    }
+  } catch {}
+  return defaultVoiceConfig;
+}
+
+export function saveVoiceConfig(config: ElonVoiceConfig): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.VOICE_CONFIG, JSON.stringify(config));
+  } catch {}
+}
+
+export function loadThemeMode(): ThemeMode {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.THEME);
+    if (raw === "light" || raw === "dark") return raw;
+  } catch {}
+  return "dark";
+}
+
+export function saveThemeMode(mode: ThemeMode): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.THEME, mode);
   } catch {}
 }
 

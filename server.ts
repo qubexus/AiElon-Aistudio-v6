@@ -3,17 +3,24 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = 3000;
 
+let cachedAiClient: GoogleGenAI | null = null;
+let cachedApiKey = "";
+
 function getAiClient(): GoogleGenAI | null {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
-  return new GoogleGenAI({
+  if (cachedAiClient && cachedApiKey === apiKey) {
+    return cachedAiClient;
+  }
+  cachedApiKey = apiKey;
+  cachedAiClient = new GoogleGenAI({
     apiKey,
     httpOptions: {
       headers: {
@@ -21,6 +28,7 @@ function getAiClient(): GoogleGenAI | null {
       },
     },
   });
+  return cachedAiClient;
 }
 
 const ELON_SYSTEM_INSTRUCTION = `You are Elon – a confident, street-smart male Tactical Worker Negotiator & UK Employment Law Companion ("ask Elon").
@@ -279,7 +287,7 @@ function runServerFallbackSentimentAnalysis(
 async function startServer() {
   const app = express();
   app.use(cors());
-  app.use(express.json({ limit: "5mb" }));
+  app.use(express.json({ limit: "15mb" }));
 
   // 0. Lightweight Health & Connectivity Probe Endpoint
   app.get("/api/health", (_req, res) => {
@@ -303,6 +311,24 @@ async function startServer() {
       }
 
       const langName = locale === "pl" ? "Polish" : locale === "ro" ? "Romanian" : "English";
+      const attachedDocsBlock =
+        Array.isArray(userContext?.attachedDocuments) && userContext.attachedDocuments.length > 0
+          ? `\nUser-Provided & AI-Analyzed Document Context:\n${userContext.attachedDocuments
+              .slice(0, 4)
+              .map((doc: any, i: number) => {
+                const signals =
+                  Array.isArray(doc.detectedSignals) && doc.detectedSignals.length > 0
+                    ? ` | Signals: ${doc.detectedSignals.slice(0, 4).join(", ")}`
+                    : "";
+                const summary = doc.contentSummary ? ` | Summary: ${doc.contentSummary}` : "";
+                const snippet = doc.extractedTextSnippet
+                  ? ` | Extract: "${String(doc.extractedTextSnippet).slice(0, 260)}"`
+                  : "";
+                return `${i + 1}. ${doc.name} [${doc.categoryTag || "Workplace Document"}]${signals}${summary}${snippet}`;
+              })
+              .join("\n")}`
+          : "";
+
       const contextSnippet = userContext
         ? `\nActive Worker Profile (MUST be used to pre-fill all formal English letters):
 - Full Name: ${userContext.name || "Artur Kowalski"}
@@ -313,7 +339,7 @@ async function startServer() {
 - Start Date: ${userContext.startDate || "2024-03-15"}
 - Hourly Rate: £${userContext.hourlyRate || "13.50"}/hr (${userContext.hoursPerWeek || 40} hrs/wk, ${userContext.contractType || "permanent"})
 - Employer Name: ${userContext.employer || "Amazon Fulfilment LCY2"} (Company No: ${userContext.companyNumber || "03223028"})
-- Employer Address: ${userContext.employerAddress || "London Distribution Park, Windrush Drive, Tilbury RM18 7AN"}
+- Employer Address: ${userContext.employerAddress || "London Distribution Park, Windrush Drive, Tilbury RM18 7AN"}${attachedDocsBlock}
 Always write the conversational explanation in ${langName}, and generate the formal document inside [ENGLISH_LETTER_START]...[ENGLISH_LETTER_END] in English.`
         : `\nAlways write the conversational explanation in ${langName}, and generate the formal document inside [ENGLISH_LETTER_START]...[ENGLISH_LETTER_END] in English.`;
 
@@ -326,11 +352,11 @@ Always write the conversational explanation in ${langName}, and generate the for
       ];
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-4-hydrogen",
         contents,
         config: {
           systemInstruction: ELON_SYSTEM_INSTRUCTION + contextSnippet,
-          temperature: 0.4,
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         },
       });
 
@@ -359,6 +385,24 @@ Always write the conversational explanation in ${langName}, and generate the for
       }
 
       const langName = locale === "pl" ? "Polish" : locale === "ro" ? "Romanian" : "English";
+      const attachedDocsBlock =
+        Array.isArray(userContext?.attachedDocuments) && userContext.attachedDocuments.length > 0
+          ? `\nUser-Provided & AI-Analyzed Document Context:\n${userContext.attachedDocuments
+              .slice(0, 4)
+              .map((doc: any, i: number) => {
+                const signals =
+                  Array.isArray(doc.detectedSignals) && doc.detectedSignals.length > 0
+                    ? ` | Signals: ${doc.detectedSignals.slice(0, 4).join(", ")}`
+                    : "";
+                const summary = doc.contentSummary ? ` | Summary: ${doc.contentSummary}` : "";
+                const snippet = doc.extractedTextSnippet
+                  ? ` | Extract: "${String(doc.extractedTextSnippet).slice(0, 260)}"`
+                  : "";
+                return `${i + 1}. ${doc.name} [${doc.categoryTag || "Workplace Document"}]${signals}${summary}${snippet}`;
+              })
+              .join("\n")}`
+          : "";
+
       const contextSnippet = userContext
         ? `\nActive Worker Profile (MUST be used to pre-fill all formal English letters):
 - Full Name: ${userContext.name || "Artur Kowalski"}
@@ -369,7 +413,7 @@ Always write the conversational explanation in ${langName}, and generate the for
 - Start Date: ${userContext.startDate || "2024-03-15"}
 - Hourly Rate: £${userContext.hourlyRate || "13.50"}/hr (${userContext.hoursPerWeek || 40} hrs/wk, ${userContext.contractType || "permanent"})
 - Employer Name: ${userContext.employer || "Amazon Fulfilment LCY2"} (Company No: ${userContext.companyNumber || "03223028"})
-- Employer Address: ${userContext.employerAddress || "London Distribution Park, Windrush Drive, Tilbury RM18 7AN"}
+- Employer Address: ${userContext.employerAddress || "London Distribution Park, Windrush Drive, Tilbury RM18 7AN"}${attachedDocsBlock}
 Always write the conversational explanation in ${langName}, and generate the formal document inside [ENGLISH_LETTER_START]...[ENGLISH_LETTER_END] in English.`
         : `\nAlways write the conversational explanation in ${langName}, and generate the formal document inside [ENGLISH_LETTER_START]...[ENGLISH_LETTER_END] in English.`;
 
@@ -389,11 +433,11 @@ Always write the conversational explanation in ${langName}, and generate the for
       res.setHeader("Connection", "keep-alive");
 
       const streamResponse = await ai.models.generateContentStream({
-        model: "gemini-3.8-flash",
+        model: "gemini-4-hydrogen",
         contents,
         config: {
           systemInstruction: ELON_SYSTEM_INSTRUCTION + contextSnippet,
-          temperature: 0.4,
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         },
       });
 
@@ -436,10 +480,10 @@ Always write the conversational explanation in ${langName}, and generate the for
 
       const langHint =
         locale === "pl"
-          ? "Polish (or English/Romanian if spoken)"
+          ? "Polish (or English/Romanian)"
           : locale === "ro"
-          ? "Romanian (or English/Polish if spoken)"
-          : "English (or Polish/Romanian if spoken)";
+          ? "Romanian (or English/Polish)"
+          : "English (or Polish/Romanian)";
 
       const audioPart = {
         inlineData: {
@@ -448,24 +492,36 @@ Always write the conversational explanation in ${langName}, and generate the for
         },
       };
       const promptPart = {
-        text: `Transcribe the spoken audio accurately in ${langHint}. Output ONLY the exact transcribed words spoken by the user, with no extra commentary, quotes, or prefixes. If no speech is audible, return an empty string.`,
+        text: `Transcribe this audio in ${langHint}. Output only the exact spoken words without quotes or commentary. Return empty string if silent.`,
       };
 
       let transcribedText = "";
       try {
         const response = await ai.models.generateContent({
-          model: "gemini-3.8-flash",
-          contents: [{ role: "user", parts: [audioPart, promptPart] }],
-          config: { temperature: 0.1 },
+          model: "gemini-3.5-transcribe",
+          contents: { parts: [audioPart, promptPart] },
         });
         transcribedText = (response.text || "").trim();
       } catch {
-        const fallbackResponse = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: [{ role: "user", parts: [audioPart, promptPart] }],
-          config: { temperature: 0.1 },
-        });
-        transcribedText = (fallbackResponse.text || "").trim();
+        try {
+          const fastFallback = await ai.models.generateContent({
+            model: "gemini-3.1-flash-lite",
+            contents: { parts: [audioPart, promptPart] },
+            config: {
+              thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+            },
+          });
+          transcribedText = (fastFallback.text || "").trim();
+        } catch {
+          const secondaryFallback = await ai.models.generateContent({
+            model: "gemini-4-hydrogen",
+            contents: { parts: [audioPart, promptPart] },
+            config: {
+              thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+            },
+          });
+          transcribedText = (secondaryFallback.text || "").trim();
+        }
       }
 
       res.json({ text: transcribedText });
@@ -510,12 +566,12 @@ Instructions:
 - For each flagged phrase, provide the exact substring from the user's input in 'originalText', the matching 'fieldKey' (or 'letter_body' if only in the full letter), 'severity' ("inflammatory" for insults/threats/profanity/criminal slurs, or "cautionary" for emotional/shouting/unsubstantiated hostility), 'category' in ${langName}, 'reason' in ${langName} explaining the UK HR/Tribunal risk, and 'suggestedReplacement' in the same language as the user's input that converts the aggressive statement into a calm, legally firm, ACAS-compliant statement.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-4-hydrogen",
         contents: promptText,
         config: {
           systemInstruction:
             "You are Elon, a UK Employment Law & ACAS tone-of-voice compliance analyzer protecting workers from self-incrimination or retaliatory disciplinary action when writing letters to HR.",
-          temperature: 0.2,
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
@@ -652,12 +708,12 @@ Instructions:
 - For 'recommendedTemplateIds', select 1 to 3 IDs strictly from this list: ["formal_grievance", "unpaid_wages", "statutory_sick_pay", "sar_data_request", "flexible_working", "constructive_dismissal"].`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-4-hydrogen",
         contents: promptText,
         config: {
           systemInstruction:
             "You are Elon, a UK Employment Law structured legal extractor. You identify exact UK statutory rights, statutory time limits, and remedies from worker consultations.",
-          temperature: 0.2,
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
@@ -750,10 +806,320 @@ Instructions:
     }
   });
 
+  // 4. Multimodal & Content-Based Document File-Type Detection & Auto-Tagging Endpoint
+  app.post("/api/gemini/detect-document-type", async (req, res) => {
+    try {
+      const {
+        fileName = "document",
+        mimeType = "application/octet-stream",
+        fileFormat = "UNKNOWN",
+        sourceMethod = "system_upload",
+        base64Data,
+        extractedText = "",
+        locale = "pl",
+      } = req.body || {};
+
+      if (!base64Data && (!extractedText || !String(extractedText).trim())) {
+        res.status(400).json({
+          error: "Missing document content (base64Data or extractedText required for content analysis).",
+        });
+        return;
+      }
+
+      const ai = getAiClient();
+      if (!ai) {
+        res.status(503).json({
+          error: "GEMINI_API_KEY not configured on server for multimodal AI document classification.",
+        });
+        return;
+      }
+
+      const langName = locale === "pl" ? "Polish" : locale === "ro" ? "Romanian" : "English";
+      const cleanMime = String(mimeType || "").split(";")[0].trim().toLowerCase();
+      const supportsInlineBinary =
+        Boolean(base64Data) &&
+        (cleanMime === "application/pdf" ||
+          cleanMime === "image/jpeg" ||
+          cleanMime === "image/jpg" ||
+          cleanMime === "image/png" ||
+          cleanMime === "image/webp" ||
+          cleanMime === "image/gif");
+
+      const allowedTags = [
+        "PDF Paystub",
+        "Image Paystub",
+        "Employment Contract",
+        "Letter to HR",
+        "Disciplinary / Grievance",
+        "Sick Note / Fit Note",
+        "P45 / P60 Tax Form",
+        "Rota / Timesheet",
+        "Workplace Document",
+      ] as const;
+
+      const promptParts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
+
+      if (supportsInlineBinary && typeof base64Data === "string") {
+        promptParts.push({
+          inlineData: {
+            mimeType: cleanMime === "image/jpg" ? "image/jpeg" : cleanMime,
+            data: base64Data,
+          },
+        });
+      }
+
+      const textExcerpt = String(extractedText || "").trim().slice(0, 9000);
+      promptParts.push({
+        text: `Inspect the ACTUAL CONTENT of this uploaded UK workplace document and classify it accurately.
+
+Metadata context (secondary only — prioritize actual visual/textual document content):
+- File Name: ${String(fileName)}
+- Detected MIME Type: ${cleanMime}
+- Detected Binary/Container Format: ${String(fileFormat)}
+- Upload Source: ${sourceMethod === "camera" ? "Camera capture" : "System file interface"}
+${textExcerpt ? `\nExtracted Text Content:\n${textExcerpt}\n` : ""}
+
+Assign the SINGLE best categoryTag strictly from this exact list:
+1. "PDF Paystub" -> Paystub / payslip / wage slip in PDF format (or text/table payslip showing Gross Pay, Net Pay, Tax Code, PAYE, NI, Hours, Deductions).
+2. "Image Paystub" -> Camera photo or image scan of a payslip / wage slip.
+3. "Employment Contract" -> Contract of employment, Section 1 Written Statement of Particulars, zero-hours/agency agreement, job offer terms.
+4. "Letter to HR" -> Formal letter to or from Human Resources (e.g. unpaid wages demand, Subject Access Request / GDPR SAR, resignation letter, flexible working request, general HR correspondence).
+5. "Disciplinary / Grievance" -> Disciplinary invitation, written warning, dismissal/termination notice, formal grievance filing, or appeal outcome letter.
+6. "Sick Note / Fit Note" -> NHS MED3 Fit Note, Statement of Fitness for Work, HMRC SSP1 form, or medical sick leave certificate.
+7. "P45 / P60 Tax Form" -> HMRC P45, P60 End of Year Certificate, P11D, or HMRC tax coding notice.
+8. "Rota / Timesheet" -> Shift rota, work timetable, clock-in/clock-out log, or weekly hours timesheet.
+9. "Workplace Document" -> Any other employment or workplace document not fitting the categories above.
+
+Instructions:
+- Set 'mappedType' to:
+  - "payslip" for "PDF Paystub" or "Image Paystub"
+  - "contract" for "Employment Contract"
+  - "hr_letter" for "Letter to HR" or "Disciplinary / Grievance"
+  - "other" for all other tags
+- Return 'confidence' as an integer 0-100 reflecting how clearly the content matches.
+- Return 'detectedSignals' (2 to 5 concise phrases quoting or naming exact headings/fields spotted in the content, e.g. "PAYE & NI Number", "Gross Pay £1,840", "Section 1 ERA 1996", "Dear HR Department").
+- Return 'contentSummary' in ${langName} (1 clear sentence summarizing what the document is).
+- Return 'extractedTextSnippet' (up to 240 chars of the most informative lines read from the document, or brief visual description).`,
+      });
+
+      const response = await ai.models.generateContent({
+        model: "gemini-4-hydrogen",
+        contents: [{ role: "user", parts: promptParts }],
+        config: {
+          systemInstruction:
+            "You are an expert UK Employment Law & Payroll Document Classifier. Classify documents strictly based on their actual content and file format.",
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              categoryTag: {
+                type: Type.STRING,
+                description:
+                  "Exact tag from: PDF Paystub, Image Paystub, Employment Contract, Letter to HR, Disciplinary / Grievance, Sick Note / Fit Note, P45 / P60 Tax Form, Rota / Timesheet, Workplace Document",
+              },
+              mappedType: {
+                type: Type.STRING,
+                description: "One of: payslip, contract, hr_letter, other",
+              },
+              confidence: {
+                type: Type.INTEGER,
+                description: "Confidence score from 0 to 100",
+              },
+              detectedSignals: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "2 to 5 concrete content indicators observed in the document",
+              },
+              contentSummary: {
+                type: Type.STRING,
+                description: `1-sentence content summary in ${langName}`,
+              },
+              extractedTextSnippet: {
+                type: Type.STRING,
+                description: "Short key excerpt read from the document",
+              },
+            },
+            required: [
+              "categoryTag",
+              "mappedType",
+              "confidence",
+              "detectedSignals",
+              "contentSummary",
+            ],
+          },
+        },
+      });
+
+      const rawJson = (response.text ?? "").trim();
+      if (!rawJson) {
+        res.status(502).json({ error: "Empty response returned from Gemini document classifier." });
+        return;
+      }
+
+      const parsed = JSON.parse(rawJson);
+      const normalizedTag = allowedTags.includes(parsed.categoryTag)
+        ? parsed.categoryTag
+        : "Workplace Document";
+
+      const validMappedTypes = ["payslip", "contract", "hr_letter", "other"];
+      const normalizedMappedType = validMappedTypes.includes(parsed.mappedType)
+        ? parsed.mappedType
+        : normalizedTag === "PDF Paystub" || normalizedTag === "Image Paystub"
+        ? "payslip"
+        : normalizedTag === "Employment Contract"
+        ? "contract"
+        : normalizedTag === "Letter to HR" || normalizedTag === "Disciplinary / Grievance"
+        ? "hr_letter"
+        : "other";
+
+      res.json({
+        categoryTag: normalizedTag,
+        mappedType: normalizedMappedType,
+        confidence: Math.max(10, Math.min(100, Number(parsed.confidence) || 85)),
+        detectedSignals: Array.isArray(parsed.detectedSignals)
+          ? parsed.detectedSignals.slice(0, 5).map(String)
+          : [],
+        contentSummary: String(parsed.contentSummary || ""),
+        extractedTextSnippet: String(parsed.extractedTextSnippet || "").slice(0, 280),
+        analysisMethod: supportsInlineBinary ? "ai_multimodal" : "ai_text",
+      });
+    } catch (err: any) {
+      console.error("Error in /api/gemini/detect-document-type:", err);
+      res.status(500).json({
+        error: err?.message || "Failed to classify uploaded document content.",
+      });
+    }
+  });
+
+  // Send exported Markdown chat transcript to the user's registered email via Resend API
+  app.post("/api/email/transcript", async (req, res) => {
+    try {
+      const {
+        toEmail,
+        recipientName = "Employee",
+        subject = "Ask Elon — UK Employment Law Consultation Transcript",
+        markdownContent = "",
+        filename = "ask-elon-consultation.md",
+      } = req.body || {};
+
+      const cleanEmail = String(toEmail || "").trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+        res.status(400).json({ error: "Invalid recipient email address." });
+        return;
+      }
+
+      if (!markdownContent || typeof markdownContent !== "string" || !markdownContent.trim()) {
+        res.status(400).json({ error: "Markdown transcript content is empty." });
+        return;
+      }
+
+      const escapeHtml = (str: string) =>
+        str
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+
+      const htmlBody = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 680px; margin: 0 auto; background-color: #0B0F17; color: #F1F5F9; border-radius: 16px; overflow: hidden; border: 1px solid #1E293B;">
+          <div style="background: linear-gradient(135deg, #131B2E 0%, #1D6852 100%); padding: 24px 28px; border-bottom: 2px solid #D97724;">
+            <div style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #38B28B; margin-bottom: 6px;">
+              ASK ELON · UK EMPLOYMENT LAW COMPANION
+            </div>
+            <h1 style="margin: 0; font-size: 20px; color: #FFFFFF;">
+              ${escapeHtml(subject)}
+            </h1>
+            <p style="margin: 6px 0 0 0; font-size: 13px; color: #CBD5E1;">
+              Prepared for <strong>${escapeHtml(recipientName)}</strong> (${escapeHtml(cleanEmail)})
+            </p>
+          </div>
+          <div style="padding: 24px 28px; background-color: #131B2E;">
+            <p style="margin-top: 0; font-size: 13px; line-height: 1.6; color: #94A3B8;">
+              Attached is your exported Markdown (<code>${escapeHtml(filename)}</code>) consultation transcript and statutory analysis. Below is the complete Markdown source for direct use in your documentation tools:
+            </p>
+            <pre style="background-color: #0B0F17; color: #F1F5F9; padding: 18px; border-radius: 12px; border: 1px solid rgba(56, 178, 139, 0.3); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; overflow-x: auto;">${escapeHtml(
+              markdownContent
+            )}</pre>
+          </div>
+          <div style="padding: 16px 28px; background-color: #0B0F17; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px; color: #64748B; text-align: center;">
+            Ask Elon · Grounded in UK Employment Rights Act 1996 &amp; ACAS Code of Practice
+          </div>
+        </div>
+      `;
+
+      const resendApiKey = (process.env.RESEND_API_KEY || "").trim();
+      const fromAddress =
+        (process.env.RESEND_FROM_EMAIL || process.env.MAIL_FROM || "").trim() ||
+        "Ask Elon Legal <onboarding@resend.dev>";
+
+      if (resendApiKey) {
+        const resendResp = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${resendApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: fromAddress,
+            to: [cleanEmail],
+            subject,
+            text: markdownContent,
+            html: htmlBody,
+            attachments: [
+              {
+                filename,
+                content: Buffer.from(markdownContent, "utf-8").toString("base64"),
+              },
+            ],
+          }),
+        });
+
+        const resendData: any = await resendResp.json().catch(() => ({}));
+        if (resendResp.ok && resendData?.id) {
+          res.json({
+            ok: true,
+            provider: "resend",
+            deliveryId: resendData.id,
+            toEmail: cleanEmail,
+            sentAt: new Date().toISOString(),
+          });
+          return;
+        }
+
+        // If Resend returned a sandbox/domain restriction or invalid key error, log and return structured status
+        console.warn("Resend API response warning:", resendResp.status, resendData);
+        res.status(resendResp.status || 502).json({
+          error:
+            resendData?.message ||
+            resendData?.error ||
+            "Resend API rejected the request. Check RESEND_API_KEY and verified sender domain.",
+          details: resendData,
+        });
+        return;
+      }
+
+      // Graceful preview fallback when RESEND_API_KEY is not configured in environment
+      res.json({
+        ok: true,
+        provider: "resend_preview_sandbox",
+        deliveryId: `re_sim_${Date.now().toString(36)}`,
+        toEmail: cleanEmail,
+        sentAt: new Date().toISOString(),
+        note: "RESEND_API_KEY not set in environment; simulated Resend dispatch in preview mode.",
+      });
+    } catch (err: any) {
+      console.error("Error in /api/email/transcript:", err);
+      res.status(500).json({
+        error: err?.message || "Failed to send transcript email via Resend API.",
+      });
+    }
+  });
+
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: false },
       appType: "spa",
     });
     app.use(vite.middlewares);
@@ -770,4 +1136,7 @@ Instructions:
   });
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error("Failed to start server:", err);
+  process.exit(1);
+});

@@ -1,23 +1,88 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
-  :root {
-    --bg-surface: #070F1A;
-    --bg-card: #0F2C4D;
-    --bg-input: #12304F;
-    --brand-primary: #0B6E4F;
-    --brand-primary-light: #2EE59D;
-    --brand-orange: #FF6A00;
-    --text-primary: #F4F8FB;
-    --text-muted: #BACADA;
-    --border-color: rgba(255, 255, 255, 0.13);
+  :root,
+  html.light-theme {
+    --bg-surface: #F4F6F9;
+    --bg-card: #FFFFFF;
+    --bg-input: #EDF2F7;
+    --brand-primary: #1D6852;
+    --brand-primary-light: #16654E;
+    --brand-orange: #C25E0E;
+    --text-primary: #0F172A;
+    --text-muted: #475569;
+    --border-color: rgba(15, 23, 42, 0.12);
+  }
+
+  html.dark {
+    --bg-surface: #0B0F17;
+    --bg-card: #131B2E;
+    --bg-input: #1A243B;
+    --brand-primary: #1D6852;
+    --brand-primary-light: #38B28B;
+    --brand-orange: #D97724;
+    --text-primary: #F1F5F9;
+    --text-muted: #94A3B8;
+    --border-color: rgba(255, 255, 255, 0.09);
   }
 
   body {
-    background-color: #070F1A;
-    color: #F4F8FB;
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
+}
+
+/* High-Contrast Daylight Theme adaptation for deep legal slate surfaces */
+html.light-theme .bg-\[\#0B0F17\],
+html.light-theme .bg-\[\#0B0F17\]\/95,
+html.light-theme .bg-\[\#0B0F17\]\/90,
+html.light-theme .bg-\[\#0B0F17\]\/80,
+html.light-theme .bg-\[\#0B0F17\]\/75,
+html.light-theme .bg-\[\#0B0F17\]\/70,
+html.light-theme .bg-\[\#0B0F17\]\/60 {
+  background-color: #F4F6F9 !important;
+}
+
+html.light-theme .bg-\[\#131B2E\],
+html.light-theme .bg-\[\#131B2E\]\/95,
+html.light-theme .bg-\[\#131B2E\]\/90,
+html.light-theme .bg-\[\#131B2E\]\/80,
+html.light-theme .bg-\[\#131B2E\]\/60 {
+  background-color: #FFFFFF !important;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+}
+
+html.light-theme .bg-\[\#1A243B\],
+html.light-theme .bg-\[\#1A243B\]\/90,
+html.light-theme .bg-\[\#1A243B\]\/80,
+html.light-theme .bg-\[\#1E2942\] {
+  background-color: #EDF2F7 !important;
+}
+
+html.light-theme .text-\[\#F1F5F9\] {
+  color: #0F172A !important;
+}
+
+html.light-theme .text-\[\#94A3B8\] {
+  color: #475569 !important;
+}
+
+html.light-theme .text-\[\#38B28B\] {
+  color: #135E46 !important;
+}
+
+html.light-theme .text-\[\#D97724\] {
+  color: #B45309 !important;
+}
+
+html.light-theme .border-white\/5,
+html.light-theme .border-white\/10,
+html.light-theme .border-white\/15,
+html.light-theme .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.12) !important;
 }
 
 /* Custom scrollbars */
@@ -26,43 +91,289 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #070F1A;
+  background: var(--bg-surface);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(148, 163, 184, 0.25);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(148, 163, 184, 0.42);
 }
 
-/* Glow effects */
+/* Subtle, Non-Glaring Advisory Highlights */
 .glow-orange {
-  box-shadow: 0 0 16px rgba(255, 106, 0, 0.35);
+  box-shadow: 0 4px 16px rgba(217, 119, 36, 0.22);
 }
 
 .glow-orange-soft {
-  box-shadow: 0 4px 18px rgba(255, 106, 0, 0.22);
+  box-shadow: 0 2px 12px rgba(217, 119, 36, 0.15);
 }
 
 .glow-green {
-  box-shadow: 0 0 16px rgba(46, 229, 157, 0.3);
+  box-shadow: 0 4px 16px rgba(56, 178, 139, 0.2);
+}
+
+/* ============================================================================
+   Responsive Navigation Bar, Protruding Robot Head & ChatTab Clearance
+   Synchronized CSS custom properties adjusted via @media queries
+   ============================================================================ */
+:root {
+  --nav-bar-height: 58px;
+  --robot-head-size: 58px;
+  --robot-head-svg-size: 54px;
+  --robot-head-bottom: 6px;
+  --robot-notch-width: 90px;
+  --robot-head-protrusion: 6px;
+  --nav-wing-inner-gap: 6px;
+
+  --chat-container-px: 8px;
+  --chat-container-pb: 12px;
+  --chat-col-gap: 12px;
+  --chat-robot-side-gap: 10px;
+  --chat-robot-gap: calc(var(--robot-notch-width) + (var(--chat-robot-side-gap) * 2));
+  --chat-flank-clearance: 44px;
+  --chat-aside-width: 264px;
+}
+
+@media (min-width: 420px) {
+  :root {
+    --nav-bar-height: 62px;
+    --robot-head-size: 64px;
+    --robot-head-svg-size: 60px;
+    --robot-head-bottom: 6px;
+    --robot-notch-width: 100px;
+    --robot-head-protrusion: 8px;
+    --nav-wing-inner-gap: 10px;
+
+    --chat-container-px: 10px;
+    --chat-container-pb: 14px;
+    --chat-col-gap: 12px;
+    --chat-robot-side-gap: 12px;
+    --chat-robot-gap: calc(var(--robot-notch-width) + (var(--chat-robot-side-gap) * 2));
+    --chat-flank-clearance: 46px;
+  }
+}
+
+@media (min-width: 640px) {
+  :root {
+    --nav-bar-height: 64px;
+    --robot-head-size: 70px;
+    --robot-head-svg-size: 66px;
+    --robot-head-bottom: 6px;
+    --robot-notch-width: 112px;
+    --robot-head-protrusion: 12px;
+    --nav-wing-inner-gap: 16px;
+
+    --chat-container-px: 16px;
+    --chat-container-pb: 16px;
+    --chat-col-gap: 16px;
+    --chat-robot-side-gap: 16px;
+    --chat-robot-gap: calc(var(--robot-notch-width) + (var(--chat-robot-side-gap) * 2));
+    --chat-flank-clearance: 48px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --nav-bar-height: 66px;
+    --robot-head-size: 74px;
+    --robot-head-svg-size: 70px;
+    --robot-head-bottom: 6px;
+    --robot-notch-width: 118px;
+    --robot-head-protrusion: 14px;
+    --nav-wing-inner-gap: 20px;
+
+    --chat-container-px: 16px;
+    --chat-container-pb: 18px;
+    --chat-col-gap: 16px;
+    --chat-robot-side-gap: 20px;
+    --chat-robot-gap: calc(var(--robot-notch-width) + (var(--chat-robot-side-gap) * 2));
+    --chat-flank-clearance: 50px;
+    --chat-aside-width: 280px;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --nav-bar-height: 66px;
+    --robot-head-size: 76px;
+    --robot-head-svg-size: 72px;
+    --robot-head-bottom: 6px;
+    --robot-notch-width: 122px;
+    --robot-head-protrusion: 16px;
+    --nav-wing-inner-gap: 24px;
+
+    --chat-container-pb: 20px;
+    --chat-robot-side-gap: 24px;
+    --chat-robot-gap: calc(var(--robot-notch-width) + (var(--chat-robot-side-gap) * 2));
+    --chat-flank-clearance: 50px;
+    --chat-aside-width: 312px;
+  }
+}
+
+@media (max-height: 600px) {
+  :root {
+    --nav-bar-height: 54px;
+    --robot-head-size: 54px;
+    --robot-head-svg-size: 50px;
+    --robot-head-bottom: 4px;
+    --robot-notch-width: 86px;
+    --robot-head-protrusion: 4px;
+    --chat-robot-side-gap: 10px;
+    --chat-robot-gap: calc(var(--robot-notch-width) + (var(--chat-robot-side-gap) * 2));
+    --chat-flank-clearance: 42px;
+    --chat-container-pb: 10px;
+  }
+}
+
+.app-chat-shell {
+  height: 100dvh;
+  overflow: hidden;
+  padding-bottom: var(--nav-bar-height);
+}
+
+.nav-wing-bar {
+  height: var(--nav-bar-height);
+}
+
+.nav-wing-left-inner {
+  padding-right: var(--nav-wing-inner-gap);
+}
+
+.nav-wing-right-inner {
+  padding-left: var(--nav-wing-inner-gap);
+}
+
+.nav-robot-notch {
+  width: var(--robot-notch-width);
+  height: var(--nav-bar-height);
+}
+
+.nav-radial-menu-anchor {
+  bottom: calc(var(--robot-head-bottom) + (var(--robot-head-size) * 0.5));
+}
+
+.nav-robot-head-btn {
+  bottom: var(--robot-head-bottom);
+}
+
+.nav-robot-head-frame {
+  width: var(--robot-head-size);
+  height: var(--robot-head-size);
+}
+
+.nav-robot-head-svg {
+  width: var(--robot-head-svg-size);
+  height: var(--robot-head-svg-size);
+}
+
+.chat-tab-container {
+  padding-left: var(--chat-container-px);
+  padding-right: var(--chat-container-px);
+  padding-bottom: var(--chat-container-pb);
+}
+
+.chat-workspace-row {
+  gap: var(--chat-col-gap);
+}
+
+.chat-messages-scroll {
+  padding-bottom: 10px;
+}
+
+.chat-composer-dock {
+  width: 100%;
+  padding-top: 8px;
+  padding-bottom: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-input-bar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.chat-flank-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--chat-flank-clearance);
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.chat-flank-left,
+.chat-flank-right {
+  flex: 1 1 0%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.chat-flank-left {
+  justify-content: flex-end;
+}
+
+.chat-flank-right {
+  justify-content: flex-start;
+}
+
+.chat-flank-robot-gap {
+  flex: 0 0 var(--chat-robot-gap);
+  width: var(--chat-robot-gap);
+}
+
+.chat-flank-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 248px;
+}
+
+@media (min-width: 640px) {
+  .chat-flank-pair {
+    gap: 8px;
+    max-width: 268px;
+  }
+}
+
+@media (max-width: 359px) {
+  .chat-flank-secondary-label {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .chat-legal-aside {
+    width: var(--chat-aside-width);
+  }
+
+  .chat-legal-scroll {
+    padding-bottom: 16px;
+  }
 }
 
 .robot-head-clip {
-  width: 58px;
-  height: 58px;
+  width: 56px;
+  height: 56px;
   border-radius: 999px;
   overflow: hidden;
-  border: 2.5px solid #FF6A00;
+  border: 2px solid #D97724;
   perspective: 160px;
   flex-shrink: 0;
-  box-shadow: 0 0 14px rgba(255, 106, 0, 0.35);
+  box-shadow: 0 4px 14px rgba(217, 119, 36, 0.24);
 }
 @media (min-width: 640px) {
   .robot-head-clip {
-    width: 62px;
-    height: 62px;
+    width: 60px;
+    height: 60px;
   }
 }
 .robot-head-idle {
@@ -70,31 +381,361 @@
   height: 100%;
   object-fit: cover;
   transform-origin: 50% 68%;
-  animation: robot-look 6.5s cubic-bezier(0.45, 0.05, 0.2, 1) infinite;
+  animation: robot-look 5.2s cubic-bezier(0.45, 0.05, 0.2, 1) infinite;
 }
 @keyframes robot-look {
-  0%, 12% { transform: scale(1.16) rotateY(0deg) rotateX(0deg) rotate(0deg); }
-  28%, 42% { transform: scale(1.18) rotateY(-22deg) rotateX(5deg) rotate(-3.5deg); }
-  58%, 72% { transform: scale(1.18) rotateY(20deg) rotateX(4deg) rotate(3.5deg); }
-  84%, 92% { transform: scale(1.14) rotateY(0deg) rotateX(10deg) rotate(0deg); }
-  100% { transform: scale(1.16) rotateY(0deg) rotateX(0deg) rotate(0deg); }
+  0%, 10% { transform: scale(1.12) rotateY(0deg) rotateX(0deg) rotate(0deg); }
+  25%, 38% { transform: scale(1.14) rotateY(-20deg) rotateX(5deg) rotate(-4deg); }
+  55%, 68% { transform: scale(1.14) rotateY(20deg) rotateX(4deg) rotate(4deg); }
+  82%, 92% { transform: scale(1.10) rotateY(0deg) rotateX(8deg) rotate(0deg); }
+  100% { transform: scale(1.12) rotateY(0deg) rotateX(0deg) rotate(0deg); }
 }
+
+/* Interactive SVG Robot Head & Facial Reaction Animations */
+@keyframes robot-svg-idle-head {
+  0%, 12% { transform: translate(0px, 0px) scale(1, 1) rotate(0deg); }
+  26%, 38% { transform: translate(-2.4px, -1px) scale(1.03, 1.07) rotate(-4deg); }
+  54%, 68% { transform: translate(2.4px, -1px) scale(1.03, 1.07) rotate(4deg); }
+  80%, 90% { transform: translate(0px, -1.5px) scale(1.05, 1.10) rotate(0deg); }
+  100% { transform: translate(0px, 0px) scale(1, 1) rotate(0deg); }
+}
+
+@keyframes robot-svg-idle-eyes {
+  0%, 12% { transform: translate(0px, 0px) scaleY(1); }
+  26%, 38% { transform: translate(-2.4px, 0px) scaleY(1); }
+  45% { transform: translate(0px, 0px) scaleY(0.12); }
+  48% { transform: translate(0px, 0px) scaleY(1); }
+  54%, 68% { transform: translate(2.4px, 0px) scaleY(1); }
+  88% { transform: translate(0px, 0.6px) scaleY(0.12); }
+  91%, 100% { transform: translate(0px, 0px) scaleY(1); }
+}
+
+/* Enlarges slightly by stretching its head when reacting to user information */
+@keyframes robot-svg-typing-head {
+  0%, 100% { transform: translate(-1.8px, -1px) scaleX(1.04) scaleY(1.11) rotate(-2.5deg); }
+  50% { transform: translate(1.8px, -1.8px) scaleX(1.07) scaleY(1.14) rotate(2.5deg); }
+}
+
+@keyframes robot-svg-typing-eyes {
+  0%, 100% { transform: translate(-3.2px, 0.5px); }
+  50% { transform: translate(3.2px, 0.5px); }
+}
+
+@keyframes robot-svg-listening-head {
+  0%, 100% { transform: translate(0px, -1.5px) scaleX(1.04) scaleY(1.10) rotate(-2deg); }
+  50% { transform: translate(0px, -2.5px) scaleX(1.07) scaleY(1.14) rotate(2deg); }
+}
+
+@keyframes robot-svg-thinking-head {
+  0%, 100% { transform: translate(-1.5px, -1px) scaleX(1.02) scaleY(1.06) rotate(-4deg); }
+  50% { transform: translate(1.5px, -2px) scaleX(1.04) scaleY(1.09) rotate(4deg); }
+}
+
+@keyframes robot-svg-visor-scan {
+  0%, 100% { transform: translateX(-13px); opacity: 0.85; }
+  50% { transform: translateX(13px); opacity: 1; }
+}
+
+@keyframes robot-svg-speaking-head {
+  0%, 100% { transform: translateY(0px) rotate(0deg) scale(1, 1); }
+  25% { transform: translateY(-2.4px) rotate(-2.5deg) scale(1.05, 1.11); }
+  50% { transform: translateY(0.5px) rotate(0deg) scale(1.02, 1.05); }
+  75% { transform: translateY(-2.2px) rotate(2.5deg) scale(1.05, 1.11); }
+}
+
+@keyframes robot-svg-mouth-talk {
+  0%, 100% { transform: scaleY(0.35); }
+  35% { transform: scaleY(1.35); }
+  70% { transform: scaleY(0.6); }
+}
+
+/* Specific 'happy' state: enlarges slightly by stretching its head when smiling or reacting to positive AI sentiment / user info */
+@keyframes robot-svg-happy-stretch {
+  0%, 100% {
+    transform: translateY(0px) scaleX(1.03) scaleY(1.06) rotate(0deg);
+  }
+  30% {
+    transform: translateY(-3.8px) scaleX(1.08) scaleY(1.16) rotate(-3deg);
+  }
+  65% {
+    transform: translateY(-2.2px) scaleX(1.09) scaleY(1.14) rotate(3deg);
+  }
+}
+
+/* Specific 'concerned' state: empathetic head tilt + slight alert stretch when AI sentiment detects serious workplace issues */
+@keyframes robot-svg-concerned-tilt {
+  0%, 100% {
+    transform: translate(-1.5px, 0.5px) scaleX(1.03) scaleY(1.08) rotate(-5.5deg);
+  }
+  45% {
+    transform: translate(1.2px, -1.8px) scaleX(1.05) scaleY(1.12) rotate(3.5deg);
+  }
+  75% {
+    transform: translate(-0.8px, -1px) scaleX(1.04) scaleY(1.10) rotate(-3.5deg);
+  }
+}
+
+@keyframes robot-svg-success-nod {
+  0%, 100% { transform: translateY(0px) scaleX(1.02) scaleY(1.05); }
+  35% { transform: translateY(-3.8px) scaleX(1.08) scaleY(1.15) rotate(-3deg); }
+  65% { transform: translateY(-1.5px) scaleX(1.05) scaleY(1.11) rotate(2deg); }
+}
+
+@keyframes robot-svg-ear-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.18); opacity: 1; }
+}
+
+.robot-svg-head-idle {
+  transform-origin: 60px 56px;
+  animation: robot-svg-idle-head 5.2s ease-in-out infinite;
+}
+.robot-svg-eyes-idle {
+  transform-origin: 60px 41.5px;
+  animation: robot-svg-idle-eyes 5.2s ease-in-out infinite;
+}
+.robot-svg-head-typing {
+  transform-origin: 60px 56px;
+  animation: robot-svg-typing-head 1.25s ease-in-out infinite;
+}
+.robot-svg-eyes-typing {
+  transform-origin: 60px 41.5px;
+  animation: robot-svg-typing-eyes 1.1s ease-in-out infinite;
+}
+.robot-svg-head-listening {
+  transform-origin: 60px 56px;
+  animation: robot-svg-listening-head 1.1s ease-in-out infinite;
+}
+.robot-svg-head-thinking {
+  transform-origin: 60px 56px;
+  animation: robot-svg-thinking-head 1.4s ease-in-out infinite;
+}
+.robot-svg-visor-beam {
+  animation: robot-svg-visor-scan 1.05s ease-in-out infinite;
+}
+.robot-svg-head-speaking {
+  transform-origin: 60px 56px;
+  animation: robot-svg-speaking-head 0.65s ease-in-out infinite;
+}
+.robot-svg-mouth-speaking {
+  transform-origin: 60px 48px;
+  animation: robot-svg-mouth-talk 0.28s ease-in-out infinite;
+}
+.robot-svg-head-happy {
+  transform-origin: 60px 58px;
+  animation: robot-svg-happy-stretch 1.35s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+.robot-svg-head-concerned {
+  transform-origin: 60px 56px;
+  animation: robot-svg-concerned-tilt 1.65s ease-in-out infinite;
+}
+.robot-svg-head-success {
+  transform-origin: 60px 58px;
+  animation: robot-svg-success-nod 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+.robot-svg-ear-active {
+  transform-origin: 60px 45px;
+  animation: robot-svg-ear-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes radial-onboarding-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes radial-gesture-ripple {
+  0% {
+    opacity: 0.72;
+    transform: scale(0.94);
+  }
+  70% {
+    opacity: 0.16;
+    transform: scale(1.28);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.36);
+  }
+}
+
+.radial-onboarding-enter {
+  animation: radial-onboarding-enter 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.radial-gesture-ripple {
+  animation: radial-gesture-ripple 2.1s ease-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .robot-head-idle { animation: none; }
+  .robot-head-idle,
+  .robot-svg-head-idle,
+  .robot-svg-eyes-idle,
+  .robot-svg-head-typing,
+  .robot-svg-eyes-typing,
+  .robot-svg-head-listening,
+  .robot-svg-head-thinking,
+  .robot-svg-visor-beam,
+  .robot-svg-head-speaking,
+  .robot-svg-mouth-speaking,
+  .robot-svg-head-happy,
+  .robot-svg-head-concerned,
+  .robot-svg-head-success,
+  .radial-onboarding-enter,
+  .radial-gesture-ripple {
+    animation: none;
+  }
 }
 
 @keyframes audio-wave-bar {
-  0%, 100% { transform: scaleY(0.3); }
+  0%, 100% { transform: scaleY(0.28); }
   50% { transform: scaleY(1); }
 }
 
-.audio-wave-bar-1 { animation: audio-wave-bar 0.75s ease-in-out infinite 0s; }
-.audio-wave-bar-2 { animation: audio-wave-bar 0.75s ease-in-out infinite 0.15s; }
-.audio-wave-bar-3 { animation: audio-wave-bar 0.75s ease-in-out infinite 0.3s; }
-.audio-wave-bar-4 { animation: audio-wave-bar 0.75s ease-in-out infinite 0.2s; }
-.audio-wave-bar-5 { animation: audio-wave-bar 0.75s ease-in-out infinite 0.35s; }
+.audio-wave-bar-1 { animation: audio-wave-bar calc(0.68s / var(--speech-rate-mult, 1)) ease-in-out infinite 0s; }
+.audio-wave-bar-2 { animation: audio-wave-bar calc(0.56s / var(--speech-rate-mult, 1)) ease-in-out infinite 0.12s; }
+.audio-wave-bar-3 { animation: audio-wave-bar calc(0.48s / var(--speech-rate-mult, 1)) ease-in-out infinite 0.24s; }
+.audio-wave-bar-4 { animation: audio-wave-bar calc(0.60s / var(--speech-rate-mult, 1)) ease-in-out infinite 0.16s; }
+.audio-wave-bar-5 { animation: audio-wave-bar calc(0.72s / var(--speech-rate-mult, 1)) ease-in-out infinite 0.30s; }
 
-/* Animated Envelope & Document Reveal after AI Conversation */
+/* Dynamic Read-Aloud Audio Wave Visualizer inside Active Chat Bubble */
+@keyframes speech-wave-harmonic-a {
+  0%, 100% {
+    transform: scaleY(calc(0.22 * var(--speech-energy, 1)));
+    opacity: 0.72;
+  }
+  35% {
+    transform: scaleY(calc(0.92 * var(--speech-energy, 1)));
+    opacity: 1;
+  }
+  70% {
+    transform: scaleY(calc(0.48 * var(--speech-energy, 1)));
+    opacity: 0.85;
+  }
+}
+
+@keyframes speech-wave-harmonic-b {
+  0%, 100% {
+    transform: scaleY(calc(0.30 * var(--speech-energy, 1)));
+    opacity: 0.78;
+  }
+  25% {
+    transform: scaleY(calc(0.62 * var(--speech-energy, 1)));
+    opacity: 0.9;
+  }
+  55% {
+    transform: scaleY(calc(1.0 * var(--speech-energy, 1)));
+    opacity: 1;
+  }
+  80% {
+    transform: scaleY(calc(0.42 * var(--speech-energy, 1)));
+    opacity: 0.84;
+  }
+}
+
+@keyframes speech-wave-harmonic-c {
+  0%, 100% {
+    transform: scaleY(calc(0.25 * var(--speech-energy, 1)));
+    opacity: 0.75;
+  }
+  45% {
+    transform: scaleY(calc(0.98 * var(--speech-energy, 1)));
+    opacity: 1;
+  }
+  65% {
+    transform: scaleY(calc(0.54 * var(--speech-energy, 1)));
+    opacity: 0.88;
+  }
+}
+
+@keyframes speech-wave-harmonic-d {
+  0%, 100% {
+    transform: scaleY(calc(0.18 * var(--speech-energy, 1)));
+    opacity: 0.7;
+  }
+  30% {
+    transform: scaleY(calc(0.84 * var(--speech-energy, 1)));
+    opacity: 0.96;
+  }
+  60% {
+    transform: scaleY(calc(0.38 * var(--speech-energy, 1)));
+    opacity: 0.8;
+  }
+  85% {
+    transform: scaleY(calc(0.74 * var(--speech-energy, 1)));
+    opacity: 0.92;
+  }
+}
+
+@keyframes speech-wave-breath-dip {
+  0%, 100% {
+    transform: scaleY(0.18);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scaleY(0.34);
+    opacity: 0.75;
+  }
+}
+
+.read-aloud-wave-bar {
+  transform-origin: center center;
+  will-change: transform, opacity;
+  transition: background-color 0.18s ease, height 0.18s ease, transform 0.2s ease;
+}
+
+.read-aloud-wave-bar.harmonic-0 {
+  animation: speech-wave-harmonic-a calc(0.58s / var(--speech-rate-mult, 1)) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.read-aloud-wave-bar.harmonic-1 {
+  animation: speech-wave-harmonic-b calc(0.46s / var(--speech-rate-mult, 1)) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.read-aloud-wave-bar.harmonic-2 {
+  animation: speech-wave-harmonic-c calc(0.52s / var(--speech-rate-mult, 1)) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.read-aloud-wave-bar.harmonic-3 {
+  animation: speech-wave-harmonic-d calc(0.64s / var(--speech-rate-mult, 1)) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.read-aloud-wave-bar.cadence-breath {
+  animation: speech-wave-breath-dip 0.7s ease-in-out infinite;
+}
+
+.read-aloud-wave-bar.is-paused {
+  animation-play-state: paused;
+  transform: scaleY(0.24) !important;
+  opacity: 0.65;
+}
+
+/* Real-time Speech-to-Text Microphone Input Audio Level Visualizer */
+.stt-mic-bar {
+  transform-origin: center center;
+  will-change: transform, opacity;
+  transition: transform 75ms cubic-bezier(0.16, 1, 0.3, 1), background-color 140ms ease, opacity 120ms ease;
+}
+
+.stt-mic-bar-bottom {
+  transform-origin: bottom center;
+  will-change: transform;
+  transition: transform 70ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stt-mic-bar,
+  .stt-mic-bar-bottom {
+    transition: none;
+  }
+}
+
+/*Animated Envelope & Document Reveal after AI Conversation */
 @keyframes envelope-appear {
   0% {
     opacity: 0;
@@ -155,3 +796,55 @@
 .envelope-badge-float {
   animation: envelope-icon-float 3.2s ease-in-out infinite;
 }
+
+/* Smooth slide-in transition when conversation category updates in the path indicator */
+@keyframes path-category-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.path-category-slide-in {
+  animation: path-category-slide-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+/* Subtle horizontal shake animation when user attempts to submit an empty chat message */
+@keyframes chat-input-shake {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  16% {
+    transform: translate3d(-5px, 0, 0);
+  }
+  34% {
+    transform: translate3d(4.5px, 0, 0);
+  }
+  52% {
+    transform: translate3d(-3.5px, 0, 0);
+  }
+  70% {
+    transform: translate3d(2.5px, 0, 0);
+  }
+  86% {
+    transform: translate3d(-1px, 0, 0);
+  }
+}
+
+.chat-input-shake {
+  animation: chat-input-shake 380ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .path-category-slide-in,
+  .chat-input-shake {
+    animation: none;
+  }
+}
+

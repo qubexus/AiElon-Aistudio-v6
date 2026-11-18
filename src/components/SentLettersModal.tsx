@@ -117,12 +117,12 @@ export const SentLettersModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col sm:items-center sm:justify-center sm:p-4 bg-[#070F1A]/95 backdrop-blur-md animate-in fade-in">
-      <div className="bg-[#0F2C4D] sm:border-2 sm:border-[#FF6A00]/60 sm:rounded-3xl w-full h-full sm:h-[90vh] sm:max-w-4xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-[80] flex flex-col sm:items-center sm:justify-center sm:p-4 bg-[#0B0F17]/95 backdrop-blur-md animate-in fade-in">
+      <div className="bg-[#131B2E] sm:border-2 sm:border-[#D97724]/60 sm:rounded-3xl w-full h-full sm:h-[90vh] sm:max-w-4xl shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3.5 bg-[#0B2038] border-b border-white/10">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-[#0B6E4F] flex items-center justify-center text-[#2EE59D] shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-[#1D6852] flex items-center justify-center text-[#38B28B] shrink-0">
               <Archive className="w-4.5 h-4.5" />
             </div>
             <div className="min-w-0">
@@ -131,7 +131,7 @@ export const SentLettersModal: React.FC = () => {
                   {activeLetter ? activeLetter.title : t("sentLettersTitle")}
                 </h2>
                 {!activeLetter && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#2EE59D]/15 border border-[#2EE59D]/40 text-[10px] font-extrabold text-[#2EE59D]">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#38B28B]/15 border border-[#38B28B]/40 text-[10px] font-extrabold text-[#38B28B]">
                     <Sparkles className="w-3 h-3" />
                     <span>
                       {locale === "pl"
@@ -143,7 +143,7 @@ export const SentLettersModal: React.FC = () => {
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-[#BACADA] truncate">
+              <p className="text-[11px] text-[#94A3B8] truncate">
                 {activeLetter
                   ? `Do: ${activeLetter.recipient} · ${activeLetter.date}`
                   : locale === "pl"
@@ -171,7 +171,7 @@ export const SentLettersModal: React.FC = () => {
           <div className="shrink-0 px-4 py-3 bg-[#0B2038]/70 border-b border-white/10 space-y-2.5">
             {/* Search Input */}
             <div className="relative">
-              <Search className="w-4 h-4 text-[#BACADA] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
@@ -181,13 +181,13 @@ export const SentLettersModal: React.FC = () => {
                     ? "Szukaj pisma po tytule, pracodawcy, kategorii (np. Grievance, Settlement, Contract)..."
                     : "Search saved letters by title, employer, or document tag..."
                 }
-                className="w-full bg-[#0F2C4D] border border-white/15 focus:border-[#2EE59D] rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-[#BACADA]/60 focus:outline-none"
+                className="w-full bg-[#131B2E] border border-white/15 focus:border-[#38B28B] rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-[#94A3B8]/60 focus:outline-none"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#BACADA] hover:text-white"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-white"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -201,8 +201,8 @@ export const SentLettersModal: React.FC = () => {
                 onClick={() => setSelectedTagFilter("ALL")}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold border transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                   selectedTagFilter === "ALL"
-                    ? "bg-[#FF6A00] text-black border-[#FF6A00] shadow-sm"
-                    : "bg-[#12304F] text-[#BACADA] border-white/10 hover:text-white"
+                    ? "bg-[#D97724] text-black border-[#D97724] shadow-sm"
+                    : "bg-[#1A243B] text-[#94A3B8] border-white/10 hover:text-white"
                 }`}
               >
                 <Tag className="w-3 h-3" />
@@ -227,7 +227,7 @@ export const SentLettersModal: React.FC = () => {
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold border transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                       isSelected
                         ? meta.activeChipClass
-                        : "bg-[#12304F] text-[#BACADA] border-white/10 hover:border-white/25 hover:text-white"
+                        : "bg-[#1A243B] text-[#94A3B8] border-white/10 hover:border-white/25 hover:text-white"
                     }`}
                   >
                     <span>{meta.label}</span>
@@ -240,13 +240,13 @@ export const SentLettersModal: React.FC = () => {
         )}
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-[#070F1A]">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-[#0B0F17]">
           {activeLetter ? (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <button
                   onClick={() => setActiveLetterId(null)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-[#BACADA] hover:text-white cursor-pointer"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-[#94A3B8] hover:text-white cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span>Wróć do listy wygenerowanych pism</span>
@@ -277,9 +277,9 @@ export const SentLettersModal: React.FC = () => {
               </div>
 
               {/* Quick Tag Organizer Bar for Active Letter */}
-              <div className="p-3 rounded-2xl bg-[#0F2C4D] border border-white/10 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[11px] font-bold text-[#BACADA] flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#2EE59D]" />
+              <div className="p-3 rounded-2xl bg-[#131B2E] border border-white/10 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[11px] font-bold text-[#94A3B8] flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#38B28B]" />
                   <span>
                     {locale === "pl"
                       ? "Kategorie dokumentu (kliknij, aby dodać lub ustawić jako główną):"
@@ -301,7 +301,7 @@ export const SentLettersModal: React.FC = () => {
                             ? meta.activeChipClass
                             : isTagged
                             ? `${meta.bgClass} ${meta.textClass} ${meta.borderClass}`
-                            : "bg-white/5 border-white/10 text-[#BACADA]/70 hover:text-white"
+                            : "bg-white/5 border-white/10 text-[#94A3B8]/70 hover:text-white"
                         }`}
                       >
                         {tg}
@@ -311,9 +311,9 @@ export const SentLettersModal: React.FC = () => {
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-[#FFF6EF] text-[#161B22] p-4 sm:p-6 border-2 border-[#FF6A00]/40 shadow-xl">
+              <div className="rounded-2xl bg-[#FFF6EF] text-[#161B22] p-4 sm:p-6 border-2 border-[#D97724]/40 shadow-xl">
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-4 border-b border-[#161B22]/15 text-[11px] font-mono text-[#161B22]/80">
-                  <span className="font-extrabold text-[#0B6E4F]">
+                  <span className="font-extrabold text-[#1D6852]">
                     OFFICIAL UK STATUTORY DOCUMENT · {activeLetter.primaryTag?.toUpperCase()}
                   </span>
                   <span>
@@ -337,7 +337,7 @@ export const SentLettersModal: React.FC = () => {
                   <div
                     key={letter.id}
                     onClick={() => setActiveLetterId(letter.id)}
-                    className="p-4 rounded-2xl bg-[#12304F] hover:bg-[#153a5e] border border-white/10 hover:border-[#2EE59D]/40 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    className="p-4 rounded-2xl bg-[#1A243B] hover:bg-[#153a5e] border border-white/10 hover:border-[#38B28B]/40 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                   >
                     <div className="space-y-1.5 min-w-0 flex-1">
                       {/* Automated Category Tags Row */}
@@ -356,20 +356,20 @@ export const SentLettersModal: React.FC = () => {
                         })}
 
                         {letter.statutoryReference && (
-                          <span className="text-[10px] font-mono text-[#BACADA] bg-[#0B2038]/80 px-2 py-0.5 rounded border border-white/10 truncate max-w-xs">
+                          <span className="text-[10px] font-mono text-[#94A3B8] bg-[#0B2038]/80 px-2 py-0.5 rounded border border-white/10 truncate max-w-xs">
                             {letter.statutoryReference}
                           </span>
                         )}
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-[#FF6A00] shrink-0" />
+                        <FileText className="w-4 h-4 text-[#D97724] shrink-0" />
                         <h4 className="text-xs sm:text-sm font-bold text-white truncate">
                           {letter.title}
                         </h4>
                       </div>
 
-                      <p className="text-[11px] text-[#BACADA] truncate">
+                      <p className="text-[11px] text-[#94A3B8] truncate">
                         Odbiorca: <span className="text-white font-semibold">{letter.recipient}</span> • Data:{" "}
                         <span className="font-mono">{letter.date}</span>
                       </p>
@@ -383,7 +383,7 @@ export const SentLettersModal: React.FC = () => {
                           handleCopy(letter.content);
                         }}
                         title="Kopiuj"
-                        className="px-2.5 py-1.5 rounded-xl bg-[#FF6A00] hover:bg-[#FF6A00]/90 text-black font-extrabold text-xs inline-flex items-center gap-1"
+                        className="px-2.5 py-1.5 rounded-xl bg-[#D97724] hover:bg-[#D97724]/90 text-black font-extrabold text-xs inline-flex items-center gap-1"
                       >
                         <Copy className="w-3.5 h-3.5" />
                         <span>Kopiuj</span>
@@ -396,19 +396,19 @@ export const SentLettersModal: React.FC = () => {
                           removeSentLetter(letter.id);
                         }}
                         title="Usuń"
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-[#EF4444]/30 text-[#BACADA] hover:text-[#FF8A8A]"
+                        className="p-1.5 rounded-lg bg-white/5 hover:bg-[#EF4444]/30 text-[#94A3B8] hover:text-[#FF8A8A]"
                       >
                         <X className="w-4 h-4" />
                       </button>
-                      <ChevronRight className="w-4 h-4 text-[#BACADA]" />
+                      <ChevronRight className="w-4 h-4 text-[#94A3B8]" />
                     </div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="text-center text-xs text-[#BACADA] py-12 space-y-3">
-              <Archive className="w-10 h-10 text-[#BACADA]/40 mx-auto" />
+            <div className="text-center text-xs text-[#94A3B8] py-12 space-y-3">
+              <Archive className="w-10 h-10 text-[#94A3B8]/40 mx-auto" />
               <p>
                 {enrichedLetters.length > 0
                   ? locale === "pl"
@@ -420,7 +420,7 @@ export const SentLettersModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedTagFilter("ALL")}
-                  className="px-3.5 py-1.5 rounded-xl bg-[#12304F] border border-[#2EE59D]/40 text-xs font-bold text-[#2EE59D] hover:text-white cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-[#1A243B] border border-[#38B28B]/40 text-xs font-bold text-[#38B28B] hover:text-white cursor-pointer"
                 >
                   {locale === "pl" ? "Pokaż wszystkie pisma" : "Show all letters"}
                 </button>
@@ -435,7 +435,7 @@ export const SentLettersModal: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2 flex-1">
               <button
                 onClick={() => handleCopy(activeLetter.content)}
-                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#FF6A00] hover:bg-[#FF6A00]/90 text-xs font-extrabold text-black shadow-md cursor-pointer"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#D97724] hover:bg-[#D97724]/90 text-xs font-extrabold text-black shadow-md cursor-pointer"
               >
                 <Copy className="w-4 h-4" />
                 <span>Kopiuj</span>
@@ -443,9 +443,9 @@ export const SentLettersModal: React.FC = () => {
 
               <button
                 onClick={() => handleDownload(activeLetter)}
-                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#0B6E4F] hover:bg-[#0B6E4F]/90 text-xs font-extrabold text-white border border-[#2EE59D]/40 shadow-md cursor-pointer"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#1D6852] hover:bg-[#1D6852]/90 text-xs font-extrabold text-white border border-[#38B28B]/40 shadow-md cursor-pointer"
               >
-                <Download className="w-4 h-4 text-[#2EE59D]" />
+                <Download className="w-4 h-4 text-[#38B28B]" />
                 <span>Pobierz</span>
               </button>
 
@@ -453,7 +453,7 @@ export const SentLettersModal: React.FC = () => {
                 href={`mailto:?subject=${encodeURIComponent(
                   `${activeLetter.title} - ${user.fullName}`
                 )}&body=${encodeURIComponent(activeLetter.content)}`}
-                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#143A66] hover:bg-[#19477d] text-xs font-extrabold text-[#2EE59D] border border-[#2EE59D]/40 shadow-md cursor-pointer"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#143A66] hover:bg-[#19477d] text-xs font-extrabold text-[#38B28B] border border-[#38B28B]/40 shadow-md cursor-pointer"
               >
                 <Mail className="w-4 h-4" />
                 <span>Wyślij mailowo</span>

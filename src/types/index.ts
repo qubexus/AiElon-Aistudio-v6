@@ -1,6 +1,27 @@
 export type Locale = "pl" | "en" | "ro";
 
+export type ThemeMode = "dark" | "light";
+
+export type RobotActivityState =
+  | "idle"
+  | "typing"
+  | "listening"
+  | "thinking"
+  | "speaking"
+  | "success"
+  | "happy"
+  | "concerned";
+
 export type ContractType = "permanent" | "zero_hours" | "agency" | "fixed_term";
+
+export type ElonVoicePreset = "young_professional" | "standard";
+
+export interface ElonVoiceConfig {
+  preset: ElonVoicePreset;
+  pitch: number;
+  speed: number;
+  autoReadAloud: boolean;
+}
 
 export interface UserProfile {
   id: string;
@@ -34,6 +55,7 @@ export interface UserProfile {
   formalCasesCount?: number;
   lastPasswordResetToken?: string;
   lastPasswordResetAt?: string;
+  voiceConfig?: ElonVoiceConfig;
 }
 
 export interface CaseNote {
@@ -155,6 +177,15 @@ export type UnsavedChatIconType =
   | "data"
   | "general";
 
+export type ChatSessionTag =
+  | "Grievance"
+  | "Pay Dispute"
+  | "Contract"
+  | "Dismissal"
+  | "Sick Pay"
+  | "Settlement"
+  | "GDPR";
+
 export interface RecentUnsavedChat {
   id: string;
   title: string;
@@ -163,6 +194,9 @@ export interface RecentUnsavedChat {
   dateLabel: string; // e.g. "25.10.2026"
   updatedAtTime: string; // e.g. "14:25"
   iconType: UnsavedChatIconType;
+  tags?: ChatSessionTag[];
+  isArchived?: boolean;
+  archivedAt?: string;
   messages: ChatMessage[];
   messageCount: number;
 }
@@ -182,10 +216,40 @@ export interface AuditResult {
   items: AuditItem[];
 }
 
+export type DocumentCategoryTag =
+  | "PDF Paystub"
+  | "Image Paystub"
+  | "Employment Contract"
+  | "Letter to HR"
+  | "Disciplinary / Grievance"
+  | "Sick Note / Fit Note"
+  | "P45 / P60 Tax Form"
+  | "Rota / Timesheet"
+  | "Workplace Document";
+
+export interface DocumentDetectionMeta {
+  categoryTag: DocumentCategoryTag;
+  mappedType: "payslip" | "contract" | "hr_letter" | "other";
+  confidence: number; // 0..100
+  sourceMethod: "camera" | "system_upload";
+  detectedMimeType: string;
+  detectedFileFormat: string;
+  analysisMethod: "ai_multimodal" | "ai_text" | "content_heuristic";
+  detectedSignals: string[];
+  contentSummary?: string;
+  extractedTextSnippet?: string;
+  detectedAt: string;
+}
+
 export interface UserDocument {
   id: string;
   name: string;
   type: "payslip" | "contract" | "hr_letter" | "other";
+  categoryTag?: DocumentCategoryTag;
+  uploadSource?: "camera" | "system" | "sample";
+  mimeType?: string;
+  previewDataUrl?: string;
+  detectionMeta?: DocumentDetectionMeta;
   uploadDate: string;
   fileSize: string;
   auditResult?: AuditResult;
