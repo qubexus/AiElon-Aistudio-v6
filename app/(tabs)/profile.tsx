@@ -4,18 +4,38 @@ import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button, Card, Field, Header, Pill, Screen, SectionTitle } from "../../src/components/ui";
-import { formatDate, localeLabels } from "../../src/i18n/translations";
+import { formatDate, localeLabels, type TranslationKey } from "../../src/i18n/translations";
 import { useApp } from "../../src/store/AppContext";
-import { colors, radius, spacing, typography } from "../../src/theme/tokens";
+import {
+  colors,
+  createThemedStyles,
+  radius,
+  spacing,
+  typography,
+  type ThemeMode,
+} from "../../src/theme/tokens";
 import type { ContractType, Locale, SentLetter, UserProfile } from "../../src/types";
 import { exportLetterToPdf } from "../../src/utils/pdf";
 
 const LOCALES: Locale[] = ["en", "pl", "ro"];
+const THEMES: ThemeMode[] = ["light", "dark", "system"];
 const CONTRACTS: ContractType[] = ["permanent", "zero_hours", "agency", "fixed_term"];
 
 export default function ProfileScreen() {
-  const { t, locale, setLocale, profile, updateProfile, serviceLength, letters, deleteLetter, backendUrl, online } =
-    useApp();
+  const {
+    t,
+    locale,
+    setLocale,
+    theme,
+    setTheme,
+    profile,
+    updateProfile,
+    serviceLength,
+    letters,
+    deleteLetter,
+    backendUrl,
+    online,
+  } = useApp();
   const [draft, setDraft] = useState<UserProfile>(profile);
   const [selectedLetter, setSelectedLetter] = useState<SentLetter | null>(null);
 
@@ -112,6 +132,26 @@ export default function ProfileScreen() {
               >
                 <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
                   {localeLabels[l]}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <SectionTitle>{t("profile.appearance")}</SectionTitle>
+        <View style={styles.segment}>
+          {THEMES.map((mode) => {
+            const active = mode === theme;
+            return (
+              <Pressable
+                key={mode}
+                onPress={() => setTheme(mode)}
+                style={[styles.segmentItem, active && styles.segmentItemActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+              >
+                <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                  {t(`theme.${mode}` as TranslationKey)}
                 </Text>
               </Pressable>
             );
@@ -244,7 +284,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   container: { flex: 1, backgroundColor: colors.surface },
   flex: { flex: 1 },
   hero: { flexDirection: "row", alignItems: "center", gap: spacing.lg, paddingTop: spacing.xl },
@@ -306,7 +346,7 @@ const styles = StyleSheet.create({
   letterRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   letterTitle: { ...typography.base, color: colors.onSurface, fontWeight: "700" },
   letterMeta: { ...typography.sm, color: colors.muted, fontWeight: "400", marginTop: 2 },
-  deleteText: { ...typography.sm, color: "#B91C1C", fontWeight: "700" },
+  deleteText: { ...typography.sm, color: colors.onErrorSoft, fontWeight: "700" },
 
   aboutCard: { gap: spacing.sm },
   aboutLine: { ...typography.sm, color: colors.muted, fontWeight: "400" },
@@ -333,4 +373,4 @@ const styles = StyleSheet.create({
   modalScrollContent: { paddingVertical: spacing.sm },
   modalLetterText: { ...typography.base, color: colors.onSurface, lineHeight: 21 },
   modalActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginVertical: spacing.md },
-});
+}));

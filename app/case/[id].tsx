@@ -14,7 +14,7 @@ import {
 import { useApp } from "../../src/store/AppContext";
 import { formatDate, formatDateTime } from "../../src/i18n/translations";
 import type { TranslationKey } from "../../src/i18n/translations";
-import { colors, radius, spacing, typography } from "../../src/theme/tokens";
+import { colors, createThemedStyles, radius, spacing, typography } from "../../src/theme/tokens";
 
 const LEGACY_SECTORS: Record<string, string> = {
   Warehouse: "warehouse",
@@ -168,7 +168,7 @@ export default function CaseDetailScreen() {
             value={note}
             onChangeText={setNote}
             placeholder={t("cases.notePlaceholder")}
-            placeholderTextColor="#9AA9B4"
+            placeholderTextColor={colors.placeholder}
             style={styles.noteInput}
             multiline
           />
@@ -202,7 +202,7 @@ export default function CaseDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   container: { flex: 1, backgroundColor: colors.surface },
   headerActions: { flexDirection: "row", alignItems: "center", gap: spacing.lg },
   title: { ...typography.title, color: colors.onSurface, marginTop: spacing.lg },
@@ -260,4 +260,4 @@ const styles = StyleSheet.create({
   noteBody: { flex: 1 },
   noteText: { ...typography.base, color: colors.onSurface, lineHeight: 21 },
   noteDate: { ...typography.sm, color: colors.muted, marginTop: 2, fontWeight: "400" },
-});
+}));

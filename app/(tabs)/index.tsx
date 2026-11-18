@@ -18,10 +18,18 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { streamElon, type AIUserContext, type ChatTurn } from "../../src/api/client";
-import { Header, Pill } from "../../src/components/ui";
+import { Header, Pill, RobotWatermark } from "../../src/components/ui";
 import { localeLabels, type TranslationKey } from "../../src/i18n/translations";
 import { newId, nowLabel, useApp } from "../../src/store/AppContext";
-import { colors, HIT_SLOP, MIN_TOUCH, radius, spacing, typography } from "../../src/theme/tokens";
+import {
+  colors,
+  createThemedStyles,
+  HIT_SLOP,
+  MIN_TOUCH,
+  radius,
+  spacing,
+  typography,
+} from "../../src/theme/tokens";
 import type { ChatMessage } from "../../src/types";
 import { parseAnswer } from "../../src/utils/letter";
 import { speak, stopSpeaking } from "../../src/utils/speech";
@@ -241,6 +249,7 @@ export default function ChatScreen() {
         ) : null}
 
         <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}>
+          {!isUser ? <RobotWatermark /> : null}
           <Text style={[styles.bubbleText, isUser && styles.bubbleTextUser]}>{body}</Text>
 
           {parsed?.letter ? (
@@ -290,6 +299,7 @@ export default function ChatScreen() {
       <Header
         title={t("chat.title")}
         subtitle={t("chat.subtitle")}
+        wordmark
         right={
           <View style={styles.headerRight}>
             {messages.length > 0 ? (
@@ -314,7 +324,7 @@ export default function ChatScreen() {
 
       {!online ? (
         <View style={styles.offlineBanner}>
-          <Ionicons name="cloud-offline-outline" size={16} color="#A85C09" />
+          <Ionicons name="cloud-offline-outline" size={16} color={colors.onWarningSoft} />
           <Text style={styles.offlineText}>{t("chat.offline")}</Text>
         </View>
       ) : null}
@@ -371,7 +381,7 @@ export default function ChatScreen() {
 
               {error ? (
                 <View style={styles.errorCard}>
-                  <Ionicons name="alert-circle-outline" size={18} color="#B91C1C" />
+                  <Ionicons name="alert-circle-outline" size={18} color={colors.onErrorSoft} />
                   <View style={styles.flex}>
                     <Text style={styles.errorText}>{error}</Text>
                     <Pressable
@@ -401,7 +411,7 @@ export default function ChatScreen() {
             value={input}
             onChangeText={setInput}
             placeholder={t("chat.placeholder")}
-            placeholderTextColor="#9AA9B4"
+            placeholderTextColor={colors.placeholder}
             style={styles.textInput}
             multiline
             maxLength={2000}
@@ -443,7 +453,7 @@ export default function ChatScreen() {
               value={onboardName}
               onChangeText={setOnboardName}
               placeholder={t("profile.fullName")}
-              placeholderTextColor="#9AA9B4"
+              placeholderTextColor={colors.placeholder}
               style={styles.onboardInput}
               accessibilityLabel={t("onboarding.name")}
             />
@@ -498,7 +508,7 @@ export default function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   container: { flex: 1, backgroundColor: colors.surface },
   flex: { flex: 1 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
@@ -508,11 +518,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#FDF1E3",
+    backgroundColor: colors.warningSoft,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
-  offlineText: { ...typography.sm, color: "#A85C09", flex: 1 },
+  offlineText: { ...typography.sm, color: colors.onWarningSoft, flex: 1 },
 
   listContent: { padding: spacing.lg, paddingBottom: spacing.xl },
 
@@ -550,15 +560,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  bubbleUser: { backgroundColor: colors.brand, borderBottomRightRadius: radius.sm },
+  bubbleUser: { backgroundColor: colors.bubbleUser, borderBottomRightRadius: radius.sm },
   bubbleAssistant: {
-    backgroundColor: colors.surfaceSecondary,
+    backgroundColor: colors.bubbleBot,
     borderWidth: 1,
     borderColor: colors.border,
     borderBottomLeftRadius: radius.sm,
+    overflow: "hidden",
   },
-  bubbleText: { ...typography.body, color: colors.onSurface, lineHeight: 23 },
-  bubbleTextUser: { color: colors.onBrand },
+  bubbleText: { ...typography.body, color: colors.onBubbleBot, lineHeight: 23 },
+  bubbleTextUser: { color: colors.onBubbleUser },
   time: { ...typography.sm, color: colors.muted, marginTop: 6, fontWeight: "400", opacity: 0.8 },
 
   letterChip: {
@@ -569,10 +580,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 8,
     borderRadius: radius.md,
-    backgroundColor: "#E8F1EC",
+    backgroundColor: colors.brandSoft,
     alignSelf: "flex-start",
   },
-  letterChipText: { ...typography.sm, color: colors.brand, fontWeight: "700" },
+  letterChipText: { ...typography.sm, color: colors.onBrandSoft, fontWeight: "700" },
 
   speakButton: {
     flexDirection: "row",
@@ -583,9 +594,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 5,
     borderRadius: radius.pill,
-    backgroundColor: "#E8F1EC",
+    backgroundColor: colors.brandSoft,
   },
-  speakText: { ...typography.sm, color: colors.brand, fontWeight: "600" },
+  speakText: { ...typography.sm, color: colors.onBrandSoft, fontWeight: "600" },
 
   thinkingRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   thinkingText: { ...typography.base, color: colors.muted },
@@ -593,13 +604,13 @@ const styles = StyleSheet.create({
   errorCard: {
     flexDirection: "row",
     gap: spacing.sm,
-    backgroundColor: "#FDECEC",
+    backgroundColor: colors.errorSoft,
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
-  errorText: { ...typography.base, color: "#B91C1C" },
-  retryText: { ...typography.base, color: "#B91C1C", fontWeight: "700", marginTop: 4 },
+  errorText: { ...typography.base, color: colors.onErrorSoft },
+  retryText: { ...typography.base, color: colors.onErrorSoft, fontWeight: "700", marginTop: 4 },
 
   actionsRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginTop: spacing.sm },
   actionLink: { paddingVertical: spacing.sm },
@@ -713,4 +724,4 @@ const styles = StyleSheet.create({
   onboardStartText: { ...typography.body, color: colors.onBrand, fontWeight: "700" },
   onboardSkip: { alignItems: "center", paddingVertical: spacing.md },
   onboardSkipText: { ...typography.sm, color: colors.muted, fontWeight: "600" },
-});
+}));

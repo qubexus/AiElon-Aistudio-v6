@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useColorScheme } from "react-native";
 import React, {
   createContext,
   useCallback,
@@ -9,6 +10,7 @@ import React, {
   useState,
 } from "react";
 import { translate, type TranslationKey } from "../i18n/translations";
+import { setActiveTheme, type ThemeMode } from "../theme/tokens";
 import { BACKEND_URL, checkHealth } from "../api/client";
 import type {
   ChatMessage,
@@ -43,6 +45,7 @@ export const emptyProfile: UserProfile = {
 
 interface PersistedState {
   locale: Locale;
+  theme: ThemeMode;
   profile: UserProfile;
   cases: WorkplaceCase[];
   letters: SentLetter[];
@@ -55,6 +58,9 @@ interface AppContextValue extends PersistedState {
   backendUrl: string;
   t: (key: TranslationKey) => string;
   setLocale: (locale: Locale) => void;
+  theme: ThemeMode;
+  resolvedTheme: "light" | "dark";
+  setTheme: (theme: ThemeMode) => void;
   updateProfile: (patch: Partial<UserProfile>) => void;
   addCase: (
     input: Pick<WorkplaceCase, "title" | "description" | "sector" | "employer">
@@ -108,6 +114,7 @@ export function computeServiceLength(startDate: string) {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<PersistedState>({
     locale: "en",
+    theme: "system",
     profile: emptyProfile,
     cases: [],
     letters: [],
@@ -127,6 +134,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const parsed = JSON.parse(raw) as Partial<PersistedState>;
           setState((prev) => ({
             locale: parsed.locale ?? prev.locale,
+            theme: parsed.theme ?? prev.theme,
             profile: { ...emptyProfile, ...(parsed.profile ?? {}) },
             cases: Array.isArray(parsed.cases) ? parsed.cases : [],
             letters: Array.isArray(parsed.letters) ? parsed.letters : [],
@@ -172,6 +180,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setLocale = useCallback((locale: Locale) => {
     setState((prev) => ({ ...prev, locale }));
+  }, []);
+
+  const setTheme = useCallback((theme: ThemeMode) => {
+    setState((prev) => ({ ...prev, theme }));
   }, []);
 
   const updateProfile = useCallback((patch: Partial<UserProfile>) => {
@@ -251,6 +263,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const t = useCallback((key: TranslationKey) => translate(state.locale, key), [state.locale]);
 
+  const systemScheme = useColorScheme();
+  const resolvedTheme: "light" | "dark" =
+    state.theme === "system" ? (systemScheme === "dark" ? "dark" : "light") : state.theme;
+
+  // Repaint the palette before children render, so a theme switch is atomic.
+  setActiveTheme(resolvedTheme);
+
   const serviceLength = useMemo(
     () => computeServiceLength(state.profile.startDate),
     [state.profile.startDate]
@@ -259,11 +278,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const value = useMemo<AppContextValue>(
     () => ({
       ...state,
+      resolvedTheme,
       hydrated,
       online,
       backendUrl: BACKEND_URL,
       t,
       setLocale,
+      setTheme,
       updateProfile,
       addCase,
       updateCase,
@@ -278,10 +299,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }),
     [
       state,
+      resolvedTheme,
       hydrated,
       online,
       t,
       setLocale,
+      setTheme,
       updateProfile,
       addCase,
       updateCase,

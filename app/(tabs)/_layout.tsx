@@ -3,7 +3,7 @@ import { Tabs } from "expo-router";
 import React from "react";
 import { StyleSheet } from "react-native";
 import { useApp } from "../../src/store/AppContext";
-import { colors, typography } from "../../src/theme/tokens";
+import { colors, createThemedStyles, typography } from "../../src/theme/tokens";
 
 export default function TabsLayout() {
   const { t } = useApp();
@@ -60,7 +60,7 @@ export default function TabsLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   tabBar: {
     backgroundColor: colors.glass,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -72,4 +72,4 @@ const styles = StyleSheet.create({
   },
   tabLabel: { ...typography.sm, fontWeight: "600", marginTop: 2 },
   tabItem: { paddingVertical: 2 },
-});
+}));

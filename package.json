@@ -12,12 +12,15 @@
     "export:web": "expo export -p web"
   },
   "dependencies": {
+    "@expo-google-fonts/dm-mono": "^0.4.2",
+    "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo/metro-runtime": "~58.0.15",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~58.0.25",
     "expo-clipboard": "~58.0.4",
     "expo-constants": "~58.0.13",
+    "expo-font": "~58.0.12",
     "expo-haptics": "~58.0.8",
     "expo-linking": "~58.0.17",
     "expo-print": "~58.0.9",

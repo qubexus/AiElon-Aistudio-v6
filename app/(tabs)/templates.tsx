@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-
 import { Card, EmptyState, Header, Pill, Screen } from "../../src/components/ui";
 import { defaultTemplates } from "../../src/data/legalTemplates";
 import { useApp } from "../../src/store/AppContext";
-import { colors, radius, spacing, typography } from "../../src/theme/tokens";
+import { colors, createThemedStyles, radius, spacing, typography } from "../../src/theme/tokens";
 import type { LegalTemplate, Locale } from "../../src/types";
 import type { TranslationKey } from "../../src/i18n/translations";
 
@@ -42,7 +42,7 @@ export default function TemplatesScreen() {
           value={query}
           onChangeText={setQuery}
           placeholder={t("templates.search")}
-          placeholderTextColor="#9AA9B4"
+          placeholderTextColor={colors.placeholder}
           style={styles.searchInput}
           autoCorrect={false}
           accessibilityLabel={t("templates.search")}
@@ -112,7 +112,7 @@ export default function TemplatesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   container: { flex: 1, backgroundColor: colors.surface },
   searchWrap: {
     flexDirection: "row",
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radius.md,
-    backgroundColor: "#E8F1EC",
+    backgroundColor: colors.brandSoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -159,4 +159,4 @@ const styles = StyleSheet.create({
   cardDescription: { ...typography.base, color: colors.muted, lineHeight: 20 },
   pillRow: { flexDirection: "row", gap: spacing.sm },
   statute: { ...typography.sm, color: colors.muted, fontWeight: "400" },
-});
+}));

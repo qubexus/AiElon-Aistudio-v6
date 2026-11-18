@@ -8,7 +8,7 @@ import { Button, Card, EmptyState, Field, Header, Pill, Screen, SectionTitle } f
 import { defaultTemplates, renderTemplateLetter } from "../../src/data/legalTemplates";
 import { newId, useApp } from "../../src/store/AppContext";
 import { exportLetterToPdf } from "../../src/utils/pdf";
-import { colors, radius, spacing, typography } from "../../src/theme/tokens";
+import { colors, createThemedStyles, radius, spacing, typography } from "../../src/theme/tokens";
 import type { LetterSentimentResult, SentLetterCategoryTag } from "../../src/types";
 import type { TranslationKey } from "../../src/i18n/translations";
 
@@ -218,7 +218,7 @@ export default function TemplateScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   container: { flex: 1, backgroundColor: colors.surface },
   formWrap: { paddingTop: spacing.lg },
   englishNote: {
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   previewWrap: { paddingTop: spacing.lg, gap: spacing.md },
-  paper: { backgroundColor: "#FFFFFF", padding: spacing.lg },
+  paper: { backgroundColor: colors.paper, padding: spacing.lg },
   letterText: { ...typography.base, color: colors.onSurface, lineHeight: 21, fontFamily: undefined },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   toneCard: { gap: spacing.sm, marginTop: spacing.sm },
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     gap: 2,
   },
-  flagOriginal: { ...typography.base, color: "#B91C1C", fontWeight: "600" },
+  flagOriginal: { ...typography.base, color: colors.onErrorSoft, fontWeight: "600" },
   flagReason: { ...typography.sm, color: colors.muted, fontWeight: "400" },
   flagFix: { ...typography.base, color: colors.brand, fontWeight: "600", borderRadius: radius.sm },
-});
+}));

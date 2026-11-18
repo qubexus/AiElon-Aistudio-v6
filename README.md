@@ -13,6 +13,10 @@ Natywna aplikacja (iOS / Android) doradcy prawa pracy UK, zbudowana na **Expo SD
 - **Priorytet sprawy** — niski / średni / wysoki, ustawiany w szczegółach sprawy.
 - **Wyszukiwarka** — w Sprawach i Pismach (tytuł, opis, pracodawca, sektor, kategoria, przepis).
 - **Onboarding** — ekran powitalny przy pierwszym uruchomieniu z wyborem języka i imieniem.
+- **Nowa paleta „alabaster & obsidian”** — jasny alabaster (`#F8FAFC`) i ciemny obsydian (`#141B23`), butelkowa zieleń (`#2E6F57`) i ciepły bursztyn (`#F59E42`) jako akcent. Pełna tabela kolorów i reguły kontrastu poniżej.
+- **Typografia** — Plus Jakarta Sans (400/600/700/800) dla tekstu i DM Mono (500) dla danych technicznych, ładowane przez `expo-font`; `fontFamily` i skala `typography` są wspólne dla całej aplikacji.
+- **Wordmark `ask Elon`** — „ask” pisane małą literą w kolorze marki, „Elon” z wielkiej litery w bursztynie; znak siedzi w nagłówku obok logo, z zachowanym odstępem i bez nachodzenia na akcje.
+- **Znak wodny robota** — delikatna głowa robota (4% w Light, 6% w Dark) w tle baniek asystenta, za tekstem, bez wpływu na czytelność.
 - **Porządki** — usunięte `expo-secure-store` i `expo-font`, backend nie serwuje już Vite ani statycznego web builda (czyste API dla aplikacji natywnej), model Gemini konfigurowalny przez `GEMINI_MODEL`.
 
 ---
@@ -127,8 +131,42 @@ npm run export:web   # smoke test bundlingu (dist/)
 - **Stan** — `AppContext` trzyma profil, sprawy, pisma i wiadomości; wszystko jest zapisywane w `AsyncStorage` pod kluczem `ask-elon/state/v1`. Co 30 s wykonywany jest probe `/api/health`, który ustawia flagę `online`.
 - **Streaming** — React Native nie ma `ReadableStream`, więc SSE jest parsowane ręcznie na `XMLHttpRequest` w `streamElon()`.
 - **Protokół odpowiedzi AI** — model opakowuje list po angielsku w `[ENGLISH_LETTER_START]…[ENGLISH_LETTER_END]`, a aktualizację profilu w `[PROFILE_UPDATE_START]…[PROFILE_UPDATE_END]`; `parseAnswer()` rozdziela te sekcje od rozmowy.
-- **Design system** — jasny motyw (`#FBF8F3`), butelkowa zieleń (`#1D4F3C`), granat (`#132B41`) i pomarańcz (`#F97316`) jako akcent. Nagłówek jest półprzezroczysty (glass), a logo siedzi w badge'u `#FFF4EA` z obramowaniem `#F3DCC8`, dzięki czemu pomarańczowo-zielona głowa robota jest czytelna na jasnym tle.
+- **Design system** — dwa pełne motywy (Light „alabaster” i Dark „obsidian”) z przełącznikiem Light / Dark / System w Profilu. Kolory żyją w `src/theme/tokens.ts` jako palety (`lightColors`, `darkColors`) udostępniane przez proxy `colors`, a `createThemedStyles()` przebudowuje StyleSheet przy zmianie motywu. Szczegóły w sekcji „Paleta kolorów”.
 - **Dostępność** — minimalny target dotyku 44 pt, `hitSlop` na ikonach, `accessibilityLabel` na logo i przyciskach.
+
+---
+
+## Paleta kolorów (alabaster & obsidian)
+
+Dwa motywy, jeden zestaw tokenów. Wszystkie wartości znajdują się w `src/theme/tokens.ts`; komponenty nigdy nie używają hexów bezpośrednio, tylko `colors.*`.
+
+| Token | Light — alabaster | Dark — obsydian | Zastosowanie |
+| --- | --- | --- | --- |
+| `surface` | `#F8FAFC` | `#141B23` | tło ekranów |
+| `surfaceSecondary` | `#FFFFFF` | `#1E2732` | karty, pola formularzy |
+| `surfaceTertiary` | `#EEF5F2` | `#162C28` | sekcje pomocnicze |
+| `onSurface` | `#1E293B` | `#F1F5F9` | tekst główny |
+| `muted` | `#64748B` | `#94A3B8` | tekst pomocniczy |
+| `placeholder` | `#94A3B8` | `#6B7C8F` | placeholdery |
+| `brand` | `#2E6F57` | `#52B798` | marka, ikony, „ask” |
+| `accent` | `#F59E42` | `#FBB063` | wypełnienia CTA, pasek karty |
+| `accentText` | `#A85E12` | `#FBB063` | bursztynowy **tekst** (kontrast ≥ 4.5:1) |
+| `bubbleUser` | `#DCECE6` | `#1F4E3D` | bańka użytkownika |
+| `bubbleBot` | `#FFFFFF` | `#232E3C` | bańka asystenta |
+| `border` | `#E2E8F0` | `#2C3847` | obramowania |
+| `successSoft` | `#E3F2EC` | `#1B3A31` | statusy pozytywne |
+| `warningSoft` | `#FDF1E3` | `#3A2E25` | ostrzeżenia |
+| `errorSoft` | `#FBE9E6` | `#3A2622` | błędy |
+| `logoBadge` | `#FDE6CE` | `#3A2E25` | tło badge'a logo |
+| `paper` | `#FFFFFF` | `#1E2732` | powierzchnia PDF/podglądu |
+
+Reguły, których pilnuje kod:
+
+- **Kontrast** — każdy tekst ma ≥ 4.5:1 (duże nagłówki ≥ 3:1). Dlatego bursztyn występuje w dwóch wariantach: `accent` do wypełnień i `accentText` do liter.
+- **Motyw systemowy** — `ThemeMode = "light" | "dark" | "system"`; przy `system` używany jest `useColorScheme()`, a `StatusBar` przełącza się automatycznie.
+- **Brak migotania** — `setActiveTheme()` ustawia paletę synchronicznie przed renderem, a `createThemedStyles()` trzyma cache per wersja palety, więc zmiana motywu to jedno przebudowanie stylów, nie pełny remount.
+- **Opaque surfaces** — nagłówek i `Screen` mają nieprzezroczyste tło (`colors.surface`), żeby treść nieaktywnej zakładki nie prześwitywała.
+- **Layout guards** — `MIN_TOUCH = 44`, `ACTION_HEIGHT = 48`, `HIT_SLOP`, `minWidth: 0` na kartach i `overflow: hidden` na bańkach; dzięki temu długie słowa i znak wodny nie rozpychają układu (weryfikowane brakiem poziomego overflow na wszystkich ekranach).
 
 ---
 

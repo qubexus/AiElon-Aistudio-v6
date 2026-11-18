@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Button, Card, EmptyState, Field, Header, Pill, Screen } from "../../src/components/ui";
 import { useApp } from "../../src/store/AppContext";
-import { colors, HIT_SLOP, radius, spacing, typography } from "../../src/theme/tokens";
+import { colors, createThemedStyles, HIT_SLOP, radius, spacing, typography } from "../../src/theme/tokens";
 import type { WorkplaceCase } from "../../src/types";
 import type { TranslationKey } from "../../src/i18n/translations";
 
@@ -121,7 +121,7 @@ export default function CasesScreen() {
             value={query}
             onChangeText={setQuery}
             placeholder={t("cases.search")}
-            placeholderTextColor="#9AA9B4"
+            placeholderTextColor={colors.placeholder}
             style={styles.searchInput}
             autoCorrect={false}
             accessibilityLabel={t("cases.search")}
@@ -240,7 +240,7 @@ export default function CasesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   container: { flex: 1, backgroundColor: colors.surface },
   addButton: {
     width: 36,
@@ -313,4 +313,4 @@ const styles = StyleSheet.create({
   },
   sectorWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.lg },
   modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: spacing.md },
-});
+}));

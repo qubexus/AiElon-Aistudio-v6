@@ -14,7 +14,17 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../store/AppContext";
-import { colors, HIT_SLOP, MIN_TOUCH, radius, spacing, typography } from "../theme/tokens";
+import {
+  ACTION_HEIGHT,
+  colors,
+  createThemedStyles,
+  fontFamily,
+  HIT_SLOP,
+  MIN_TOUCH,
+  radius,
+  spacing,
+  typography,
+} from "../theme/tokens";
 
 /* ---------------------------------- Screen --------------------------------- */
 
@@ -25,6 +35,8 @@ export const Screen: React.FC<{
   style?: ViewStyle;
 }> = ({ children, scroll, padded = true, style }) => {
   const contentStyle = [
+    // Opaque so a kept-alive inactive tab can never show through this screen.
+    { backgroundColor: colors.surface },
     padded && { paddingHorizontal: spacing.lg },
     { paddingBottom: spacing["2xl"] },
     style,
@@ -46,6 +58,23 @@ export const Screen: React.FC<{
   return <View style={[styles.flex, contentStyle]}>{children}</View>;
 };
 
+/* --------------------------------- Wordmark -------------------------------- */
+
+/**
+ * "ask Elon" lockup: lowercase "ask" in deep sage, capital "E" in warm apricot.
+ * The brand name is identical in every language, so it is not translated.
+ */
+export const Wordmark: React.FC<{ size?: number }> = ({ size = 24 }) => (
+  <Text
+    style={[styles.wordmark, { fontSize: size }]}
+    accessibilityRole="header"
+    accessibilityLabel="ask Elon"
+  >
+    <Text style={styles.wordmarkAsk}>ask </Text>
+    <Text style={styles.wordmarkElon}>Elon</Text>
+  </Text>
+);
+
 /* ---------------------------------- Header --------------------------------- */
 
 export const Header: React.FC<{
@@ -55,7 +84,9 @@ export const Header: React.FC<{
   right?: React.ReactNode;
   /** Brand mark in the top bar. Hidden on nested screens that need the space. */
   showLogo?: boolean;
-}> = ({ title, subtitle, onBack, right, showLogo = true }) => {
+  /** Render the "ask Elon" wordmark instead of a plain title (chat screen). */
+  wordmark?: boolean;
+}> = ({ title, subtitle, onBack, right, showLogo = true, wordmark = false }) => {
   const insets = useSafeAreaInsets();
   const { t } = useApp();
   return (
@@ -82,9 +113,13 @@ export const Header: React.FC<{
           </View>
         ) : null}
         <View style={styles.headerTextWrap}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {title}
-          </Text>
+          {wordmark ? (
+            <Wordmark />
+          ) : (
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {title}
+            </Text>
+          )}
           {subtitle ? (
             <Text style={styles.headerSubtitle} numberOfLines={1}>
               {subtitle}
@@ -94,6 +129,27 @@ export const Header: React.FC<{
         {right ? <View style={styles.headerRight}>{right}</View> : null}
       </View>
     </View>
+  );
+};
+
+/* ----------------------------- Robot watermark ----------------------------- */
+
+/**
+ * Contour robot head behind Elon's chat bubbles. Locked to pointer-events: none
+ * and kept at 4% (light) / 6% (dark) so the advice text stays perfectly legible.
+ */
+export const RobotWatermark: React.FC = () => {
+  const { resolvedTheme } = useApp();
+  return (
+    <Image
+      source={require("../../assets/logo-mark.png")}
+      style={[styles.watermark, { opacity: resolvedTheme === "dark" ? 0.06 : 0.04 }]}
+      tintColor={colors.watermark}
+      resizeMode="contain"
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    />
   );
 };
 
@@ -122,20 +178,20 @@ export const Card: React.FC<{
 
 type PillTone = "brand" | "success" | "warning" | "error" | "neutral";
 
-const pillTones: Record<PillTone, { bg: string; fg: string }> = {
-  brand: { bg: "#E8F1EC", fg: colors.brand },
-  success: { bg: "#E7F7F1", fg: "#0B7A5A" },
-  warning: { bg: "#FDF1E3", fg: "#A85C09" },
-  error: { bg: "#FDECEC", fg: "#B91C1C" },
+const pillTones = (): Record<PillTone, { bg: string; fg: string }> => ({
+  brand: { bg: colors.brandSoft, fg: colors.onBrandSoft },
+  success: { bg: colors.successSoft, fg: colors.onSuccessSoft },
+  warning: { bg: colors.warningSoft, fg: colors.onWarningSoft },
+  error: { bg: colors.errorSoft, fg: colors.onErrorSoft },
   neutral: { bg: colors.surfaceTertiary, fg: colors.muted },
-};
+});
 
 export const Pill: React.FC<{
   label: string;
   tone?: PillTone;
   icon?: keyof typeof Ionicons.glyphMap;
 }> = ({ label, tone = "neutral", icon }) => {
-  const palette = pillTones[tone];
+  const palette = pillTones()[tone];
   return (
     <View style={[styles.pill, { backgroundColor: palette.bg }]}>
       {icon ? (
@@ -159,8 +215,8 @@ export const Button: React.FC<{
 }> = ({ label, onPress, variant = "primary", icon, disabled, loading, fullWidth }) => {
   const isPrimary = variant === "primary";
   const isDanger = variant === "danger";
-  const bg = isPrimary ? colors.brand : isDanger ? "#FDECEC" : "transparent";
-  const fg = isPrimary ? colors.onBrand : isDanger ? "#B91C1C" : colors.brand;
+  const bg = isPrimary ? colors.accent : isDanger ? colors.errorSoft : "transparent";
+  const fg = isPrimary ? colors.onAccent : isDanger ? colors.onErrorSoft : colors.brand;
   const borderColor = variant === "secondary" ? colors.borderStrong : "transparent";
 
   return (
@@ -208,7 +264,7 @@ export const Field: React.FC<TextInputProps & { label: string; hint?: string; er
     <TextInput
       {...inputProps}
       style={[styles.input, error ? styles.inputError : null, style]}
-      placeholderTextColor="#9AA9B4"
+      placeholderTextColor={colors.placeholder}
       accessibilityLabel={label}
     />
     {error ? <Text style={styles.fieldError}>{error}</Text> : null}
@@ -253,11 +309,12 @@ export const SectionTitle: React.FC<{ children: React.ReactNode; right?: React.R
 
 export const Divider = () => <View style={styles.divider} />;
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   flex: { flex: 1 },
 
   header: {
-    backgroundColor: colors.glass,
+    // Solid (not glass) so an inactive tab screen can never bleed through.
+    backgroundColor: colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
     paddingBottom: spacing.md,
@@ -268,13 +325,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 13,
-    backgroundColor: "#FFF4EA",
+    backgroundColor: colors.logoBadge,
     borderWidth: 1,
-    borderColor: "#F3DCC8",
+    borderColor: colors.logoBadgeBorder,
     alignItems: "center",
     justifyContent: "center",
     marginRight: spacing.md,
-    shadowColor: "#355645",
+    shadowColor: colors.shadow,
     shadowOpacity: 0.12,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
@@ -283,6 +340,9 @@ const styles = StyleSheet.create({
   logoImage: { width: 30, height: 30 },
   headerTextWrap: { flex: 1 },
   headerTitle: { ...typography.heading, color: colors.onSurface },
+  wordmark: { letterSpacing: -0.5 },
+  wordmarkAsk: { fontFamily: fontFamily.extrabold, fontWeight: "800", color: colors.brand },
+  wordmarkElon: { fontFamily: fontFamily.extrabold, fontWeight: "800", color: colors.accentText },
   headerSubtitle: { ...typography.sm, color: colors.muted, marginTop: 2, fontWeight: "400" },
   headerRight: { marginLeft: spacing.sm },
   backButton: {
@@ -293,12 +353,22 @@ const styles = StyleSheet.create({
     marginLeft: -spacing.md,
   },
 
+  watermark: {
+    position: "absolute",
+    right: -14,
+    bottom: -18,
+    width: 132,
+    height: 132,
+  },
   card: {
     backgroundColor: colors.surfaceSecondary,
-    borderRadius: radius.md,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
+    borderTopWidth: 3,
+    borderTopColor: colors.accent,
     padding: spacing.lg,
+    minWidth: 0,
   },
   cardPressed: { opacity: 0.9 },
 
@@ -313,9 +383,10 @@ const styles = StyleSheet.create({
   pillText: { ...typography.sm, fontWeight: "600" },
 
   button: {
-    minHeight: MIN_TOUCH,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
+    minHeight: ACTION_HEIGHT,
+    maxHeight: 56,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.pill,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -350,7 +421,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: radius.pill,
-    backgroundColor: "#E8F1EC",
+    backgroundColor: colors.brandSoft,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.lg,
@@ -378,4 +449,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   divider: { height: 1, backgroundColor: colors.divider, marginVertical: spacing.lg },
-});
+}));
