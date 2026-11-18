@@ -78,7 +78,7 @@ export const Wordmark: React.FC<{ size?: number }> = ({ size = 24 }) => (
 /* ---------------------------------- Header --------------------------------- */
 
 export const Header: React.FC<{
-  title: string;
+  title?: string;
   subtitle?: string;
   onBack?: () => void;
   right?: React.ReactNode;
@@ -86,7 +86,7 @@ export const Header: React.FC<{
   showLogo?: boolean;
   /** Render the "ask Elon" wordmark instead of a plain title (chat screen). */
   wordmark?: boolean;
-}> = ({ title, subtitle, onBack, right, showLogo = true, wordmark = false }) => {
+}> = ({ title = "", subtitle, onBack, right, showLogo = true, wordmark = false }) => {
   const insets = useSafeAreaInsets();
   const { t } = useApp();
   return (

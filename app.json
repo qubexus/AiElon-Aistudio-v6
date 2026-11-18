@@ -22,14 +22,16 @@
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true
-        }
+        },
+        "NSMicrophoneUsageDescription": "Ask Elon uses the microphone to dictate your message."
       }
     },
     "android": {
       "package": "uk.askelon.app",
       "usesCleartextTraffic": true,
       "permissions": [
-        "INTERNET"
+        "INTERNET",
+        "RECORD_AUDIO"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#F8FAFC",
@@ -48,7 +50,14 @@
       "expo-router",
       "expo-status-bar",
       "expo-sharing",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow Ask Elon to record your voice so it can turn your words into a message.",
+          "enableBackgroundRecording": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

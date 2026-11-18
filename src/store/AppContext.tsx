@@ -46,6 +46,7 @@ export const emptyProfile: UserProfile = {
 interface PersistedState {
   locale: Locale;
   theme: ThemeMode;
+  autoRead: boolean;
   profile: UserProfile;
   cases: WorkplaceCase[];
   letters: SentLetter[];
@@ -61,6 +62,8 @@ interface AppContextValue extends PersistedState {
   theme: ThemeMode;
   resolvedTheme: "light" | "dark";
   setTheme: (theme: ThemeMode) => void;
+  autoRead: boolean;
+  setAutoRead: (value: boolean) => void;
   updateProfile: (patch: Partial<UserProfile>) => void;
   addCase: (
     input: Pick<WorkplaceCase, "title" | "description" | "sector" | "employer">
@@ -115,6 +118,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [state, setState] = useState<PersistedState>({
     locale: "en",
     theme: "system",
+    autoRead: false,
     profile: emptyProfile,
     cases: [],
     letters: [],
@@ -135,6 +139,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setState((prev) => ({
             locale: parsed.locale ?? prev.locale,
             theme: parsed.theme ?? prev.theme,
+            autoRead: typeof parsed.autoRead === "boolean" ? parsed.autoRead : prev.autoRead,
             profile: { ...emptyProfile, ...(parsed.profile ?? {}) },
             cases: Array.isArray(parsed.cases) ? parsed.cases : [],
             letters: Array.isArray(parsed.letters) ? parsed.letters : [],
@@ -249,6 +254,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   }, []);
 
+  const setAutoRead = useCallback(
+    (autoRead: boolean) => setState((prev) => ({ ...prev, autoRead })),
+    []
+  );
+
   const clearChat = useCallback(() => {
     setState((prev) => ({ ...prev, messages: [] }));
   }, []);
@@ -285,6 +295,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       t,
       setLocale,
       setTheme,
+      setAutoRead,
       updateProfile,
       addCase,
       updateCase,
@@ -305,6 +316,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       t,
       setLocale,
       setTheme,
+      setAutoRead,
       updateProfile,
       addCase,
       updateCase,
