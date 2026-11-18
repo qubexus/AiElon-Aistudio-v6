@@ -14,7 +14,11 @@ function escapeHtml(value: string): string {
  * Renders a formal letter to an A4 PDF and opens the native share sheet.
  * Returns true when a PDF was produced and shared.
  */
-export async function exportLetterToPdf(title: string, body: string): Promise<boolean> {
+export async function exportLetterToPdf(
+  title: string,
+  body: string,
+  footer = "Generated with Ask Elon \u2014 UK employment law assistant."
+): Promise<boolean> {
   const html = `<!DOCTYPE html>
 <html>
   <head>
@@ -46,7 +50,7 @@ export async function exportLetterToPdf(title: string, body: string): Promise<bo
   <body>
     <h1>${escapeHtml(title)}</h1>
     <pre>${escapeHtml(body)}</pre>
-    <div class="footer">Wygenerowano w aplikacji Ask Elon — asystent prawa pracy UK.</div>
+    <div class="footer">${escapeHtml(footer)}</div>
   </body>
 </html>`;
 

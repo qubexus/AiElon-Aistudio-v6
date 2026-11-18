@@ -8,7 +8,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { translate } from "../i18n/translations";
+import { translate, type TranslationKey } from "../i18n/translations";
 import { BACKEND_URL, checkHealth } from "../api/client";
 import type {
   ChatMessage,
@@ -53,7 +53,7 @@ interface AppContextValue extends PersistedState {
   hydrated: boolean;
   online: boolean;
   backendUrl: string;
-  t: (key: string) => string;
+  t: (key: TranslationKey) => string;
   setLocale: (locale: Locale) => void;
   updateProfile: (patch: Partial<UserProfile>) => void;
   addCase: (
@@ -107,7 +107,7 @@ export function computeServiceLength(startDate: string) {
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<PersistedState>({
-    locale: "pl",
+    locale: "en",
     profile: emptyProfile,
     cases: [],
     letters: [],
@@ -249,7 +249,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setState((prev) => ({ ...prev, letters: prev.letters.filter((l) => l.id !== id) }));
   }, []);
 
-  const t = useCallback((key: string) => translate(state.locale, key), [state.locale]);
+  const t = useCallback((key: TranslationKey) => translate(state.locale, key), [state.locale]);
 
   const serviceLength = useMemo(
     () => computeServiceLength(state.profile.startDate),

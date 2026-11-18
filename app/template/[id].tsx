@@ -10,6 +10,7 @@ import { newId, useApp } from "../../src/store/AppContext";
 import { exportLetterToPdf } from "../../src/utils/pdf";
 import { colors, radius, spacing, typography } from "../../src/theme/tokens";
 import type { LetterSentimentResult, SentLetterCategoryTag } from "../../src/types";
+import type { TranslationKey } from "../../src/i18n/translations";
 
 const labelFor = (locale: string, f: { labelEn: string; labelPl: string; labelRo: string }) =>
   locale === "pl" ? f.labelPl : locale === "ro" ? f.labelRo : f.labelEn;
@@ -97,7 +98,7 @@ export default function TemplateScreen() {
   const exportPdf = async () => {
     if (!letter) return;
     try {
-      await exportLetterToPdf(title, letter);
+      await exportLetterToPdf(title, letter, t("pdf.footer"));
     } catch {
       Alert.alert(t("common.error"), t("templates.pdfError"));
     }
@@ -110,6 +111,7 @@ export default function TemplateScreen() {
       templateId: template.id,
       title: template.titleEn,
       titlePl: template.titlePl,
+      titleRo: template.titleRo,
       recipient: values.employer_name || profile.employerName,
       date: new Date().toISOString(),
       content: letter,
@@ -149,12 +151,17 @@ export default function TemplateScreen() {
                 label={labelFor(locale, f)}
                 value={values[f.key] ?? ""}
                 onChangeText={(v) => setValues((prev) => ({ ...prev, [f.key]: v }))}
-                placeholder={f.placeholder}
+                placeholder={
+                  t(`tpl.field.${f.key}` as TranslationKey) === `tpl.field.${f.key}`
+                    ? f.placeholder
+                    : t(`tpl.field.${f.key}` as TranslationKey)
+                }
                 error={errors[f.key]}
                 multiline={f.key.includes("description") || f.key.includes("details")}
               />
             ))}
             <Button label={t("templates.generate")} onPress={generate} icon="sparkles-outline" fullWidth />
+            <Text style={styles.englishNote}>{t("templates.englishNote")}</Text>
           </View>
         ) : (
           <View style={styles.previewWrap}>
@@ -183,7 +190,7 @@ export default function TemplateScreen() {
             {tone ? (
               <Card style={styles.toneCard}>
                 <Pill
-                  label={`${tone.overallStatus} · ${tone.toneScore}/100`}
+                  label={`${t(`templates.tone.${tone.overallStatus}` as TranslationKey)} · ${tone.toneScore}/100`}
                   tone={
                     tone.overallStatus === "professional"
                       ? "success"
@@ -214,6 +221,13 @@ export default function TemplateScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
   formWrap: { paddingTop: spacing.lg },
+  englishNote: {
+    ...typography.sm,
+    color: colors.muted,
+    lineHeight: 18,
+    marginTop: spacing.sm,
+    textAlign: "center",
+  },
   previewWrap: { paddingTop: spacing.lg, gap: spacing.md },
   paper: { backgroundColor: "#FFFFFF", padding: spacing.lg },
   letterText: { ...typography.base, color: colors.onSurface, lineHeight: 21, fontFamily: undefined },

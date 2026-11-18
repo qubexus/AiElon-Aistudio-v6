@@ -8,6 +8,7 @@ import {
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -18,7 +19,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { streamElon, type AIUserContext, type ChatTurn } from "../../src/api/client";
 import { Header, Pill } from "../../src/components/ui";
-import { localeLabels } from "../../src/i18n/translations";
+import { localeLabels, type TranslationKey } from "../../src/i18n/translations";
 import { newId, nowLabel, useApp } from "../../src/store/AppContext";
 import { colors, HIT_SLOP, MIN_TOUCH, radius, spacing, typography } from "../../src/theme/tokens";
 import type { ChatMessage } from "../../src/types";
@@ -26,13 +27,13 @@ import { parseAnswer } from "../../src/utils/letter";
 import { speak, stopSpeaking } from "../../src/utils/speech";
 
 const CHIPS = [
-  { key: "chat.chip.overtime", prompt: "Pracodawca nie zapłacił mi za nadgodziny. Co mogę zrobić?" },
-  { key: "chat.chip.ssp", prompt: "Pracodawca odmawia wypłaty wynagrodzenia chorobowego (SSP)." },
-  { key: "chat.chip.hours", prompt: "Pracodawca obciął mi godziny bez mojej zgody." },
-  { key: "chat.chip.grievance", prompt: "Chcę złożyć formalną skargę (grievance) na menedżera." },
-  { key: "chat.chip.dismissal", prompt: "Zostałem zwolniony z pracy. Czy to było legalne?" },
-  { key: "chat.chip.holiday", prompt: "Mam problem z wypłatą za urlop (holiday pay)." },
-];
+  { key: "chat.chip.overtime", prompt: "chat.prompt.overtime" },
+  { key: "chat.chip.ssp", prompt: "chat.prompt.ssp" },
+  { key: "chat.chip.hours", prompt: "chat.prompt.hours" },
+  { key: "chat.chip.grievance", prompt: "chat.prompt.grievance" },
+  { key: "chat.chip.dismissal", prompt: "chat.prompt.dismissal" },
+  { key: "chat.chip.holiday", prompt: "chat.prompt.holiday" },
+] as const satisfies ReadonlyArray<{ key: TranslationKey; prompt: TranslationKey }>;
 
 export default function ChatScreen() {
   const {
@@ -59,6 +60,7 @@ export default function ChatScreen() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
+  const [onboardName, setOnboardName] = useState("");
 
   // Never let speech keep playing after leaving the chat.
   useEffect(() => () => stopSpeaking(), []);
@@ -206,7 +208,7 @@ export default function ChatScreen() {
     addCase({
       title: lastUser.text.slice(0, 60),
       description: lastUser.text,
-      sector: profile.industry || "Other",
+      sector: profile.industry || "other",
       employer: profile.employerName,
     });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -256,6 +258,27 @@ export default function ChatScreen() {
             </Pressable>
           ) : null}
 
+          {!isUser ? (
+            <Pressable
+              onPress={() => toggleSpeak(item.id, body)}
+              style={styles.speakButton}
+              hitSlop={HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel={t(
+                speakingId === item.id ? "chat.stopReading" : "chat.readAloud"
+              )}
+            >
+              <Ionicons
+                name={speakingId === item.id ? "stop-circle-outline" : "volume-high-outline"}
+                size={14}
+                color={colors.brand}
+              />
+              <Text style={styles.speakText}>
+                {t(speakingId === item.id ? "chat.stopReading" : "chat.readAloud")}
+              </Text>
+            </Pressable>
+          ) : null}
+
           {item.timestamp ? <Text style={styles.time}>{item.timestamp}</Text> : null}
         </View>
       </View>
@@ -270,7 +293,12 @@ export default function ChatScreen() {
         right={
           <View style={styles.headerRight}>
             {messages.length > 0 ? (
-              <Pressable onPress={clearChat} hitSlop={HIT_SLOP} accessibilityLabel="Clear chat">
+              <Pressable
+                onPress={clearChat}
+                hitSlop={HIT_SLOP}
+                accessibilityRole="button"
+                accessibilityLabel={t("chat.clear")}
+              >
                 <Ionicons name="refresh-outline" size={22} color={colors.muted} />
               </Pressable>
             ) : null}
@@ -310,7 +338,7 @@ export default function ChatScreen() {
                 {CHIPS.map((chip) => (
                   <Pressable
                     key={chip.key}
-                    onPress={() => send(chip.prompt)}
+                    onPress={() => send(t(chip.prompt))}
                     style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
                     accessibilityRole="button"
                   >
@@ -395,6 +423,77 @@ export default function ChatScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={!profile.onboarded && messages.length === 0}
+        transparent
+        animationType="fade"
+        onRequestClose={() => updateProfile({ onboarded: true })}
+      >
+        <View style={styles.onboardBackdrop}>
+          <View style={styles.onboardCard}>
+            <View style={styles.onboardBadge}>
+              <Ionicons name="shield-checkmark" size={26} color={colors.onBrand} />
+            </View>
+            <Text style={styles.onboardTitle}>{t("onboarding.title")}</Text>
+            <Text style={styles.onboardBody}>{t("onboarding.body")}</Text>
+
+            <Text style={styles.onboardLabel}>{t("onboarding.name")}</Text>
+            <TextInput
+              value={onboardName}
+              onChangeText={setOnboardName}
+              placeholder={t("profile.fullName")}
+              placeholderTextColor="#9AA9B4"
+              style={styles.onboardInput}
+              accessibilityLabel={t("onboarding.name")}
+            />
+
+            <Text style={[styles.onboardLabel, { marginTop: spacing.lg }]}>
+              {t("profile.language")}
+            </Text>
+            <View style={styles.onboardLangs}>
+              {(["en", "pl", "ro"] as const).map((l) => {
+                const active = locale === l;
+                return (
+                  <Pressable
+                    key={l}
+                    onPress={() => setLocale(l)}
+                    style={[styles.onboardLang, active && styles.onboardLangActive]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[styles.onboardLangText, active && styles.onboardLangTextActive]}>
+                      {localeLabels[l]}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Pressable
+              onPress={() => {
+                updateProfile({
+                  onboarded: true,
+                  ...(onboardName.trim() ? { fullName: onboardName.trim() } : {}),
+                });
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              }}
+              style={styles.onboardStart}
+              accessibilityRole="button"
+            >
+              <Text style={styles.onboardStartText}>{t("onboarding.start")}</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => updateProfile({ onboarded: true })}
+              style={styles.onboardSkip}
+              accessibilityRole="button"
+            >
+              <Text style={styles.onboardSkipText}>{t("onboarding.skip")}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

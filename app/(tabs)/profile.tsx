@@ -4,13 +4,13 @@ import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button, Card, Field, Header, Pill, Screen, SectionTitle } from "../../src/components/ui";
-import { localeLabels } from "../../src/i18n/translations";
+import { formatDate, localeLabels } from "../../src/i18n/translations";
 import { useApp } from "../../src/store/AppContext";
 import { colors, radius, spacing, typography } from "../../src/theme/tokens";
 import type { ContractType, Locale, SentLetter, UserProfile } from "../../src/types";
 import { exportLetterToPdf } from "../../src/utils/pdf";
 
-const LOCALES: Locale[] = ["pl", "en", "ro"];
+const LOCALES: Locale[] = ["en", "pl", "ro"];
 const CONTRACTS: ContractType[] = ["permanent", "zero_hours", "agency", "fixed_term"];
 
 export default function ProfileScreen() {
@@ -29,7 +29,13 @@ export default function ProfileScreen() {
   const pdfSelected = async () => {
     if (!selectedLetter) return;
     try {
-      await exportLetterToPdf(selectedLetter.title, selectedLetter.content);
+      const title =
+        locale === "pl"
+          ? selectedLetter.titlePl || selectedLetter.title
+          : locale === "ro"
+            ? selectedLetter.titleRo || selectedLetter.title
+            : selectedLetter.title;
+      await exportLetterToPdf(title, selectedLetter.content, t("pdf.footer"));
     } catch {
       Alert.alert(t("common.error"), t("templates.pdfError"));
     }
@@ -60,6 +66,9 @@ export default function ProfileScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     Alert.alert(t("profile.saved"));
   };
+
+  const letterTitle = (l: SentLetter) =>
+    locale === "pl" && l.titlePl ? l.titlePl : locale === "ro" && l.titleRo ? l.titleRo : l.title;
 
   const initials =
     (profile.fullName || "?")
@@ -175,10 +184,10 @@ export default function ProfileScreen() {
                 <View style={styles.letterRow}>
                   <View style={styles.flex}>
                     <Text style={styles.letterTitle} numberOfLines={2}>
-                      {locale === "pl" && l.titlePl ? l.titlePl : l.title}
+                      {letterTitle(l)}
                     </Text>
                     <Text style={styles.letterMeta}>
-                      {l.recipient} · {new Date(l.date).toLocaleDateString()}
+                      {l.recipient} · {formatDate(locale, l.date)}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.muted} />
@@ -193,9 +202,44 @@ export default function ProfileScreen() {
           <Text style={styles.aboutLine}>
             {t("profile.backend")}: {backendUrl}
           </Text>
-          <Pill label={online ? "online" : "offline"} tone={online ? "success" : "warning"} />
+          <Pill
+            label={online ? t("common.online") : t("common.offline")}
+            tone={online ? "success" : "warning"}
+          />
         </Card>
       </Screen>
+
+      <Modal
+        visible={!!selectedLetter}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSelectedLetter(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle} numberOfLines={2}>
+              {selectedLetter ? letterTitle(selectedLetter) : ""}
+            </Text>
+            <Text style={styles.letterMeta}>
+              {selectedLetter ? `${selectedLetter.recipient} · ${formatDate(locale, selectedLetter.date)}` : ""}
+            </Text>
+
+            <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent}>
+              <Text style={styles.modalLetterText} selectable>
+                {selectedLetter?.content ?? ""}
+              </Text>
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <Button label={t("profile.copyLetter")} onPress={copySelected} icon="copy-outline" variant="secondary" />
+              <Button label={t("profile.exportPdf")} onPress={pdfSelected} icon="download-outline" variant="secondary" />
+              <Button label={t("common.delete")} onPress={deleteSelected} icon="trash-outline" variant="danger" />
+            </View>
+            <Button label={t("common.close")} onPress={() => setSelectedLetter(null)} variant="ghost" fullWidth />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -286,6 +330,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: { ...typography.heading, color: colors.onSurface, marginBottom: spacing.md },
   modalScroll: { maxHeight: 360 },
+  modalScrollContent: { paddingVertical: spacing.sm },
   modalLetterText: { ...typography.base, color: colors.onSurface, lineHeight: 21 },
   modalActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginVertical: spacing.md },
 });

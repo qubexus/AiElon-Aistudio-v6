@@ -13,6 +13,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useApp } from "../store/AppContext";
 import { colors, HIT_SLOP, MIN_TOUCH, radius, spacing, typography } from "../theme/tokens";
 
 /* ---------------------------------- Screen --------------------------------- */
@@ -56,6 +57,7 @@ export const Header: React.FC<{
   showLogo?: boolean;
 }> = ({ title, subtitle, onBack, right, showLogo = true }) => {
   const insets = useSafeAreaInsets();
+  const { t } = useApp();
   return (
     <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
       <View style={styles.headerRow}>
@@ -65,7 +67,7 @@ export const Header: React.FC<{
             hitSlop={HIT_SLOP}
             style={styles.backButton}
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={t("common.back")}
           >
             <Ionicons name="chevron-back" size={24} color={colors.onSurface} />
           </Pressable>

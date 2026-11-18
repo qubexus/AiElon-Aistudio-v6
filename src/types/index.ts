@@ -94,6 +94,7 @@ export interface SentLetter {
   templateId: string;
   title: string;
   titlePl?: string;
+  titleRo?: string;
   categoryLabelPl?: string;
   caseSummaryPl?: string;
   recipient: string;

@@ -6,10 +6,27 @@ import { Button, Card, EmptyState, Field, Header, Pill, Screen } from "../../src
 import { useApp } from "../../src/store/AppContext";
 import { colors, HIT_SLOP, radius, spacing, typography } from "../../src/theme/tokens";
 import type { WorkplaceCase } from "../../src/types";
+import type { TranslationKey } from "../../src/i18n/translations";
 
 type Filter = "all" | "open" | "resolved";
 
-const SECTORS = ["Warehouse", "Healthcare / NHS", "Construction", "Hospitality", "Agency", "Other"];
+const SECTORS = ["warehouse", "healthcare", "construction", "hospitality", "agency", "other"] as const;
+
+/** Older builds stored the English sector names, so map them to stable keys. */
+const LEGACY_SECTORS: Record<string, string> = {
+  Warehouse: "warehouse",
+  "Healthcare / NHS": "healthcare",
+  Construction: "construction",
+  Hospitality: "hospitality",
+  Agency: "agency",
+  Other: "other",
+};
+
+const sectorLabel = (t: (key: TranslationKey) => string, sector: string) => {
+  const key = LEGACY_SECTORS[sector] ?? sector;
+  const translated = t(`cases.sectors.${key}` as TranslationKey);
+  return translated === `cases.sectors.${key}` ? sector : translated;
+};
 
 export default function CasesScreen() {
   const { t, cases, addCase } = useApp();
@@ -21,7 +38,7 @@ export default function CasesScreen() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [employer, setEmployer] = useState("");
-  const [sector, setSector] = useState(SECTORS[0]);
+  const [sector, setSector] = useState<string>(SECTORS[0]);
   const [errors, setErrors] = useState<{ title?: string; description?: string }>({});
 
   const visible = useMemo(() => {
@@ -72,7 +89,7 @@ export default function CasesScreen() {
           tone={item.status === "open" ? "warning" : "success"}
           icon={item.status === "open" ? "time-outline" : "checkmark-circle-outline"}
         />
-        <Pill label={item.sector} tone="neutral" />
+        <Pill label={sectorLabel(t, item.sector)} tone="neutral" />
         {item.notes.length > 0 ? (
           <Pill label={`${item.notes.length} ${t("cases.notes").toLowerCase()}`} tone="brand" />
         ) : null}
@@ -166,14 +183,14 @@ export default function CasesScreen() {
                 label={t("cases.form.title")}
                 value={title}
                 onChangeText={setTitle}
-                placeholder="Np. Brak wypłaty nadgodzin w marcu"
+                placeholder={t("cases.form.titlePlaceholder")}
                 error={errors.title}
               />
               <Field
                 label={t("cases.form.description")}
                 value={description}
                 onChangeText={setDescription}
-                placeholder={t("cases.form.description")}
+                placeholder={t("cases.form.descriptionPlaceholder")}
                 multiline
                 numberOfLines={4}
                 style={styles.textarea}
@@ -183,7 +200,7 @@ export default function CasesScreen() {
                 label={t("cases.form.employer")}
                 value={employer}
                 onChangeText={setEmployer}
-                placeholder="Np. Amazon LCY2"
+                placeholder={t("cases.form.employerPlaceholder")}
               />
 
               <Text style={styles.fieldLabel}>{t("cases.form.sector")}</Text>
@@ -197,7 +214,7 @@ export default function CasesScreen() {
                       style={[styles.filterChip, active && styles.filterChipActive]}
                     >
                       <Text style={[styles.filterText, active && styles.filterTextActive]}>
-                        {item}
+                        {sectorLabel(t, item)}
                       </Text>
                     </Pressable>
                   );

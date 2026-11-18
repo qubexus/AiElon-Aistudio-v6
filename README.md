@@ -17,6 +17,17 @@ Natywna aplikacja (iOS / Android) doradcy prawa pracy UK, zbudowana na **Expo SD
 
 ---
 
+## Języki (i18n)
+
+Aplikacja jest w pełni trójjęzyczna: **English (domyślny)**, **Polski** i **Română**. Język można zmienić w onboardingu oraz w Profilu, a wybór jest zapamiętywany lokalnie.
+
+- Wszystkie teksty interfejsu (nawigacja, czat, sprawy, pisma, profil, komunikaty, błędy, etykiety dostępności) znajdują się w `src/i18n/translations.ts`.
+- Słownik angielski jest źródłem prawdy (`as const`), a typ `TranslationKey` wymusza na kompilatorze, że polski i rumuński mają **każdy** klucz — brak tłumaczenia to błąd TypeScript.
+- Daty i godziny formatowane są przez `Intl` z tagami `en-GB` / `pl-PL` / `ro-RO`, a odsłuch (TTS) używa tego samego języka.
+- Pisma prawne generowane są po angielsku (wymóg brytyjskich pracodawców i trybunałów) — ekran pisma pokazuje stosowną informację w wybranym języku.
+
+---
+
 ## Struktura repozytorium
 
 ```

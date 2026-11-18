@@ -7,6 +7,7 @@ import { defaultTemplates } from "../../src/data/legalTemplates";
 import { useApp } from "../../src/store/AppContext";
 import { colors, radius, spacing, typography } from "../../src/theme/tokens";
 import type { LegalTemplate, Locale } from "../../src/types";
+import type { TranslationKey } from "../../src/i18n/translations";
 
 export function pickLocalized(template: LegalTemplate, locale: Locale) {
   if (locale === "pl") return { title: template.titlePl, description: template.descriptionPl };
@@ -69,7 +70,7 @@ export default function TemplatesScreen() {
               accessibilityRole="button"
             >
               <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                {cat === "all" ? t("templates.all") : cat}
+                {cat === "all" ? t("templates.all") : t(`templates.cat.${cat}` as TranslationKey)}
               </Text>
             </Pressable>
           );
@@ -96,7 +97,7 @@ export default function TemplatesScreen() {
                     {text.description}
                   </Text>
                   <View style={styles.pillRow}>
-                    <Pill label={tpl.category} tone="brand" />
+                    <Pill label={t(`templates.cat.${tpl.category}` as TranslationKey)} tone="brand" />
                   </View>
                   <Text style={styles.statute} numberOfLines={2}>
                     {tpl.statutoryReference}

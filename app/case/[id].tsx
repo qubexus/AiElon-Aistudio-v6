@@ -12,12 +12,29 @@ import {
   SectionTitle,
 } from "../../src/components/ui";
 import { useApp } from "../../src/store/AppContext";
+import { formatDate, formatDateTime } from "../../src/i18n/translations";
+import type { TranslationKey } from "../../src/i18n/translations";
 import { colors, radius, spacing, typography } from "../../src/theme/tokens";
+
+const LEGACY_SECTORS: Record<string, string> = {
+  Warehouse: "warehouse",
+  "Healthcare / NHS": "healthcare",
+  Construction: "construction",
+  Hospitality: "hospitality",
+  Agency: "agency",
+  Other: "other",
+};
+
+const sectorLabel = (t: (key: TranslationKey) => string, sector: string) => {
+  const key = LEGACY_SECTORS[sector] ?? sector;
+  const translated = t(`cases.sectors.${key}` as TranslationKey);
+  return translated === `cases.sectors.${key}` ? sector : translated;
+};
 
 export default function CaseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { t, cases, updateCase, deleteCase, addCaseNote } = useApp();
+  const { t, locale, cases, updateCase, deleteCase, addCaseNote } = useApp();
   const [note, setNote] = useState("");
 
   const item = cases.find((c) => c.id === id);
@@ -44,9 +61,11 @@ export default function CaseDetailScreen() {
   };
 
   const askElon = () => {
-    const prompt = `${item.title}. ${item.description} (Pracodawca: ${
-      item.employer || "nieznany"
-    }, branża: ${item.sector}). Co mogę zrobić zgodnie z prawem UK?`;
+    const prompt = t("cases.askElonPrompt")
+      .replace("{title}", item.title)
+      .replace("{description}", item.description)
+      .replace("{employer}", item.employer || t("cases.unknownEmployer"))
+      .replace("{sector}", sectorLabel(t, item.sector));
     router.push({ pathname: "/(tabs)", params: { prompt } });
   };
 
@@ -96,7 +115,7 @@ export default function CaseDetailScreen() {
             label={item.status === "open" ? t("cases.open") : t("cases.resolved")}
             tone={item.status === "open" ? "warning" : "success"}
           />
-          <Pill label={item.sector} tone="neutral" />
+          <Pill label={sectorLabel(t, item.sector)} tone="neutral" />
           <Pill label={t(`cases.priority.${item.priority}`)} tone="brand" />
         </View>
 
@@ -128,7 +147,7 @@ export default function CaseDetailScreen() {
             </Text>
           ) : null}
           <Text style={styles.meta}>
-            {new Date(item.createdAt).toLocaleDateString()} · {item.notes.length}{" "}
+            {formatDate(locale, item.createdAt)} · {item.notes.length}{" "}
             {t("cases.notes").toLowerCase()}
           </Text>
         </Card>
@@ -171,12 +190,7 @@ export default function CaseDetailScreen() {
                 <View style={styles.noteBody}>
                   <Text style={styles.noteText}>{n.text}</Text>
                   <Text style={styles.noteDate}>
-                    {new Date(n.date).toLocaleString([], {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatDateTime(locale, n.date)}
                   </Text>
                 </View>
               </View>
