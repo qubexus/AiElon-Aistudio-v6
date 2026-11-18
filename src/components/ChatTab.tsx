@@ -23,6 +23,7 @@ import { ElonPeekingBubbleGrip, PeekEdgeSide } from "./ElonPeekingBubbleGrip";
 import { Tooltip } from "./Tooltip";
 import { CameraScannerModal } from "./CameraScannerModal";
 import { analyzeUploadedDocument, DOCUMENT_TAG_STYLES } from "../utils/documentClassifier";
+import { computeCaseDocumentProgress } from "../utils/caseProgress";
 import {
   Send,
   Mic,
@@ -629,6 +630,7 @@ export const ChatTab: React.FC = () => {
     setActiveTemplateId,
     setActiveTab,
     saveSentLetter,
+    sentLetters,
     cases,
     activeCaseId,
     setActiveCaseId,
@@ -1127,6 +1129,149 @@ export const ChatTab: React.FC = () => {
         : "";
 
     const messageCount = chatMessages.filter((m) => !m.isSystemBroadcast).length;
+    const realUserMsgs = chatMessages.filter(
+      (m) => m.role === "user" && !m.isSystemBroadcast
+    );
+    const fullContextLower = `${combinedText} ${chatDraft.toLowerCase()}`;
+
+    type CasePathSentimentTone =
+      | "info_calm"
+      | "warning_amber"
+      | "critical_coral"
+      | "constructive_emerald";
+
+    let sentimentTone: CasePathSentimentTone = "info_calm";
+
+    const hasCriticalSignals =
+      categoryType === "dismissal" ||
+      /\b(zwolni\w*|wyrzuc\w*|dyscyplin\w*|dismiss\w*|fired|sacked|tribunal|sąd\w*|3 miesiące minus 1 dzień|3 months minus 1 day|natychmiast\w*|gross misconduct)\b/i.test(
+        fullContextLower
+      );
+
+    const hasUrgentDisputeSignals =
+      categoryType === "wages" ||
+      categoryType === "sick_pay" ||
+      categoryType === "grievance" ||
+      linkedCase?.priority === "high" ||
+      /\b(nie zapłaci\w*|brak wypłat\w*|nadgodzin\w*|potrąc\w*|odmawia\w*|unpaid|deduct\w*|overtime|skarg\w*|grievance|mobbing\w*|harass\w*|ssp1|wezwani\w*|spór|dispute|obcię\w*)\b/i.test(
+        fullContextLower
+      );
+
+    const hasConstructiveResolutionSignals =
+      linkedCase?.status === "resolved" ||
+      categoryType === "settlement" ||
+      /\b(wypłacono|rozwiązano|ugod\w*|settlement|porozumieni\w*|resolved)\b/i.test(
+        fullContextLower
+      );
+
+    if (realUserMsgs.length === 0 && !chatDraft.trim() && !linkedCase) {
+      sentimentTone = "info_calm";
+    } else if (hasCriticalSignals && linkedCase?.status !== "resolved") {
+      sentimentTone = "critical_coral";
+    } else if (hasUrgentDisputeSignals && linkedCase?.status !== "resolved") {
+      sentimentTone = "warning_amber";
+    } else if (hasConstructiveResolutionSignals) {
+      sentimentTone = "constructive_emerald";
+    } else {
+      sentimentTone = "info_calm";
+    }
+
+    const sentimentConfigMap: Record<
+      CasePathSentimentTone,
+      {
+        labelPl: string;
+        labelEn: string;
+        labelRo: string;
+        descPl: string;
+        descEn: string;
+        descRo: string;
+        navTintClass: string;
+        badgeClass: string;
+        dotClass: string;
+        activeStepClass: string;
+        lastStepTextClass: string;
+        iconAccentClass: string;
+      }
+    > = {
+      info_calm: {
+        labelPl: "Zbieranie informacji",
+        labelEn: "Information Gathering",
+        labelRo: "Colectare informații",
+        descPl:
+          "Spokojny tryb informacyjny — zbieranie faktów, analiza umowy i weryfikacja przysługujących praw w UK.",
+        descEn:
+          "Calm information gathering — reviewing facts, contract terms, and UK statutory rights.",
+        descRo:
+          "Mod calm de informare — colectarea faptelor și verificarea drepturilor legale în UK.",
+        navTintClass:
+          "bg-gradient-to-r from-[#0C2540]/90 via-[#111E34]/95 to-[#131B2E]/90 border-[#38BDF8]/30 border-l-2 border-l-[#38BDF8] shadow-[0_2px_14px_rgba(56,189,248,0.08)]",
+        badgeClass: "bg-[#38BDF8]/12 border-[#38BDF8]/35 text-[#7DD3FC]",
+        dotClass: "bg-[#38BDF8]",
+        activeStepClass:
+          "text-[#E0F2FE] font-bold bg-[#38BDF8]/15 border border-[#38BDF8]/30",
+        lastStepTextClass: "text-[#7DD3FC] hover:text-[#F1F5F9] hover:bg-[#38BDF8]/10 font-semibold",
+        iconAccentClass: "text-[#38BDF8]",
+      },
+      warning_amber: {
+        labelPl: "Pilny spór",
+        labelEn: "Urgent Dispute",
+        labelRo: "Litigiu urgent",
+        descPl:
+          "Wykryto pilny spór pracowniczy (np. niewypłacone nadgodziny, SSP lub skarga HR) — zalecane pisemne wezwanie i pilnowanie terminów ACAS.",
+        descEn:
+          "Urgent workplace dispute detected (unpaid wages, SSP, or HR grievance) — written notice and ACAS time limits apply.",
+        descRo:
+          "Litigiu urgent detectat (salarii neplătite, SSP sau plângere HR) — se recomandă notificare scrisă și atenție la termenele ACAS.",
+        navTintClass:
+          "bg-gradient-to-r from-[#2D1C0B]/90 via-[#1D1B2A]/95 to-[#131B2E]/90 border-[#F59E0B]/35 border-l-2 border-l-[#F59E0B] shadow-[0_2px_14px_rgba(245,158,11,0.10)]",
+        badgeClass: "bg-[#F59E0B]/15 border-[#F59E0B]/40 text-[#FCD34D]",
+        dotClass: "bg-[#F59E0B] animate-pulse",
+        activeStepClass:
+          "text-[#FEF3C7] font-bold bg-[#F59E0B]/15 border border-[#F59E0B]/35",
+        lastStepTextClass: "text-[#FBBF24] hover:text-[#F1F5F9] hover:bg-[#F59E0B]/10 font-semibold",
+        iconAccentClass: "text-[#F59E0B]",
+      },
+      critical_coral: {
+        labelPl: "Pilna eskalacja",
+        labelEn: "Critical Escalation",
+        labelRo: "Escaladare critică",
+        descPl:
+          "Sprawa o wysokim priorytecie (zwolnienie, spotkanie dyscyplinarne lub termin 3 mies. minus 1 dzień do ACAS / Trybunału).",
+        descEn:
+          "High-urgency escalation (dismissal, disciplinary hearing, or strict 3-months-minus-1-day ACAS / Tribunal deadline).",
+        descRo:
+          "Urgență ridicată (concediere, ședință disciplinară sau termen strict de 3 luni minus o zi la ACAS).",
+        navTintClass:
+          "bg-gradient-to-r from-[#311316]/90 via-[#1F1726]/95 to-[#131B2E]/90 border-[#F97316]/40 border-l-2 border-l-[#EF4444] shadow-[0_2px_16px_rgba(239,68,68,0.11)]",
+        badgeClass: "bg-[#EF4444]/15 border-[#F97316]/45 text-[#FDA4AF]",
+        dotClass: "bg-[#EF4444] animate-pulse",
+        activeStepClass:
+          "text-[#FFE4E6] font-bold bg-[#EF4444]/15 border border-[#F97316]/35",
+        lastStepTextClass: "text-[#FB923C] hover:text-[#F1F5F9] hover:bg-[#EF4444]/10 font-semibold",
+        iconAccentClass: "text-[#F97316]",
+      },
+      constructive_emerald: {
+        labelPl: "Aktywne rozwiązanie",
+        labelEn: "Constructive Resolution",
+        labelRo: "Soluționare activă",
+        descPl:
+          "Konstruktywny etap sprawy — przygotowywanie ugody, porozumienia ACAS lub sfinalizowanie roszczenia.",
+        descEn:
+          "Constructive resolution stage — settlement negotiation, ACAS conciliation, or claim completion.",
+        descRo:
+          "Etapă constructivă — negocierea unui acord, conciliere ACAS sau finalizarea cererii.",
+        navTintClass:
+          "bg-gradient-to-r from-[#0D2B24]/90 via-[#12202F]/95 to-[#131B2E]/90 border-[#38B28B]/35 border-l-2 border-l-[#38B28B] shadow-[0_2px_14px_rgba(56,178,139,0.09)]",
+        badgeClass: "bg-[#38B28B]/15 border-[#38B28B]/40 text-[#6EE7B7]",
+        dotClass: "bg-[#38B28B]",
+        activeStepClass:
+          "text-[#ECFDF5] font-bold bg-[#38B28B]/15 border border-[#38B28B]/30",
+        lastStepTextClass: "text-[#38B28B] hover:text-[#F1F5F9] hover:bg-[#38B28B]/10 font-semibold",
+        iconAccentClass: "text-[#38B28B]",
+      },
+    };
+
+    const sentimentMeta = sentimentConfigMap[sentimentTone];
 
     return {
       rootLabel:
@@ -1139,11 +1284,31 @@ export const ChatTab: React.FC = () => {
       dateRangeText,
       messageCount,
       isArchived: Boolean(activeSession?.isArchived),
+      sentimentTone,
+      sentimentLabel:
+        locale === "pl"
+          ? sentimentMeta.labelPl
+          : locale === "ro"
+          ? sentimentMeta.labelRo
+          : sentimentMeta.labelEn,
+      sentimentDescription:
+        locale === "pl"
+          ? sentimentMeta.descPl
+          : locale === "ro"
+          ? sentimentMeta.descRo
+          : sentimentMeta.descEn,
+      sentimentNavTintClass: sentimentMeta.navTintClass,
+      sentimentBadgeClass: sentimentMeta.badgeClass,
+      sentimentDotClass: sentimentMeta.dotClass,
+      sentimentActiveStepClass: sentimentMeta.activeStepClass,
+      sentimentLastStepTextClass: sentimentMeta.lastStepTextClass,
+      sentimentIconAccentClass: sentimentMeta.iconAccentClass,
     };
   }, [
     activeCaseId,
     activeUnsavedChatId,
     cases,
+    chatDraft,
     chatMessages,
     locale,
     recentUnsavedChats,
@@ -2061,6 +2226,385 @@ export const ChatTab: React.FC = () => {
   const activeSmartSuggestion = smartContextSuggestions.find(
     (s) => s.id === activeSmartChipId
   );
+
+  // Dynamic follow-up question & action chips derived from the last message received from the AI
+  interface DynamicFollowUpChip {
+    id: string;
+    label: string;
+    promptText?: string;
+    actionType: "send_prompt" | "pin_last_ai" | "open_template" | "switch_persona";
+    templateId?: string;
+    targetMsgId?: string;
+    accent: "green" | "orange" | "blue";
+  }
+
+  const dynamicFollowUpChips = useMemo<DynamicFollowUpChip[]>(() => {
+    const aiMessages = chatMessages.filter(
+      (m) => m.role === "assistant" && !m.isSystemBroadcast
+    );
+    const lastAiMsg = aiMessages[aiMessages.length - 1];
+    if (!lastAiMsg) return [];
+
+    // Initial welcome banner state (before first AI response)
+    if (lastAiMsg.id === "msg_init" && chatMessages.length <= 1) {
+      return [
+        {
+          id: "init_unpaid_wages",
+          label:
+            locale === "pl"
+              ? "Brak wypłaty za nadgodziny (ERA 1996 s.13)"
+              : locale === "ro"
+              ? "Ore suplimentare neplătite (ERA 1996 s.13)"
+              : "Unpaid overtime & wage deductions (ERA 1996 s.13)",
+          promptText:
+            locale === "pl"
+              ? "Pracodawca nie zapłacił mi za 12 nadgodzin w zeszłym miesiącu. Jakie mam prawa i jak napisać wezwanie do HR?"
+              : locale === "ro"
+              ? "Angajatorul nu mi-a plătit 12 ore suplimentare luna trecută. Ce drepturi am și cum trimit o scrisoare la HR?"
+              : "My employer didn't pay me for 12 hours of overtime last month. What are my rights and how do I write to HR?",
+          actionType: "send_prompt",
+          accent: "green",
+        },
+        {
+          id: "init_cut_hours",
+          label:
+            locale === "pl"
+              ? "Obcięcie godzin / Zero-hours"
+              : locale === "ro"
+              ? "Reducerea orelor / Zero-hours"
+              : "Cut hours / Zero-hours contract",
+          promptText:
+            locale === "pl"
+              ? "Mam umowę zero-hours i kierownik nagle obciął mi wszystkie zmiany w grafiku. Co mogę zrobić?"
+              : locale === "ro"
+              ? "Am contract zero-hours și managerul mi-a tăiat brusc toate turele. Ce pot face?"
+              : "I'm on a zero-hours contract and my manager suddenly cut all my shifts. What can I do?",
+          actionType: "send_prompt",
+          accent: "blue",
+        },
+        {
+          id: "init_ssp",
+          label:
+            locale === "pl"
+              ? "Chorobowe SSP i Fit Note"
+              : locale === "ro"
+              ? "Concediu medical SSP & Fit Note"
+              : "Statutory Sick Pay (SSP) & Fit Note",
+          promptText:
+            locale === "pl"
+              ? "Oddałem zwolnienie lekarskie (Fit Note), ale HR odmawia wypłaty chorobowego SSP. Jak wymusić wypłatę lub formularz SSP1?"
+              : locale === "ro"
+              ? "Am trimis Fit Note, dar HR refuză plata SSP. Cum solicit plata sau formularul SSP1?"
+              : "I submitted a Fit Note, but HR refuses to pay Statutory Sick Pay (SSP). How do I claim it or request form SSP1?",
+          actionType: "send_prompt",
+          accent: "orange",
+        },
+        {
+          id: "init_grievance",
+          label:
+            locale === "pl"
+              ? "Skarga Formal Grievance (ACAS)"
+              : locale === "ro"
+              ? "Plângere Formal Grievance (ACAS)"
+              : "Formal Grievance letter (ACAS)",
+          promptText:
+            locale === "pl"
+              ? "Chcę złożyć oficjalną skargę (Formal Grievance) na niesprawiedliwe traktowanie przez przełożonego. Przygotuj wzór pisma."
+              : locale === "ro"
+              ? "Vreau să depun o plângere oficială (Formal Grievance) împotriva managerului. Pregătește scrisoarea."
+              : "I want to raise a Formal Grievance about unfair treatment by my manager. Please draft the letter.",
+          actionType: "send_prompt",
+          accent: "green",
+        },
+      ];
+    }
+
+    const aiTextLower = (lastAiMsg.text || "").toLowerCase();
+    const recentUserMsg =
+      [...chatMessages]
+        .reverse()
+        .find((m) => m.role === "user" && !m.isSystemBroadcast)?.text || "";
+    const combinedLower = `${aiTextLower} ${recentUserMsg.toLowerCase()}`;
+
+    const chips: DynamicFollowUpChip[] = [];
+
+    // Topic-specific follow-up questions based on the last AI response
+    if (
+      /wypłat|nadgodzin|payslip|potrąc|pensj|stawk|unpaid|wage|deduct|overtime|section 13|nmw|holiday pay|salari/i.test(
+        combinedLower
+      )
+    ) {
+      chips.push(
+        {
+          id: "fu_wages_lba",
+          label:
+            locale === "pl"
+              ? "Napisz przedsądowe wezwanie (7 dni na przelew)"
+              : locale === "ro"
+              ? "Redactează somație de plată (termen 7 zile)"
+              : "Draft Letter Before Action (7-day deadline)",
+          promptText:
+            locale === "pl"
+              ? "Przygotuj bardziej stanowcze przedsądowe wezwanie do zapłaty (Letter Before Action) z terminem 7 dni przed zgłoszeniem do ACAS."
+              : locale === "ro"
+              ? "Pregătește o somație oficială (Letter Before Action) cu termen de 7 zile înainte de sesizarea ACAS."
+              : "Draft a firm Letter Before Action giving HR 7 days to pay the arrears before I start ACAS Early Conciliation.",
+          actionType: "send_prompt",
+          accent: "orange",
+        },
+        {
+          id: "fu_wages_acas",
+          label:
+            locale === "pl"
+              ? "Jak zgłosić sprawę do ACAS Early Conciliation?"
+              : locale === "ro"
+              ? "Cum deschid procedura ACAS Early Conciliation?"
+              : "How do I start ACAS Early Conciliation?",
+          promptText:
+            locale === "pl"
+              ? "Wyjaśnij krok po kroku, jak bezpłatnie zgłosić brak wypłaty do ACAS Early Conciliation i jak liczyć termin 3 miesięcy minus 1 dzień."
+              : locale === "ro"
+              ? "Explică pas cu pas cum sesizez gratuit ACAS Early Conciliation și cum se calculează termenul de 3 luni minus o zi."
+              : "Explain step-by-step how to start free ACAS Early Conciliation and how the 3-months-minus-1-day deadline works.",
+          actionType: "send_prompt",
+          accent: "green",
+        },
+        {
+          id: "fu_wages_holiday",
+          label:
+            locale === "pl"
+              ? "Przelicz też wpływ nadgodzin na Holiday Pay"
+              : locale === "ro"
+              ? "Calculează și impactul asupra Holiday Pay"
+              : "Include overtime impact on Holiday Pay",
+          promptText:
+            locale === "pl"
+              ? "Czy regularne nadgodziny powinny być też wliczane do mojej stawki urlopowej (Holiday Pay) w UK? Dopisz to roszczenie do pisma."
+              : locale === "ro"
+              ? "Orele suplimentare regulate trebuie incluse și în calculul Holiday Pay în UK? Adaugă această solicitare în scrisoare."
+              : "Should regular overtime also be included in my UK Holiday Pay rate? Please add that claim to my letter.",
+          actionType: "send_prompt",
+          accent: "blue",
+        }
+      );
+    } else if (
+      /zwolni|wypowiedzen|dyscyplin|dismiss|disciplinary|redundan|hearing|tribunal|concedier/i.test(
+        combinedLower
+      )
+    ) {
+      chips.push(
+        {
+          id: "fu_dismiss_appeal",
+          label:
+            locale === "pl"
+              ? "Przygotuj oficjalne odwołanie od decyzji (Appeal)"
+              : locale === "ro"
+              ? "Redactează contestația oficială (Appeal)"
+              : "Draft a formal Dismissal Appeal letter",
+          promptText:
+            locale === "pl"
+              ? "Napisz oficjalne odwołanie od decyzji pracodawcy (Formal Appeal Letter) powołując się na naruszenie procedury ACAS Code of Practice."
+              : locale === "ro"
+              ? "Redactează o contestație oficială (Formal Appeal Letter) invocând încălcarea procedurii ACAS Code of Practice."
+              : "Draft a formal Appeal Letter citing procedural breaches of the ACAS Code of Practice on Disciplinary and Grievance Procedures.",
+          actionType: "send_prompt",
+          accent: "orange",
+        },
+        {
+          id: "fu_dismiss_sec10",
+          label:
+            locale === "pl"
+              ? "Wniosek o przełożenie spotkania i reprezentanta (s.10)"
+              : locale === "ro"
+              ? "Cerere amânare ședință + reprezentant (s.10)"
+              : "Request hearing postponement & union rep (s.10)",
+          promptText:
+            locale === "pl"
+              ? "Przygotuj pismo o przesunięcie spotkania dyscyplinarnego o 5 dni roboczych, abym mógł skorzystać z prawa do reprezentanta (Section 10 ERA 1999)."
+              : locale === "ro"
+              ? "Pregătește o cerere de amânare a ședinței disciplinare cu 5 zile lucrătoare pentru a fi însoțit de reprezentant (Section 10 ERA 1999)."
+              : "Draft a request to postpone the disciplinary hearing by 5 working days so my companion can attend under Section 10 of the Employment Relations Act 1999.",
+          actionType: "send_prompt",
+          accent: "green",
+        },
+        {
+          id: "fu_dismiss_sar",
+          label:
+            locale === "pl"
+              ? "Zażądaj pełnych akt i notatek HR (wniosek SAR)"
+              : locale === "ro"
+              ? "Solicită dosarul HR complet (cerere SAR)"
+              : "Request all HR notes & evidence via SAR",
+          promptText:
+            locale === "pl"
+              ? "Przygotuj wniosek Subject Access Request (UK GDPR Art. 15) o wydanie wszystkich notatek ze spotkań, wiadomości e-mail i dowodów w mojej sprawie."
+              : locale === "ro"
+              ? "Pregătește o cerere Subject Access Request (UK GDPR Art. 15) pentru toate notele HR, e-mailurile și probele din dosarul meu."
+              : "Draft a Subject Access Request (UK GDPR Art. 15) demanding copies of all HR meeting notes, internal emails, and disciplinary evidence.",
+          actionType: "send_prompt",
+          accent: "blue",
+        }
+      );
+    } else if (
+      /chorob|ssp|fit note|l4|sick|zdrow|wypadek|medical|ssp1/i.test(combinedLower)
+    ) {
+      chips.push(
+        {
+          id: "fu_sick_ssp1",
+          label:
+            locale === "pl"
+              ? "Wezwij HR do wypłaty SSP lub wydania druku SSP1"
+              : locale === "ro"
+              ? "Solicită plata SSP sau formularul SSP1"
+              : "Demand SSP payment or statutory form SSP1",
+          promptText:
+            locale === "pl"
+              ? "Napisz oficjalne wezwanie do HR o natychmiastowe naliczenie Statutory Sick Pay (SSP) albo wydanie formularza SSP1 z pisemnym uzasadnieniem."
+              : locale === "ro"
+              ? "Redactează o cerere oficială către HR pentru plata imediată a SSP sau eliberarea formularului SSP1 cu motivarea în scris."
+              : "Draft a formal notice to HR requiring immediate payment of Statutory Sick Pay (SSP) or issuance of form SSP1 with written reasons.",
+          actionType: "send_prompt",
+          accent: "orange",
+        },
+        {
+          id: "fu_sick_hmrc",
+          label:
+            locale === "pl"
+              ? "Jak zgłosić odmowę SSP do HMRC Statutory Dispute Team?"
+              : locale === "ro"
+              ? "Cum reclam refuzul SSP la HMRC?"
+              : "How to escalate unpaid SSP to HMRC Dispute Team?",
+          promptText:
+            locale === "pl"
+              ? "Podaj dokładną instrukcję i numer do HMRC Statutory Payment Dispute Team, jeśli pracodawca nadal odmawia wypłaty SSP."
+              : locale === "ro"
+              ? "Oferă instrucțiunile exacte pentru sesizarea HMRC Statutory Payment Dispute Team dacă angajatorul refuză plata SSP."
+              : "Provide step-by-step instructions for escalating an SSP refusal to the HMRC Statutory Payment Dispute Team.",
+          actionType: "send_prompt",
+          accent: "green",
+        }
+      );
+    } else if (
+      /skarg|grievance|mobbing|dyskrymin|harass|bully|equality act|traktowan/i.test(
+        combinedLower
+      )
+    ) {
+      chips.push(
+        {
+          id: "fu_grievance_letter",
+          label:
+            locale === "pl"
+              ? "Wygeneruj pełną skargę Formal Grievance do HR"
+              : locale === "ro"
+              ? "Generează plângerea Formal Grievance către HR"
+              : "Draft full Formal Grievance letter to HR",
+          promptText:
+            locale === "pl"
+              ? "Sformułuj pełne pismo Formal Grievance zgodne z ACAS Code of Practice, wzywające pracodawcę do wyznaczenia spotkania wyjaśniającego w ciągu 5 dni."
+              : locale === "ro"
+              ? "Redactează o scrisoare Formal Grievance conformă cu ACAS Code of Practice, solicitând o ședință oficială în 5 zile."
+              : "Draft a complete Formal Grievance letter under the ACAS Code of Practice requesting a grievance hearing within 5 working days.",
+          actionType: "send_prompt",
+          accent: "orange",
+        },
+        {
+          id: "fu_grievance_evidence",
+          label:
+            locale === "pl"
+              ? "Jakie dowody przygotować na spotkanie Grievance?"
+              : locale === "ro"
+              ? "Ce dovezi să pregătesc pentru ședința Grievance?"
+              : "What evidence should I prepare for the hearing?",
+          promptText:
+            locale === "pl"
+              ? "Stwórz listę kontrolną dowodów (świadkowie, wiadomości, dziennik zdarzeń), które powinienem zabrać na spotkanie Grievance Hearing."
+              : locale === "ro"
+              ? "Creează o listă de verificare cu dovezile (martori, mesaje, jurnal) pe care trebuie să le prezint la Grievance Hearing."
+              : "Create an evidence checklist (witnesses, messages, incident log) that I should bring to the Grievance Hearing.",
+          actionType: "send_prompt",
+          accent: "green",
+        }
+      );
+    } else {
+      // General legal follow-ups for any other AI advice
+      chips.push(
+        {
+          id: "fu_gen_steps",
+          label:
+            locale === "pl"
+              ? "Wyjaśnij krok po kroku, co zrobić najpierw"
+              : locale === "ro"
+              ? "Explică pas cu pas ce trebuie făcut mai întâi"
+              : "Explain step-by-step what to do first",
+          promptText:
+            locale === "pl"
+              ? "Rozpisz mi w 3 prostych krokach, co dokładnie powinienem zrobić w pierwszej kolejności i jakich terminów pilnować."
+              : locale === "ro"
+              ? "Descrie în 3 pași simpli ce trebuie să fac mai întâi și ce termene legale trebuie să respect."
+              : "Break down in 3 clear steps what I should do first and which statutory deadlines I must watch.",
+          actionType: "send_prompt",
+          accent: "green",
+        },
+        {
+          id: "fu_gen_letter",
+          label:
+            locale === "pl"
+              ? "Przygotuj oficjalne pismo po angielsku do HR"
+              : locale === "ro"
+              ? "Redactează scrisoarea oficială în engleză către HR"
+              : "Draft an official English letter to HR",
+          promptText:
+            locale === "pl"
+              ? "Przygotuj na podstawie tej porady gotowe, oficjalne pismo po angielsku do działu HR z powołaniem na odpowiednie przepisy UK."
+              : locale === "ro"
+              ? "Pe baza acestui sfat, redactează o scrisoare oficială în limba engleză către HR invocând legislația UK aplicabilă."
+              : "Based on this advice, draft a formal English letter to HR citing the relevant UK statutory provisions.",
+          actionType: "send_prompt",
+          accent: "orange",
+        }
+      );
+    }
+
+    // Add contextual action chips (Pin last AI advice to Case / Switch Persona tone)
+    if (lastAiMsg.id !== "msg_init" && !lastAiMsg.pinnedToCaseId) {
+      chips.push({
+        id: `fu_pin_${lastAiMsg.id}`,
+        label:
+          locale === "pl"
+            ? "Przypnij odpowiedź do sprawy"
+            : locale === "ro"
+            ? "Fixează răspunsul la dosar"
+            : "Pin response to Case",
+        actionType: "pin_last_ai",
+        targetMsgId: lastAiMsg.id,
+        accent: "green",
+      });
+    }
+
+    if (lastAiMsg.id !== "msg_init") {
+      const currentPersona =
+        voiceConfig?.preset === "standard" ? "trade_union" : "employment_law";
+      chips.push({
+        id: "fu_persona_tone",
+        label:
+          currentPersona === "employment_law"
+            ? locale === "pl"
+              ? "Przełącz na taktykę związkową (Trade Union)"
+              : locale === "ro"
+              ? "Comută pe tactica sindicală (Trade Union)"
+              : "Switch to Trade Union Rep tactics"
+            : locale === "pl"
+            ? "Przełącz na tryb ustawowy (Employment Law)"
+            : locale === "ro"
+            ? "Comută pe modul legislativ (Employment Law)"
+            : "Switch to statutory Employment Law mode",
+        actionType: "switch_persona",
+        accent: "blue",
+      });
+    }
+
+    return chips.slice(0, 4);
+  }, [chatMessages, locale, voiceConfig?.preset]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesContentRef = useRef<HTMLDivElement>(null);
@@ -4684,6 +5228,136 @@ export const ChatTab: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* ACTIVE LEGAL CASES · SUBTLE REQUIRED DOCUMENTS PROGRESS SIDEBAR CARDS */}
+        {cases.length > 0 && (
+          <div className="rounded-xl bg-[#131B2E]/95 border border-white/15 p-3 space-y-2.5 shadow-md">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Scale className="w-3.5 h-3.5 text-[#D97724] shrink-0" />
+                <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-white truncate">
+                  {locale === "pl"
+                    ? "Twoje Sprawy · Dokumenty"
+                    : locale === "ro"
+                    ? "Cazurile Tale · Documente"
+                    : "Your Cases · Document Progress"}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("cases");
+                  setIsMobilePanelOpen(false);
+                }}
+                className="text-[10px] font-bold text-[#D97724] hover:text-[#F59E0B] transition-colors cursor-pointer shrink-0"
+              >
+                {locale === "pl"
+                  ? "Wszystkie →"
+                  : locale === "ro"
+                  ? "Toate →"
+                  : "View all →"}
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {cases.map((c) => {
+                const progress = computeCaseDocumentProgress(
+                  c,
+                  documents,
+                  sentLetters,
+                  user,
+                  locale
+                );
+                const isSelected = (activeCaseId || cases[0]?.id) === c.id;
+                const isReady = progress.percentage === 100;
+
+                return (
+                  <div
+                    key={c.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      setActiveCaseId(c.id);
+                      setActiveTab("cases");
+                      setIsMobilePanelOpen(false);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setActiveCaseId(c.id);
+                        setActiveTab("cases");
+                        setIsMobilePanelOpen(false);
+                      }
+                    }}
+                    className={`group rounded-xl p-2.5 border transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-[#1A2438] border-[#D97724]/50 shadow-sm"
+                        : "bg-[#0B0F19]/80 border-white/10 hover:border-white/25 hover:bg-[#131B2E]"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <p className="text-[11px] font-bold text-white leading-snug line-clamp-1 group-hover:text-[#FBBF24] transition-colors">
+                        {c.title}
+                      </p>
+                      <span
+                        className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-mono tabular-nums font-extrabold ${
+                          isReady
+                            ? "bg-[#1D6852]/30 text-[#38B28B] border border-[#38B28B]/30"
+                            : "bg-[#D97724]/15 text-[#FBBF24] border border-[#D97724]/30"
+                        }`}
+                      >
+                        {progress.completedCount}/{progress.totalCount} ({progress.percentage}%)
+                      </span>
+                    </div>
+
+                    {/* Subtle Segmented Document Progress Bar */}
+                    <div
+                      className="grid grid-cols-4 gap-1 mb-1.5"
+                      aria-label={`Postęp dokumentów: ${progress.percentage}%`}
+                    >
+                      {progress.items.map((item) => (
+                        <div
+                          key={item.id}
+                          title={`${item.label}: ${item.completed ? "Gotowe" : "Brakuje"}`}
+                          className={`h-1.5 rounded-full transition-all duration-300 ${
+                            item.completed
+                              ? isReady
+                                ? "bg-[#38B28B]"
+                                : "bg-gradient-to-r from-[#D97724] to-[#38B28B]"
+                              : "bg-white/10"
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 text-[10px]">
+                      <span className="text-[#94A3B8] truncate">
+                        {progress.nextMissingDocLabel ? (
+                          <>
+                            <span className="text-[#FBBF24] font-semibold">
+                              {locale === "pl"
+                                ? "Brakuje: "
+                                : locale === "ro"
+                                ? "Lipsește: "
+                                : "Missing: "}
+                            </span>
+                            {progress.nextMissingDocLabel}
+                          </>
+                        ) : (
+                          <span className="text-[#38B28B] font-semibold">
+                            {progress.statusLabel}
+                          </span>
+                        )}
+                      </span>
+                      <ChevronRight className="w-3 h-3 text-[#94A3B8] group-hover:text-white shrink-0" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Contextual Summary Digest */}
         <div className="rounded-xl bg-[#131B2E]/90 border border-white/10 p-3">
           <div className="flex items-center justify-between gap-2 text-[11px] text-[#94A3B8] mb-1">
@@ -5164,17 +5838,19 @@ export const ChatTab: React.FC = () => {
           </div>
         )}
 
-        {/* Breadcrumb Navigation Trail (Shown once user begins consulting) */}
-        {conversationBreadcrumbs.length > 1 && (
+        {/* Subtle Sentiment-Tinted 'Path' Indicator & Breadcrumb Navigation Trail */}
+        {conversationBreadcrumbs.length >= 1 && (
           <nav
+            data-testid="chat-path-indicator"
+            data-sentiment={conversationPathMeta.sentimentTone}
             aria-label={
               locale === "pl"
-                ? "Nawigacja okruszkowa etapów konsultacji"
+                ? "Ścieżka konsultacji i wskaźnik nastroju sprawy"
                 : locale === "ro"
-                ? "Navigare etape consultație"
-                : "Consultation stage breadcrumb navigation"
+                ? "Parcurs consultație și indicator stare caz"
+                : "Consultation path and case sentiment indicator"
             }
-            className="shrink-0 mb-2 px-3 py-1.5 rounded-xl bg-[#131B2E]/90 border border-white/10 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px]"
+            className={`shrink-0 mb-2 px-3 py-1.5 rounded-xl border flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] transition-all duration-500 ${conversationPathMeta.sentimentNavTintClass}`}
           >
             <div className="flex items-center gap-1.5 min-w-0 flex-1">
               <Tooltip
@@ -5203,11 +5879,21 @@ export const ChatTab: React.FC = () => {
                       ? "Istoric și cazuri"
                       : "History & Cases"
                   }
-                  className="inline-flex items-center justify-center p-1 rounded-md text-[#94A3B8] hover:text-[#38B28B] hover:bg-white/5 transition-colors shrink-0 cursor-pointer"
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors shrink-0 cursor-pointer"
                 >
-                  <Briefcase className="w-3.5 h-3.5 text-[#38B28B]" aria-hidden="true" />
+                  <Briefcase
+                    className={`w-3.5 h-3.5 transition-colors duration-300 ${conversationPathMeta.sentimentIconAccentClass}`}
+                    aria-hidden="true"
+                  />
+                  <span className="font-mono text-[10px] font-extrabold uppercase tracking-wider text-white/85">
+                    {locale === "pl" ? "Ścieżka" : locale === "ro" ? "Parcurs" : "Path"}
+                  </span>
                 </button>
               </Tooltip>
+
+              <span className="text-white/20 select-none" aria-hidden="true">
+                |
+              </span>
 
               <ol className="flex items-center gap-1 min-w-0 overflow-x-auto no-scrollbar py-0.5">
                 {conversationBreadcrumbs.map((stage, sIdx) => {
@@ -5230,12 +5916,12 @@ export const ChatTab: React.FC = () => {
                           type="button"
                           onClick={() => navigateToBreadcrumbStage(stage)}
                           aria-current={isActive ? "step" : undefined}
-                          className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-md transition-colors whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#38B28B] ${
+                          className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-md transition-all duration-300 whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#38B28B] ${
                             isActive
-                              ? "text-[#F1F5F9] font-bold bg-white/5"
+                              ? conversationPathMeta.sentimentActiveStepClass
                               : isLast
-                              ? "text-[#D97724] hover:text-[#F1F5F9] hover:bg-white/5 font-semibold"
-                              : "text-[#94A3B8] hover:text-[#38B28B] hover:bg-white/5 font-medium"
+                              ? conversationPathMeta.sentimentLastStepTextClass
+                              : "text-[#94A3B8] hover:text-[#F1F5F9] hover:bg-white/5 font-medium"
                           }`}
                         >
                           {stage.kind === "issue" && (
@@ -5271,6 +5957,14 @@ export const ChatTab: React.FC = () => {
                     </li>
                   );
                 })}
+                {conversationBreadcrumbs.length === 1 && (
+                  <li className="flex items-center gap-1 min-w-0 shrink-0 text-[#94A3B8]">
+                    <ChevronRight className="w-3 h-3 text-[#94A3B8]/55 shrink-0" aria-hidden="true" />
+                    <span className="truncate max-w-[160px] sm:max-w-[220px]">
+                      {conversationPathMeta.threadLeafLabel}
+                    </span>
+                  </li>
+                )}
               </ol>
 
               {conversationPathMeta.isArchived && (
@@ -5280,30 +5974,52 @@ export const ChatTab: React.FC = () => {
               )}
             </div>
 
-            <Tooltip
-              side="bottom"
-              content={
-                locale === "pl"
-                  ? "Zakres dat i liczba wiadomości"
-                  : locale === "ro"
-                  ? "Interval de date și număr de mesaje"
-                  : "Consultation date range & messages"
-              }
-            >
-              <div className="flex items-center gap-1.5 font-mono tabular-nums text-[11px] text-[#94A3B8] whitespace-nowrap shrink-0">
-                <Calendar className="w-3.5 h-3.5 text-[#D97724] shrink-0" aria-hidden="true" />
-                <span className="text-[#F1F5F9] font-semibold">
-                  {conversationPathMeta.dateRangeText}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Case Sentiment Indicator Pill */}
+              <Tooltip
+                side="bottom"
+                wrap
+                content={conversationPathMeta.sentimentDescription}
+              >
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-bold tracking-tight transition-all duration-500 select-none ${conversationPathMeta.sentimentBadgeClass}`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${conversationPathMeta.sentimentDotClass}`}
+                    aria-hidden="true"
+                  />
+                  <span>{conversationPathMeta.sentimentLabel}</span>
                 </span>
-                <span className="text-[#94A3B8]/55" aria-hidden="true">
-                  ·
-                </span>
-                <span>
-                  {conversationPathMeta.messageCount}{" "}
-                  {locale === "pl" ? "wiad." : locale === "ro" ? "mes." : "msgs"}
-                </span>
-              </div>
-            </Tooltip>
+              </Tooltip>
+
+              <Tooltip
+                side="bottom"
+                content={
+                  locale === "pl"
+                    ? "Zakres dat i liczba wiadomości"
+                    : locale === "ro"
+                    ? "Interval de date și număr de mesaje"
+                    : "Consultation date range & messages"
+                }
+              >
+                <div className="hidden sm:flex items-center gap-1.5 font-mono tabular-nums text-[11px] text-[#94A3B8] whitespace-nowrap shrink-0">
+                  <Calendar
+                    className={`w-3.5 h-3.5 shrink-0 transition-colors duration-300 ${conversationPathMeta.sentimentIconAccentClass}`}
+                    aria-hidden="true"
+                  />
+                  <span className="text-[#F1F5F9] font-semibold">
+                    {conversationPathMeta.dateRangeText}
+                  </span>
+                  <span className="text-[#94A3B8]/55" aria-hidden="true">
+                    ·
+                  </span>
+                  <span>
+                    {conversationPathMeta.messageCount}{" "}
+                    {locale === "pl" ? "wiad." : locale === "ro" ? "mes." : "msgs"}
+                  </span>
+                </div>
+              </Tooltip>
+            </div>
           </nav>
         )}
 
@@ -5343,9 +6059,14 @@ export const ChatTab: React.FC = () => {
                     className={`chat-bubble-elon relative overflow-visible rounded-2xl shadow-xs ${initMarginClass} ${initPaddingClass}`}
                   >
                     <ElonPeekingBubbleGrip side={initPeekSide} activityState={robotState} />
-                    <div className="relative z-10 flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[var(--bg-header-accent)] border border-[var(--accent-green)]/35 flex items-center justify-center shrink-0">
-                        <AskElonShieldLogo className="w-8 h-8" activityState={robotState} />
+                    <div className="relative z-10 flex items-start gap-3.5">
+                      <div className="w-13 h-13 sm:w-15 sm:h-15 flex items-center justify-center shrink-0">
+                        <img
+                          src="/brand/elon-robot-oryginal-przezroczysty.png"
+                          alt="ask Elon Robot"
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-contain drop-shadow-sm select-none"
+                        />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -7596,6 +8317,83 @@ export const ChatTab: React.FC = () => {
                 </Tooltip>
               </div>
             </div>
+
+          {/* Dynamic Follow-Up Question & Action Chips Row (Contextually generated from the last AI message) */}
+          {dynamicFollowUpChips.length > 0 && !isDictating && !isTranscribing && (
+            <div
+              role="region"
+              aria-label={
+                locale === "pl"
+                  ? "Sugerowane pytania uzupełniające i akcje"
+                  : locale === "ro"
+                  ? "Întrebări suplimentare și acțiuni sugerate"
+                  : "Suggested follow-up questions and actions"
+              }
+              className="flex items-center gap-1.5 overflow-x-auto px-1 py-1 no-scrollbar"
+            >
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#1A243B]/90 border border-white/10 text-[10px] font-extrabold uppercase tracking-wider text-[#94A3B8] whitespace-nowrap shrink-0 select-none">
+                <Sparkles className="w-2.5 h-2.5 text-[#D97724] shrink-0" aria-hidden="true" />
+                <span>
+                  {locale === "pl"
+                    ? "Co dalej:"
+                    : locale === "ro"
+                    ? "Pașii următori:"
+                    : "Follow-ups:"}
+                </span>
+              </span>
+
+              {dynamicFollowUpChips.map((chip) => {
+                const chipColorClasses =
+                  chip.accent === "orange"
+                    ? "bg-[#131B2E] hover:bg-[#1E293B] border-[#D97724]/45 hover:border-[#D97724] text-[#F1F5F9]"
+                    : chip.accent === "blue"
+                    ? "bg-[#131B2E] hover:bg-[#1E293B] border-[#38BDF8]/40 hover:border-[#38BDF8] text-[#F1F5F9]"
+                    : "bg-[#131B2E] hover:bg-[#1E293B] border-[#38B28B]/40 hover:border-[#38B28B] text-[#F1F5F9]";
+
+                const dotColorClass =
+                  chip.accent === "orange"
+                    ? "bg-[#D97724]"
+                    : chip.accent === "blue"
+                    ? "bg-[#38BDF8]"
+                    : "bg-[#38B28B]";
+
+                return (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    disabled={isChatLoading && chip.actionType === "send_prompt"}
+                    onClick={() => {
+                      if (chip.actionType === "send_prompt" && chip.promptText) {
+                        isAutoScrollPinnedRef.current = true;
+                        setIsAutoScrollPinned(true);
+                        setUnreadBelowCount(0);
+                        sendChatMessage(chip.promptText);
+                      } else if (chip.actionType === "pin_last_ai" && chip.targetMsgId) {
+                        pinChatMessageToCase(chip.targetMsgId);
+                      } else if (chip.actionType === "open_template" && chip.templateId) {
+                        handleOpenTemplate(chip.templateId);
+                      } else if (chip.actionType === "switch_persona") {
+                        handleToggleAiPersona();
+                      }
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold transition-all whitespace-nowrap shrink-0 cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed ${chipColorClasses}`}
+                  >
+                    {chip.actionType === "pin_last_ai" ? (
+                      <Pin className="w-3 h-3 text-[#38B28B] shrink-0" aria-hidden="true" />
+                    ) : chip.actionType === "switch_persona" ? (
+                      <ShieldCheck className="w-3 h-3 text-[#38BDF8] shrink-0" aria-hidden="true" />
+                    ) : (
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColorClass}`}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <span>{chip.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Dedicated Chat Input Box positioned directly ABOVE the protruding center robot head */}
           <div

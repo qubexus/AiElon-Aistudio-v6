@@ -15,7 +15,6 @@ import {
   Check,
 } from "lucide-react";
 import { Locale } from "../types";
-import { AskElonShieldLogo } from "./AskElonShieldLogo";
 import { Tooltip } from "./Tooltip";
 
 const CountryFlagSvg: React.FC<{ code: Locale; className?: string }> = ({
@@ -256,27 +255,8 @@ export const Header: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-3 sm:px-5 h-15 flex items-center justify-between gap-2">
-        {/* Left: Hamburger Menu + Brand Identity with Reactive Robot Logo */}
+        {/* Left: Top-Left Robot Graphic on Banner + Hamburger Menu + Brand Identity */}
         <div className="flex items-center gap-2.5 min-w-0">
-          <Tooltip
-            side="bottom"
-            content={
-              locale === "pl"
-                ? "Menu główne i narzędzia"
-                : locale === "ro"
-                ? "Meniu principal și instrumente"
-                : "Main Menu & Legal Tools"
-            }
-          >
-            <button
-              onClick={() => setIsMenuDrawerOpen(true)}
-              className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-[#1E2732] hover:bg-slate-200/80 dark:hover:bg-[#232E3C] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-primary)] transition-colors shrink-0 cursor-pointer"
-              aria-label="Open menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-          </Tooltip>
-
           <Tooltip
             side="bottom"
             content={
@@ -296,21 +276,24 @@ export const Header: React.FC = () => {
               className="flex items-center gap-2.5 text-left group min-w-0 cursor-pointer"
             >
               <div
-                className={`relative w-11 h-11 rounded-2xl bg-[#1E2732] border flex items-center justify-center shrink-0 transition-transform duration-300 ${
+                className={`relative w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center shrink-0 transition-transform duration-300 ${
                   robotState === "happy" || robotState === "typing" || robotState === "success"
-                    ? "border-[var(--accent-green)] shadow-[0_0_14px_rgba(82,183,152,0.32)] scale-105"
+                    ? "scale-105 drop-shadow-[0_0_10px_rgba(82,183,152,0.45)]"
                     : robotState === "concerned"
-                    ? "border-amber-500 shadow-[0_0_14px_rgba(245,158,11,0.32)] scale-105"
+                    ? "scale-105 drop-shadow-[0_0_10px_rgba(245,158,11,0.45)]"
                     : robotState === "speaking" || robotState === "listening"
-                    ? "border-[var(--accent-orange)] shadow-[0_0_14px_rgba(245,158,66,0.3)] scale-105"
-                    : robotState !== "idle"
-                    ? "border-[var(--accent-green)] shadow-[0_0_12px_rgba(82,183,152,0.25)]"
-                    : "border-[var(--accent-green)]/40 group-hover:border-[var(--accent-green)]"
+                    ? "scale-105 drop-shadow-[0_0_12px_rgba(249,115,22,0.5)]"
+                    : "group-hover:scale-105"
                 }`}
               >
-                <AskElonShieldLogo className="w-9 h-9" activityState={robotState} />
+                <img
+                  src="/brand/elon-robot-oryginal-przezroczysty.png"
+                  alt="ask Elon Robot"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain select-none"
+                />
                 <span
-                  className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-[#141B23] ${
+                  className={`absolute bottom-0.5 right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-[#141B23] ${
                     !isOnline
                       ? "bg-[var(--accent-orange)]"
                       : robotState === "speaking" || robotState === "listening"
@@ -337,6 +320,25 @@ export const Header: React.FC = () => {
                   {robotStatusLabel}
                 </span>
               </div>
+            </button>
+          </Tooltip>
+
+          <Tooltip
+            side="bottom"
+            content={
+              locale === "pl"
+                ? "Menu główne i narzędzia"
+                : locale === "ro"
+                ? "Meniu principal și instrumente"
+                : "Main Menu & Legal Tools"
+            }
+          >
+            <button
+              onClick={() => setIsMenuDrawerOpen(true)}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-100 dark:bg-[#1E2732] hover:bg-slate-200/80 dark:hover:bg-[#232E3C] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-primary)] transition-colors shrink-0 cursor-pointer"
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5" />
             </button>
           </Tooltip>
         </div>

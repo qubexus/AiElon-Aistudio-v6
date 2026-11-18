@@ -11,6 +11,7 @@ import {
 import { classifySentLetter, renderTemplateLetter } from "../data/legalTemplates";
 import { AskElonShieldLogo } from "./AskElonShieldLogo";
 import { downloadLetterAsPDF } from "../utils/pdfGenerator";
+import { computeCaseDocumentProgress } from "../utils/caseProgress";
 import {
   X,
   Menu,
@@ -116,6 +117,10 @@ export const MenuDrawer: React.FC = () => {
     saveSentLetter,
     templates,
     setActiveTemplateId,
+    cases,
+    activeCaseId,
+    setActiveCaseId,
+    documents,
     showToast,
     t,
     networkStatus,
@@ -954,9 +959,97 @@ export const MenuDrawer: React.FC = () => {
                     <span>
                       {locale === "pl" ? "Sprawy" : locale === "ro" ? "Cazuri" : "Cases"}
                     </span>
+                    {cases.length > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-white/10 text-[10px] font-mono tabular-nums font-bold text-[#D97724]">
+                        {cases.length}
+                      </span>
+                    )}
                   </div>
                   <ChevronRight className="w-4 h-4 text-[#8EA4BA]" />
                 </button>
+
+                {/* Sidebar Case Cards with Subtle Required Documents Progress Indicator */}
+                {cases.length > 0 && (
+                  <div className="pl-3 pr-1 py-1.5 space-y-1.5">
+                    {cases.map((c) => {
+                      const progress = computeCaseDocumentProgress(
+                        c,
+                        documents,
+                        sentLetters,
+                        user,
+                        locale
+                      );
+                      const isSelected =
+                        activeTab === "cases" && (activeCaseId || cases[0]?.id) === c.id;
+                      const isReady = progress.percentage === 100;
+
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveCaseId(c.id);
+                            setActiveTab("cases");
+                            closeDrawer();
+                          }}
+                          className={`w-full text-left rounded-xl px-3 py-2.5 border transition-all cursor-pointer group ${
+                            isSelected
+                              ? "bg-[#1A2639] border-[#D97724]/50 shadow-sm"
+                              : "bg-[#0B1626]/90 border-white/10 hover:border-white/25 hover:bg-[#112036]"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <span className="text-xs font-bold text-white truncate group-hover:text-[#FBBF24] transition-colors">
+                              {c.title}
+                            </span>
+                            <span
+                              className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-mono tabular-nums font-extrabold ${
+                                isReady
+                                  ? "bg-[#1D6852]/30 text-[#38B28B] border border-[#38B28B]/30"
+                                  : "bg-[#D97724]/15 text-[#FBBF24] border border-[#D97724]/30"
+                              }`}
+                            >
+                              {progress.completedCount}/{progress.totalCount} · {progress.percentage}%
+                            </span>
+                          </div>
+
+                          {/* Subtle 4-segment document completion bar */}
+                          <div className="grid grid-cols-4 gap-1 mb-1">
+                            {progress.items.map((item) => (
+                              <div
+                                key={item.id}
+                                className={`h-1.5 rounded-full transition-all duration-300 ${
+                                  item.completed
+                                    ? isReady
+                                      ? "bg-[#38B28B]"
+                                      : "bg-gradient-to-r from-[#D97724] to-[#38B28B]"
+                                    : "bg-white/10"
+                                }`}
+                              />
+                            ))}
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 text-[10px] text-[#8EA4BA]">
+                            <span className="truncate">
+                              {progress.nextMissingDocLabel
+                                ? `${
+                                    locale === "pl"
+                                      ? "Brakuje: "
+                                      : locale === "ro"
+                                      ? "Lipsește: "
+                                      : "Missing: "
+                                  }${progress.nextMissingDocLabel}`
+                                : progress.statusLabel}
+                            </span>
+                            <span className="font-mono text-[9px] text-[#D97724] shrink-0 truncate max-w-[110px]">
+                              {c.employer}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Pisma */}
                 <button
