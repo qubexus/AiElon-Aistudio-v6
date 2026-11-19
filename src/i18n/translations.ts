@@ -33,9 +33,9 @@ export const translations: Record<string, Record<Locale, string>> = {
     ro: "Mai ai și alte întrebări? Spune-mi ce altceva ai dori să întrebi.",
   },
   chatPlaceholder: {
-    pl: "Opisz swój problem (np. obcięcie godzin, brak wypłaty, zwolnienie)...",
-    en: "Describe your issue (e.g. cut hours, unpaid wages, dismissal)...",
-    ro: "Descrie problema ta (ex. reducerea orelor, neplată, concediere)...",
+    pl: "Opisz swoją sytuację w pracy…",
+    en: "Describe your situation at work…",
+    ro: "Descrie situația ta de la muncă…",
   },
   send: { pl: "Wyślij", en: "Send", ro: "Trimite" },
   clearChat: { pl: "Wyczyść czat", en: "Clear chat", ro: "Șterge conversația" },

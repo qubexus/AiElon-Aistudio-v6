@@ -19,7 +19,6 @@ import {
   GeneratedChatLetter,
 } from "../data/legalTemplates";
 import { AskElonShieldLogo, analyzeAiResponseSentiment } from "./AskElonShieldLogo";
-import { ElonPeekingBubbleGrip, PeekEdgeSide } from "./ElonPeekingBubbleGrip";
 import { LegalLetterFooter } from "./LegalLetterFooter";
 import { Tooltip } from "./Tooltip";
 import { CameraScannerModal } from "./CameraScannerModal";
@@ -29,7 +28,7 @@ import {
   getCaseProgressWidthClass,
 } from "../utils/caseProgress";
 import {
-  Send,
+  ArrowUp,
   Mic,
   MicOff,
   Volume2,
@@ -98,6 +97,324 @@ const CHAT_SESSION_TAG_LIST: ChatSessionTag[] = [
   "Settlement",
   "GDPR",
 ];
+
+type GreetingLang = "pl" | "en" | "ro";
+
+interface GreetingVariantPair {
+  withName: string;
+  withoutName: string;
+}
+
+const EMPTY_CHAT_GREETINGS: Record<GreetingLang, readonly GreetingVariantPair[]> = {
+  pl: [
+    {
+      withName: "Cześć {name}! Stoję po Twojej stronie w każdej sprawie z prawa pracy — od samych podstaw.",
+      withoutName: "Cześć! Stoję po Twojej stronie w każdej sprawie z prawa pracy — od samych podstaw.",
+    },
+    {
+      withName: "Witaj, {name}. Jestem tu dla Ciebie, pracownika: prawo pracy w UK przejdziemy razem krok po kroku, od podstaw.",
+      withoutName: "Witaj. Jestem tu dla Ciebie, pracownika: prawo pracy w UK przejdziemy razem krok po kroku, od podstaw.",
+    },
+    {
+      withName: "Dzień dobry, {name}! W sprawach pracowniczych gram w Twojej drużynie — zaczniemy od podstaw i dojdziemy do konkretów.",
+      withoutName: "Dzień dobry! W sprawach pracowniczych gram w Twojej drużynie — zaczniemy od podstaw i dojdziemy do konkretów.",
+    },
+    {
+      withName: "Hej {name}, dobrze Cię widzieć. Pilnuję Twoich praw w pracy i tłumaczę je od podstaw, bez prawniczego żargonu.",
+      withoutName: "Hej, dobrze Cię widzieć. Pilnuję Twoich praw w pracy i tłumaczę je od podstaw, bez prawniczego żargonu.",
+    },
+    {
+      withName: "{name}, cześć! Jestem po stronie pracownika — w prawie pracy pomogę Ci od pierwszego kroku.",
+      withoutName: "Cześć! Jestem po stronie pracownika — w prawie pracy pomogę Ci od pierwszego kroku.",
+    },
+    {
+      withName: "Dobrze, że jesteś, {name}. Twoje prawa w pracy to moja działka: wyjaśnię wszystko od podstaw i będę po Twojej stronie.",
+      withoutName: "Dobrze, że jesteś. Twoje prawa w pracy to moja działka: wyjaśnię wszystko od podstaw i będę po Twojej stronie.",
+    },
+    {
+      withName: "Miło Cię widzieć, {name}. Gdy chodzi o prawo pracy, stoję murem za pracownikiem — i zaczynam od podstaw.",
+      withoutName: "Miło Cię widzieć. Gdy chodzi o prawo pracy, stoję murem za pracownikiem — i zaczynam od podstaw.",
+    },
+    {
+      withName: "Hej {name}! Jestem Elon, Twój człowiek od praw pracowniczych — od podstaw, zawsze po Twojej stronie.",
+      withoutName: "Hej! Jestem Elon, Twój człowiek od praw pracowniczych — od podstaw, zawsze po Twojej stronie.",
+    },
+  ],
+  en: [
+    {
+      withName: "Hi {name}! I'm on your side in every employment-law matter — starting from the basics.",
+      withoutName: "Hi! I'm on your side in every employment-law matter — starting from the basics.",
+    },
+    {
+      withName: "Welcome, {name}. I'm here for you as a worker: we'll go through UK employment law together, step by step, from the ground up.",
+      withoutName: "Welcome. I'm here for you as a worker: we'll go through UK employment law together, step by step, from the ground up.",
+    },
+    {
+      withName: "Hello {name}! On workplace rights I play on your team — we start with the basics and work up to the specifics.",
+      withoutName: "Hello! On workplace rights I play on your team — we start with the basics and work up to the specifics.",
+    },
+    {
+      withName: "Hey {name}, good to see you. I look after your rights at work and explain them from the basics, without legal jargon.",
+      withoutName: "Hey, good to see you. I look after your rights at work and explain them from the basics, without legal jargon.",
+    },
+    {
+      withName: "{name}, hi there! I'm on the worker's side — with employment law, I'll help you from the very first step.",
+      withoutName: "Hi there! I'm on the worker's side — with employment law, I'll help you from the very first step.",
+    },
+    {
+      withName: "Glad you're here, {name}. Your rights at work are my job: I'll explain everything from the basics and stay on your side.",
+      withoutName: "Glad you're here. Your rights at work are my job: I'll explain everything from the basics and stay on your side.",
+    },
+    {
+      withName: "Nice to see you, {name}. When it comes to employment law, I stand firmly behind the worker — and I start with the basics.",
+      withoutName: "Nice to see you. When it comes to employment law, I stand firmly behind the worker — and I start with the basics.",
+    },
+    {
+      withName: "Hey {name}! I'm Elon, your go-to for workers' rights — from the basics, always on your side.",
+      withoutName: "Hey! I'm Elon, your go-to for workers' rights — from the basics, always on your side.",
+    },
+  ],
+  ro: [
+    {
+      withName: "Salut, {name}! Sunt de partea ta în orice problemă de dreptul muncii — începând cu elementele de bază.",
+      withoutName: "Salut! Sunt de partea ta în orice problemă de dreptul muncii — începând cu elementele de bază.",
+    },
+    {
+      withName: "Bine ai venit, {name}. Sunt aici pentru tine, ca angajat: parcurgem împreună dreptul muncii din UK, pas cu pas, de la zero.",
+      withoutName: "Bine ai venit. Sunt aici pentru tine, ca angajat: parcurgem împreună dreptul muncii din UK, pas cu pas, de la zero.",
+    },
+    {
+      withName: "Bună ziua, {name}! În problemele de la muncă joc în echipa ta — pornim de la bază și ajungem la concret.",
+      withoutName: "Bună ziua! În problemele de la muncă joc în echipa ta — pornim de la bază și ajungem la concret.",
+    },
+    {
+      withName: "Hei {name}, mă bucur să te văd. Îți apăr drepturile la muncă și ți le explic de la bază, fără jargon juridic.",
+      withoutName: "Hei, mă bucur să te văd. Îți apăr drepturile la muncă și ți le explic de la bază, fără jargon juridic.",
+    },
+    {
+      withName: "{name}, salut! Sunt de partea angajatului — în dreptul muncii te ajut de la primul pas.",
+      withoutName: "Salut! Sunt de partea angajatului — în dreptul muncii te ajut de la primul pas.",
+    },
+    {
+      withName: "Mă bucur că ești aici, {name}. Drepturile tale la muncă sunt treaba mea: îți explic totul de la bază și rămân de partea ta.",
+      withoutName: "Mă bucur că ești aici. Drepturile tale la muncă sunt treaba mea: îți explic totul de la bază și rămân de partea ta.",
+    },
+    {
+      withName: "Ce bine să te văd, {name}. Când e vorba de dreptul muncii, stau ferm alături de angajat — și încep cu elementele de bază.",
+      withoutName: "Ce bine să te văd. Când e vorba de dreptul muncii, stau ferm alături de angajat — și încep cu elementele de bază.",
+    },
+    {
+      withName: "Hei {name}! Sunt Elon, omul tău pentru drepturile angajaților — de la bază, mereu de partea ta.",
+      withoutName: "Hei! Sunt Elon, omul tău pentru drepturile angajaților — de la bază, mereu de partea ta.",
+    },
+  ],
+};
+
+function rollRandomEmptyChatGreeting(): { lang: GreetingLang; variant: number } {
+  const langs: GreetingLang[] = ["pl", "en", "ro"];
+  const lang = langs[Math.floor(Math.random() * langs.length)];
+  const variant = Math.floor(Math.random() * 8);
+  return { lang, variant };
+}
+
+interface LocalTypingSuggestionRule {
+  keywords: RegExp[];
+  suggestions: Record<Locale, string[]>;
+}
+
+const LOCAL_TYPING_SUGGESTION_RULES: LocalTypingSuggestionRule[] = [
+  {
+    keywords: [
+      /\b(chorob\w*|chory|chora|goraczk\w*|syrop\w*|lekarz\w*|l4|przezieb\w*|gryp\w*)\b/,
+      /\b(sick\w*|ill\w*|fever|flu|cold|ssp|fit\s*note|doctor|gp|cough|coughing|medicine)\b/,
+      /\b(boal\w*|bolnav\w*|febr\w*|sirop\w*|medic\w*|concediu\s*medical)\b/,
+    ],
+    suggestions: {
+      pl: [
+        "Czy przysługuje mi chorobowe SSP?",
+        "Kiedy muszę dostarczyć Fit Note od GP?",
+        "Jak prawidłowo zgłosić chorobę pracodawcy?",
+        "Pracodawca odmówił wypłaty chorobowego SSP",
+      ],
+      en: [
+        "Am I entitled to Statutory Sick Pay (SSP)?",
+        "When do I need a GP fit note?",
+        "How to report sickness to my employer",
+        "My employer refused to pay SSP",
+      ],
+      ro: [
+        "Am dreptul la concediu medical SSP?",
+        "Când trebuie să aduc Fit Note de la GP?",
+        "Cum anunț corect angajatorul că sunt bolnav?",
+        "Angajatorul a refuzat plata SSP",
+      ],
+    },
+  },
+  {
+    keywords: [
+      /\b(nadgodzin\w*|wyplat\w*|pensj\w*|payslip\w*|potrac\w*|nie\s*zaplac\w*|stawk\w*|minimaln\w*)\b/,
+      /\b(overtime|wages?|salary|pay\b|unpaid|deduct\w*|underpaid|minimum\s*wage|nmw)\b/,
+      /\b(salari\w*|ore\s*supliment\w*|fluturas\w*|neplatit\w*|deduc\w*|retin\w*)\b/,
+    ],
+    suggestions: {
+      pl: [
+        "Nie zapłacili mi za nadgodziny",
+        "Nielegalne potrącenie z payslipu",
+        "Brak pełnej wypłaty (unlawful deduction)",
+        "Sprawdź stawkę National Minimum Wage",
+      ],
+      en: [
+        "I wasn't paid for my overtime hours",
+        "Unlawful deduction from my payslip",
+        "My employer didn't pay my full wages",
+        "Check National Minimum Wage entitlement",
+      ],
+      ro: [
+        "Nu mi-au plătit orele suplimentare",
+        "Deducere ilegală de pe fluturașul de salariu",
+        "Angajatorul nu mi-a plătit salariul integral",
+        "Verifică salariul minim în UK (NMW)",
+      ],
+    },
+  },
+  {
+    keywords: [
+      /\b(zwolni\w*|wypowiedzen\w*|dyscyplin\w*|skarg\w*|grievance|zawies\w*)\b/,
+      /\b(dismiss\w*|fired|sacked|redundan\w*|disciplin\w*|hearing|suspend\w*|acas|tribunal|notice\s*period)\b/,
+      /\b(concedier\w*|concediat\w*|preaviz\w*|planger\w*|avertisment\w*|suspendat\w*)\b/,
+    ],
+    suggestions: {
+      pl: [
+        "Niesłuszne zwolnienie (Unfair Dismissal)",
+        "Jak złożyć formalną skargę (Formal Grievance)?",
+        "Prawo do osoby towarzyszącej na dyscyplinarce",
+        "Jak rozpocząć ACAS Early Conciliation?",
+      ],
+      en: [
+        "Unfair dismissal rights in the UK",
+        "How do I raise a Formal Grievance?",
+        "Right to be accompanied at a disciplinary hearing",
+        "How to start ACAS Early Conciliation",
+      ],
+      ro: [
+        "Drepturi în caz de concediere abuzivă",
+        "Cum depun o plângere Formal Grievance?",
+        "Dreptul la însoțitor la audierea disciplinară",
+        "Cum încep procedura ACAS Early Conciliation?",
+      ],
+    },
+  },
+  {
+    keywords: [
+      /\b(godzin\w*|zmian\w*|grafik\w*|agencj\w*|zero[\s-]?hours?|obcie\w*|obcin\w*)\b/,
+      /\b(hours?|shifts?|rota|agency|cut\b|cancelled|canceled|schedule)\b/,
+      /\b(ore\b|orele|tur\w*|program\w*|agenti\w*|taiat\w*|redus\w*)\b/,
+    ],
+    suggestions: {
+      pl: [
+        "Obcięli mi godziny bez uprzedzenia",
+        "Prawa na kontrakcie zero-hours",
+        "Prawa pracownika agencyjnego (12 tygodni AWR)",
+        "Odwołana zmiana na ostatnią chwilę",
+      ],
+      en: [
+        "My hours were cut without notice",
+        "My rights on a zero-hours contract",
+        "Agency worker rights after 12 weeks (AWR)",
+        "Short-notice shift cancellation",
+      ],
+      ro: [
+        "Mi-au tăiat orele fără preaviz",
+        "Drepturile mele pe contract zero-hours",
+        "Drepturi angajat prin agenție după 12 săptămâni",
+        "Tură anulată în ultimul moment",
+      ],
+    },
+  },
+  {
+    keywords: [
+      /\b(urlop\w*|wakacj\w*|wolne\w*)\b/,
+      /\b(holiday\w*|annual\s*leave|pto|vacation)\b/,
+      /\b(concediu\s*de\s*odihn\w*|zile\s*de\s*concediu|vacant\w*)\b/,
+    ],
+    suggestions: {
+      pl: [
+        "Ile dni płatnego urlopu mi przysługuje?",
+        "Nie wypłacili mi holiday pay",
+        "Pracodawca odmawia udzielenia urlopu",
+        "Ekwiwalent za niewykorzystany urlop po odejściu",
+      ],
+      en: [
+        "How much paid holiday am I entitled to?",
+        "Unpaid holiday pay calculation",
+        "My employer refused my holiday request",
+        "Unused holiday pay when leaving a job",
+      ],
+      ro: [
+        "Câte zile de concediu plătit am dreptul?",
+        "Calculul pentru holiday pay neplătit",
+        "Angajatorul mi-a refuzat cererea de concediu",
+        "Plata zilelor de concediu neefectuate la plecare",
+      ],
+    },
+  },
+  {
+    keywords: [
+      /\b(mobbing\w*|dyskrymin\w*|nekan\w*|ciaz\w*|macierzyn\w*|wypadek\w*|bezpiecz\w*)\b/,
+      /\b(bully\w*|harass\w*|discrimin\w*|racis\w*|pregnan\w*|maternity|paternity|accident|injury|unsafe)\b/,
+      /\b(hartuir\w*|discrimin\w*|sarcin\w*|maternitat\w*|accident\w*|sigurant\w*)\b/,
+    ],
+    suggestions: {
+      pl: [
+        "Mobbing lub nękanie w miejscu pracy",
+        "Dyskryminacja w pracy (Equality Act 2010)",
+        "Prawa w ciąży i podczas urlopu macierzyńskiego",
+        "Wypadek w pracy — jakie mam prawa?",
+      ],
+      en: [
+        "Workplace bullying and harassment rights",
+        "Discrimination under the Equality Act 2010",
+        "Pregnancy and maternity rights at work",
+        "Rights after an accident at work",
+      ],
+      ro: [
+        "Hărțuire sau mobbing la locul de muncă",
+        "Discriminare la muncă (Equality Act 2010)",
+        "Drepturi în sarcină și concediu de maternitate",
+        "Drepturi după un accident de muncă",
+      ],
+    },
+  },
+];
+
+function getLocalTypingSuggestions(draft: string, locale: Locale): string[] {
+  const words = draft.trim().split(/\s+/).filter(Boolean);
+  if (words.length < 3) return [];
+
+  const normalized = draft
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  let bestRule: LocalTypingSuggestionRule | null = null;
+  let bestScore = 0;
+
+  for (const rule of LOCAL_TYPING_SUGGESTION_RULES) {
+    let score = 0;
+    for (const pattern of rule.keywords) {
+      if (pattern.test(normalized)) {
+        score += 1;
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestRule = rule;
+    }
+  }
+
+  if (!bestRule || bestScore === 0) return [];
+  return bestRule.suggestions[locale] || bestRule.suggestions.en;
+}
 
 const CHAT_SESSION_TAG_STYLES: Record<
   ChatSessionTag,
@@ -676,14 +993,14 @@ export const ChatTab: React.FC = () => {
   });
   const chatFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Randomly assigns 'left' or 'right' edge for the peeking robot head + metallic gripping fingers per bot message ID
-  const botPeekSideMapRef = useRef<Record<string, PeekEdgeSide>>({});
-  const getBotBubblePeekSide = useCallback((msgId: string): PeekEdgeSide => {
-    if (!botPeekSideMapRef.current[msgId]) {
-      botPeekSideMapRef.current[msgId] = Math.random() < 0.5 ? "left" : "right";
-    }
-    return botPeekSideMapRef.current[msgId];
-  }, []);
+  // Local randomized greeting for empty chat (independent language PL/EN/RO + variant 1..8)
+  const [emptyGreetingRoll, setEmptyGreetingRoll] = useState<{
+    lang: GreetingLang;
+    variant: number;
+  }>(() => rollRandomEmptyChatGreeting());
+  const prevHadUserMessagesRef = useRef<boolean>(
+    chatMessages.some((m) => m.role === "user")
+  );
 
   // Context Menu state for individual chat bubbles (triggered on long-press or right-click)
   const [bubbleContextMenu, setBubbleContextMenu] = useState<{
@@ -941,12 +1258,28 @@ export const ChatTab: React.FC = () => {
     () => chatMessages.some((m) => m.role === "user"),
     [chatMessages]
   );
-  const hasElonReplied = useMemo(
-    () =>
-      chatMessages.some(
-        (m) => m.role === "assistant" && m.id !== "msg_init" && !m.isSystemBroadcast
-      ),
-    [chatMessages]
+
+  // Re-roll greeting whenever chat resets from active conversation back to empty
+  useEffect(() => {
+    if (prevHadUserMessagesRef.current && !hasUserMessages) {
+      setEmptyGreetingRoll(rollRandomEmptyChatGreeting());
+    }
+    prevHadUserMessagesRef.current = hasUserMessages;
+  }, [hasUserMessages]);
+
+  const emptyChatGreetingText = useMemo(() => {
+    const list = EMPTY_CHAT_GREETINGS[emptyGreetingRoll.lang];
+    const item = list[emptyGreetingRoll.variant] ?? list[0];
+    const firstName = (user.fullName || "").trim().split(/\s+/)[0] || "";
+    if (firstName) {
+      return item.withName.replace("{name}", firstName);
+    }
+    return item.withoutName;
+  }, [emptyGreetingRoll, user.fullName]);
+
+  const typingSuggestions = useMemo(
+    () => getLocalTypingSuggestions(chatDraft, locale),
+    [chatDraft, locale]
   );
 
   useEffect(() => {
@@ -1524,6 +1857,7 @@ export const ChatTab: React.FC = () => {
     const groups: ChatMessageTimeGroup[] = [];
     for (let idx = 0; idx < chatMessages.length; idx++) {
       const msg = chatMessages[idx];
+      if (msg.id === "msg_init") continue;
       const currentGroup = groups[groups.length - 1];
       const prevEntry = currentGroup?.items[currentGroup.items.length - 1];
 
@@ -5641,9 +5975,9 @@ export const ChatTab: React.FC = () => {
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
-      {/* Clean 52px Full-Screen Chat Top Bar: Back + 28px Robot + "Elon" | Right: "⋯ Opcje" */}
+      {/* Clean 52px Full-Screen Chat Top Bar: Back + Circular Avatar w/ online dot + "Elon" | Right: "⋯ Opcje" */}
       <header className="h-[52px] min-h-[52px] shrink-0 px-2.5 sm:px-4 border-b border-[#E2E8F0] dark:border-[#2C3847] bg-[#FFFFFF]/95 dark:bg-[#1E2732]/95 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0">
           <button
             type="button"
             onClick={() => {
@@ -5656,16 +5990,21 @@ export const ChatTab: React.FC = () => {
             <ArrowLeft className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 shrink-0 flex items-center justify-center">
-              <AskElonShieldLogo
-                variant="head-only"
-                className="w-7 h-7"
-                active
-                activityState={robotState}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="relative w-8 h-8 rounded-full bg-[#F1F5F9] dark:bg-[#141B23] border border-[#E2E8F0] dark:border-[#2C3847] flex items-center justify-center shrink-0">
+              <img
+                src="/brand/elon-robot-oryginal-przezroczysty.png"
+                alt="Elon"
+                draggable={false}
+                referrerPolicy="no-referrer"
+                className="w-7 h-7 object-contain rounded-full select-none"
+              />
+              <span
+                aria-hidden="true"
+                className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#52B798] ring-2 ring-[#FFFFFF] dark:ring-[#1E2732]"
               />
             </div>
-            <span className="text-base font-bold tracking-tight text-[#1E293B] dark:text-[#F1F5F9] truncate">
+            <span className="text-[15px] font-bold tracking-tight text-[#1E293B] dark:text-[#F1F5F9] truncate">
               Elon
             </span>
           </div>
@@ -5677,9 +6016,9 @@ export const ChatTab: React.FC = () => {
           aria-haspopup="dialog"
           aria-expanded={isOptionsSheetOpen}
           aria-label={t("chatOptionsBtn")}
-          className="min-h-[44px] px-3 rounded-xl border border-[#E2E8F0] dark:border-[#2C3847] bg-[#F8FAFC] dark:bg-[#141B23] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] text-xs font-bold text-[#1E293B] dark:text-[#F1F5F9] inline-flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer"
+          className="min-h-[44px] px-3.5 rounded-full border border-[#2C3847] bg-[#1E2732] dark:bg-[#141B23] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] text-xs font-bold text-[#F1F5F9] inline-flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer"
         >
-          <MoreHorizontal className="w-4 h-4 text-[#0D9488] dark:text-[#2DD4BF] shrink-0" aria-hidden="true" />
+          <MoreHorizontal className="w-4 h-4 text-[#2DD4BF] shrink-0" aria-hidden="true" />
           <span>{t("chatOptionsBtn")}</span>
         </button>
       </header>
@@ -5737,6 +6076,20 @@ export const ChatTab: React.FC = () => {
           className="relative z-10 flex-1 min-h-0 overflow-y-auto px-4 py-3"
         >
           <div ref={messagesContentRef} className="max-w-3xl mx-auto space-y-3.5 pb-2">
+          {/* Local randomized Elon greeting bubble shown ONLY on empty chat (never persisted or sent to AI) */}
+          {!hasUserMessages && (
+            <div className="flex flex-col items-start">
+              <div className="chat-bubble-elon max-w-[92%] sm:max-w-[85%] px-4 py-3.5 rounded-2xl shadow-xs">
+                <p
+                  lang={emptyGreetingRoll.lang}
+                  className="text-[15px] leading-[1.55] text-[var(--text-primary)] whitespace-pre-wrap break-words"
+                >
+                  {emptyChatGreetingText}
+                </p>
+              </div>
+            </div>
+          )}
+
           {(() => {
             const renderChatMessageItem = (
               msg: ChatMessage,
@@ -5744,56 +6097,7 @@ export const ChatTab: React.FC = () => {
               isGroupedInsideCard: boolean
             ) => {
               if (msg.id === "msg_init") {
-                const initPeekSide = getBotBubblePeekSide(msg.id);
-                const initMarginClass =
-                  initPeekSide === "left"
-                    ? "ml-6 sm:ml-7 mr-1"
-                    : "mr-6 sm:mr-7 ml-1";
-                const initPaddingClass =
-                  initPeekSide === "left"
-                    ? "pl-6 sm:pl-7 pr-4 sm:pr-5 py-4"
-                    : "pl-4 sm:pl-5 pr-6 sm:pr-7 py-4";
-
-                return (
-                  <div
-                    key={msg.id}
-                    ref={(el) => {
-                      messageRefsMap.current[msg.id] = el;
-                    }}
-                    className={`chat-bubble-elon relative overflow-visible rounded-2xl shadow-xs ${initMarginClass} ${initPaddingClass}`}
-                  >
-                    <ElonPeekingBubbleGrip side={initPeekSide} activityState={robotState} />
-                    <div className="relative z-10 flex items-start gap-3.5">
-                      <div className="w-13 h-13 sm:w-15 sm:h-15 flex items-center justify-center shrink-0">
-                        <img
-                          src="/brand/elon-robot-oryginal-przezroczysty.png"
-                          alt="ask Elon Robot"
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-contain drop-shadow-sm select-none"
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h2 className="text-sm sm:text-base font-extrabold text-[var(--text-primary)] tracking-tight leading-snug">
-                            {locale === "pl"
-                              ? "Rozmowa z Elonem — Prawa Pracy w UK"
-                              : locale === "ro"
-                              ? "Conversație cu Elon — Dreptul Muncii în UK"
-                              : "Chat with Elon — UK Employment Rights"}
-                          </h2>
-                          <span className="badge-demo-pill">DEMO</span>
-                        </div>
-                        <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed mt-1.5">
-                          {locale === "pl"
-                            ? "Opisz swoją sytuację w pracy (brak wypłaty, nadgodziny, chorobowe SSP, wypowiedzenie) albo załącz payslip. Wyjaśnię Twoje prawa w UK (ACAS / ERA 1996) i od razu przygotuję oficjalne pismo po angielsku."
-                            : locale === "ro"
-                            ? "Descrie situația de la muncă (ore neplătite, reducere ore, concediu medical SSP, concediere) sau atașează un fluturaș. Îți explic drepturile în UK (ACAS / ERA 1996) și pregătesc scrisoarea oficială în engleză."
-                            : "Describe your workplace issue (unpaid wages, overtime, sick pay SSP, dismissal) or attach a payslip. I'll explain your UK rights (ACAS / ERA 1996) and draft a ready-to-send English letter."}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
+                return null;
               }
 
               const isAI = msg.role === "assistant";
@@ -5838,7 +6142,6 @@ export const ChatTab: React.FC = () => {
                 ? buildPersonalizedEnglishLetterForChat(prevUserMsg, msg.text, user)
                 : null;
 
-              const botPeekSide: PeekEdgeSide | null = isAI ? getBotBubblePeekSide(msg.id) : null;
               const botActivityState = isAI
                 ? isCurrentSpeaking && !isSpeechPaused
                   ? "speaking"
@@ -5853,18 +6156,7 @@ export const ChatTab: React.FC = () => {
                   : analyzeAiResponseSentiment(msg.text, prevUserMsg) || "idle"
                 : "idle";
 
-              const botSidePaddingClass = isAI
-                ? botPeekSide === "left"
-                  ? "pl-6 sm:pl-7 pr-4 py-3.5"
-                  : "pl-4 pr-6 sm:pr-7 py-3.5"
-                : "px-4 py-3.5";
-
-              const botOuterMarginClass =
-                isAI && !isGroupedInsideCard
-                  ? botPeekSide === "left"
-                    ? "ml-6 sm:ml-7 mr-1"
-                    : "mr-6 sm:mr-7 ml-1"
-                  : "";
+              const botSidePaddingClass = "px-4 py-3.5";
 
               const bubbleClassName = isGroupedInsideCard
                 ? `relative overflow-visible w-full ${botSidePaddingClass} transition-colors duration-200 ${
@@ -5879,8 +6171,8 @@ export const ChatTab: React.FC = () => {
                       : "chat-bubble-user !rounded-none border-l-2 !border-l-[var(--accent-green)]"
                   }`
                 : `${
-                    isAI ? "w-[calc(100%-2rem)] sm:max-w-[92%]" : "max-w-[92%] sm:max-w-[85%]"
-                  } ${botOuterMarginClass} ${botSidePaddingClass} rounded-2xl transition-all duration-300 ${
+                    isAI ? "max-w-[92%] sm:max-w-[88%]" : "max-w-[92%] sm:max-w-[85%]"
+                  } ${botSidePaddingClass} rounded-2xl transition-all duration-300 ${
                     msg.isSystemBroadcast
                       ? "bg-gradient-to-r from-[#2B1608] via-[#1E2732] to-[#141B23] border-2 border-[var(--accent-orange)]/70 text-[var(--text-primary)]"
                       : isAI
@@ -5950,14 +6242,6 @@ export const ChatTab: React.FC = () => {
                         : ""
                     }`}
                   >
-                    {/* Conditional Left/Right Peeking Robot Head + Metallic Fingers Gripping the Bubble Edge */}
-                    {isAI && botPeekSide && (
-                      <ElonPeekingBubbleGrip
-                        side={botPeekSide}
-                        activityState={botActivityState}
-                      />
-                    )}
-
                     {/* Header inside bubble */}
                     <div className="relative z-10 flex items-center justify-between gap-3 mb-1.5 text-[11px] text-[var(--text-secondary)]">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -6708,9 +6992,7 @@ export const ChatTab: React.FC = () => {
               return (
                 <div
                   key={group.id}
-                  className={`${
-                    hasAiMsg ? "mx-6 sm:mx-7 w-[calc(100%-3rem)] sm:w-[calc(100%-3.5rem)]" : "w-full sm:max-w-[97%]"
-                  } rounded-2xl ${
+                  className={`w-full rounded-2xl ${
                     isCollapsed ? "bg-[var(--bubble-elon)] backdrop-blur-[6px]" : "bg-transparent"
                   } border shadow-xs overflow-visible transition-all duration-300 ${
                     hasActiveChild
@@ -6850,46 +7132,6 @@ export const ChatTab: React.FC = () => {
                 <span className="inline-block w-2 h-2 rounded-full bg-[#38B28B] animate-bounce [animation-delay:0.2s]"></span>
                 <span className="inline-block w-2 h-2 rounded-full bg-[#38B28B] animate-bounce [animation-delay:0.4s]"></span>
                 <span className="text-xs font-medium ml-1">Elon analizuje prawo pracy UK...</span>
-              </div>
-            </div>
-          )}
-
-          {/* Clear Quick-Start Topic Prompts ONLY on Empty Chat (disappears after first user message) */}
-          {!hasUserMessages && !isChatLoading && (
-            <div className="pt-1 space-y-2">
-              <div className="text-[11px] font-semibold text-[#64748B] dark:text-[#94A3B8] px-1">
-                {locale === "pl"
-                  ? "Wybierz temat rozmowy lub opisz własną sytuację poniżej:"
-                  : locale === "ro"
-                  ? "Alege un subiect sau descrie situația ta mai jos:"
-                  : "Pick a UK workplace topic or describe your situation below:"}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {[
-                  { key: "q1", icon: <Banknote className="w-4 h-4 text-[#FBBF24] shrink-0" /> },
-                  { key: "q2", icon: <Briefcase className="w-4 h-4 text-[#38BDF8] shrink-0" /> },
-                  { key: "q3", icon: <HeartPulse className="w-4 h-4 text-[#A78BFA] shrink-0" /> },
-                  { key: "q4", icon: <ShieldAlert className="w-4 h-4 text-[#D97724] shrink-0" /> },
-                ].map(({ key, icon }) => {
-                  const label = t(key);
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => {
-                        isAutoScrollPinnedRef.current = true;
-                        setIsAutoScrollPinned(true);
-                        sendChatMessage(label);
-                      }}
-                      className="text-left p-3 rounded-2xl bg-[#FFFFFF] dark:bg-[#1E2732] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] border border-[#E2E8F0] dark:border-[#2C3847] transition-all flex items-start gap-2.5 cursor-pointer group shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none"
-                    >
-                      <span className="mt-0.5">{icon}</span>
-                      <span className="text-xs font-medium text-[#1E293B] dark:text-[#F1F5F9] leading-snug">
-                        {label}
-                      </span>
-                    </button>
-                  );
-                })}
               </div>
             </div>
           )}
@@ -7101,130 +7343,43 @@ export const ChatTab: React.FC = () => {
             </div>
           )}
 
-          {/* Max 1 horizontally scrollable row of 2-3 CO DALEJ chips, ONLY after Elon has answered */}
-          {hasElonReplied &&
-            !isChatLoading &&
-            dynamicFollowUpChips.length > 0 &&
-            !isDictating &&
-            !isTranscribing && (
-              <div
-                role="region"
-                aria-label={t("chatFollowUpsSection")}
-                className="flex items-center gap-1.5 overflow-x-auto py-0.5 no-scrollbar"
-              >
-                {dynamicFollowUpChips.slice(0, 3).map((chip) => (
-                  <button
-                    key={chip.id}
-                    type="button"
-                    disabled={isChatLoading && chip.actionType === "send_prompt"}
-                    onClick={() => {
-                      if (chip.actionType === "send_prompt" && chip.promptText) {
-                        isAutoScrollPinnedRef.current = true;
-                        setIsAutoScrollPinned(true);
-                        setUnreadBelowCount(0);
-                        sendChatMessage(chip.promptText);
-                      } else if (chip.actionType === "pin_last_ai" && chip.targetMsgId) {
-                        pinChatMessageToCase(chip.targetMsgId);
-                      } else if (chip.actionType === "open_template" && chip.templateId) {
-                        handleOpenTemplate(chip.templateId);
-                      } else if (chip.actionType === "switch_persona") {
-                        handleToggleAiPersona();
-                      }
-                    }}
-                    className="inline-flex items-center gap-1.5 min-h-[34px] px-3 py-1 rounded-full border border-[#E2E8F0] dark:border-[#2C3847] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] bg-[#FFFFFF] dark:bg-[#1E2732] text-[#1E293B] dark:text-[#F1F5F9] text-[12px] font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full bg-[#0D9488] dark:bg-[#2DD4BF] shrink-0"
-                      aria-hidden="true"
-                    />
-                    <span>{chip.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-          {/* Input Row: Mic / Clip / Camera + Textarea + Turquoise Send Button */}
-          <div
-            className={`flex items-end gap-1.5 bg-[#FFFFFF] dark:bg-[#1E2732] border rounded-2xl px-2 py-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none transition-colors ${
-              isInputInvalidShake ? "chat-input-shake" : ""
-            } ${
-              isDictating
-                ? isVoiceDetected
-                  ? "border-[#52B798]"
-                  : "border-[#EF4444]"
-                : showEmptyInputError
-                ? "border-[#F87171]"
-                : !isOnline
-                ? "border-[#F59E42]/60 dark:border-[#FBB063]/60"
-                : "border-[#E2E8F0] dark:border-[#2C3847] focus-within:border-[#0D9488] dark:focus-within:border-[#2DD4BF]"
-            }`}
-          >
-            {/* Voice Recording / Dictation Button with Reactive Mini Audio Meter */}
-            <Tooltip
-              side="top"
-              content={
-                isDictating
-                  ? locale === "pl"
-                    ? "Zatrzymaj nagrywanie"
-                    : locale === "ro"
-                    ? "Oprește înregistrarea"
-                    : "Stop Voice Recording"
-                  : locale === "pl"
-                  ? "Nagraj wiadomość głosem"
+          {/* Typing-only local keyword suggestions (appears ONLY after ~3 words typed & keyword match; zero AI calls) */}
+          {typingSuggestions.length > 0 && !isDictating && !isTranscribing && (
+            <div
+              role="region"
+              aria-label={
+                locale === "pl"
+                  ? "Podpowiedzi tematów"
                   : locale === "ro"
-                  ? "Dictează mesaj vocal"
-                  : "Dictate Message with Voice"
+                  ? "Sugestii de subiecte"
+                  : "Topic suggestions"
               }
+              className="flex items-center gap-1.5 overflow-x-auto py-0.5 no-scrollbar"
             >
-              <button
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  toggleDictation();
-                }}
-                aria-pressed={isDictating}
-                aria-label={isDictating ? "Stop recording" : "Voice dictation"}
-                className={`flex items-center justify-center gap-1.5 min-h-[44px] h-11 ${
-                  isDictating ? "px-2.5" : "w-10 sm:w-11"
-                } rounded-xl transition-all shrink-0 cursor-pointer ${
-                  isDictating
-                    ? "bg-[#EF4444] text-white shadow-[0_0_12px_rgba(239,68,68,0.45)]"
-                    : isTranscribing
-                    ? "bg-[#F59E42]/20 border border-[#F59E42]/50 text-[#F59E42] dark:text-[#FBB063]"
-                    : "bg-[#F8FAFC] dark:bg-[#141B23] hover:bg-[#E2E8F0]/60 dark:hover:bg-[#25303E] text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]"
-                }`}
-              >
-                {isTranscribing ? (
-                  <RefreshCw className="w-4 h-4 sm:w-[18px] sm:h-[18px] animate-spin" />
-                ) : isDictating ? (
-                  <>
-                    <MicOff className="w-4 h-4 sm:w-[18px] sm:h-[18px] shrink-0" />
-                    <span className="inline-flex items-end gap-0.5 h-3.5" aria-hidden="true">
-                      {[6, 9, 12].map((barIdx, i) => (
-                        <span
-                          key={i}
-                          style={{
-                            transform: `scaleY(${Math.max(0.22, micAudioLevels[barIdx] || 0.22)})`,
-                          }}
-                          className="w-0.5 h-3.5 rounded-full bg-white stt-mic-bar-bottom"
-                        />
-                      ))}
-                    </span>
-                    <span className="text-[11px] font-mono tabular-nums font-extrabold pr-0.5">
-                      0:{String(recordingSeconds).padStart(2, "0")}
-                    </span>
-                  </>
-                ) : (
-                  <Mic className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
-                )}
-              </button>
-            </Tooltip>
+              {typingSuggestions.slice(0, 4).map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => {
+                    setChatDraft(suggestion);
+                    setShowEmptyInputError(false);
+                    setIsInputInvalidShake(false);
+                    chatInputTextareaRef.current?.focus();
+                  }}
+                  className="inline-flex items-center gap-1.5 min-h-[44px] px-3.5 py-2 rounded-full border border-[#E2E8F0] dark:border-[#2C3847] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] bg-[#FFFFFF] dark:bg-[#1E2732] text-[#1E293B] dark:text-[#F1F5F9] text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer"
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full bg-[#0D9488] dark:bg-[#2DD4BF] shrink-0"
+                    aria-hidden="true"
+                  />
+                  <span>{suggestion}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
+          {/* Input Row: Rounded input (textarea + Mic/Clip/Camera inside right) + Circular Turquoise Send Button outside right */}
+          <div className="flex items-end gap-2">
             {/* Hidden System File Input for Instant Document Classification */}
             <input
               ref={chatFileInputRef}
@@ -7235,129 +7390,219 @@ export const ChatTab: React.FC = () => {
               className="hidden"
             />
 
-            {/* Attach Document via System File Picker */}
-            <Tooltip
-              side="top"
-              content={
-                locale === "pl"
-                  ? "Załącz dokument z dysku (auto-rozpoznawanie PDF/umów/payslipów)"
-                  : locale === "ro"
-                  ? "Atașează document (detectare automată categorie)"
-                  : "Attach Document from Device (Auto-Classify)"
-              }
-            >
-              <button
-                type="button"
-                disabled={isAnalyzingAttachment}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  chatFileInputRef.current?.click();
-                }}
-                aria-label={
-                  locale === "pl"
-                    ? "Załącz dokument z systemu"
-                    : "Attach document from system"
-                }
-                className="flex items-center justify-center w-10 sm:w-11 h-11 min-h-[44px] rounded-xl bg-[#F8FAFC] dark:bg-[#141B23] hover:bg-[#E2E8F0]/60 dark:hover:bg-[#25303E] text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] transition-all shrink-0 cursor-pointer disabled:opacity-50"
-              >
-                {isAnalyzingAttachment ? (
-                  <Loader2 className="w-4 h-4 sm:w-[18px] sm:h-[18px] animate-spin text-[#38B28B]" />
-                ) : (
-                  <Paperclip className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
-                )}
-              </button>
-            </Tooltip>
-
-            {/* Scan Document via Camera */}
-            <Tooltip
-              side="top"
-              content={
-                locale === "pl"
-                  ? "Zrób zdjęcie dokumentu aparatem (auto-kategoryzacja)"
-                  : locale === "ro"
-                  ? "Scanează document cu camera"
-                  : "Scan Document with Camera"
-              }
-            >
-              <button
-                type="button"
-                disabled={isAnalyzingAttachment}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setIsChatCameraOpen(true);
-                }}
-                aria-label={
-                  locale === "pl" ? "Skanuj dokument aparatem" : "Scan document with camera"
-                }
-                className="flex items-center justify-center w-10 sm:w-11 h-11 min-h-[44px] rounded-xl bg-[#F8FAFC] dark:bg-[#141B23] hover:bg-[#E2E8F0]/60 dark:hover:bg-[#25303E] text-[#64748B] dark:text-[#94A3B8] hover:text-[#0D9488] dark:hover:text-[#2DD4BF] transition-all shrink-0 cursor-pointer disabled:opacity-50"
-              >
-                <Camera className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
-              </button>
-            </Tooltip>
-
-            <textarea
-              ref={chatInputTextareaRef}
-              value={chatDraft}
-              onChange={(e) => {
-                const nextVal = e.target.value;
-                setChatDraft(nextVal);
-                if (nextVal.trim().length > 0 && showEmptyInputError) {
-                  setShowEmptyInputError(false);
-                  setIsInputInvalidShake(false);
-                }
-              }}
-              onKeyDown={handleKeyDown}
-              aria-invalid={showEmptyInputError}
-              aria-describedby={showEmptyInputError ? "chat-empty-input-error" : undefined}
-              placeholder={
-                isAnalyzingAttachment
-                  ? locale === "pl"
-                    ? "Analizowanie zawartości dokumentu..."
-                    : "Analyzing document content..."
-                  : isTranscribing
-                  ? "Przetwarzanie nagrania..."
-                  : isDictating
-                  ? t("listening")
+            <div
+              className={`flex-1 min-w-0 flex items-end gap-0.5 bg-[#FFFFFF] dark:bg-[#1E2732] border rounded-[24px] pl-3.5 pr-1 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none transition-colors ${
+                isInputInvalidShake ? "chat-input-shake" : ""
+              } ${
+                isDictating
+                  ? isVoiceDetected
+                    ? "border-[#52B798]"
+                    : "border-[#EF4444]"
                   : showEmptyInputError
-                  ? locale === "pl"
-                    ? "Wpisz treść wiadomości przed wysłaniem..."
-                    : locale === "ro"
-                    ? "Scrie un mesaj înainte de a trimite..."
-                    : "Please enter a message before sending..."
-                  : locale === "pl"
-                  ? "Napisz pytanie do Elona..."
-                  : locale === "ro"
-                  ? "Scrie întrebarea pentru Elon..."
-                  : "Ask Elon a question..."
-              }
-              rows={1}
-              className={`flex-1 min-w-0 bg-transparent border-0 resize-none text-[15px] leading-[1.45] text-[#1E293B] dark:text-[#F1F5F9] focus:ring-0 focus:outline-none min-h-[44px] max-h-28 py-2.5 px-1.5 overflow-y-auto no-scrollbar transition-colors ${
-                showEmptyInputError
-                  ? "placeholder-[#F87171]/85"
-                  : "placeholder-[#64748B] dark:placeholder-[#94A3B8]"
+                  ? "border-[#F87171]"
+                  : !isOnline
+                  ? "border-[#F59E42]/60 dark:border-[#FBB063]/60"
+                  : "border-[#E2E8F0] dark:border-[#2C3847] focus-within:border-[#0D9488] dark:focus-within:border-[#2DD4BF]"
               }`}
-            />
-            {showEmptyInputError && (
-              <span id="chat-empty-input-error" role="alert" className="sr-only">
-                {locale === "pl"
-                  ? "Pole wiadomości nie może być puste."
-                  : locale === "ro"
-                  ? "Câmpul mesajului nu poate fi gol."
-                  : "Message field cannot be empty."}
-              </span>
-            )}
+            >
+              <textarea
+                ref={chatInputTextareaRef}
+                value={chatDraft}
+                onChange={(e) => {
+                  const nextVal = e.target.value;
+                  setChatDraft(nextVal);
+                  if (nextVal.trim().length > 0 && showEmptyInputError) {
+                    setShowEmptyInputError(false);
+                    setIsInputInvalidShake(false);
+                  }
+                }}
+                onKeyDown={handleKeyDown}
+                aria-invalid={showEmptyInputError}
+                aria-describedby={showEmptyInputError ? "chat-empty-input-error" : undefined}
+                placeholder={
+                  isAnalyzingAttachment
+                    ? locale === "pl"
+                      ? "Analizowanie zawartości dokumentu..."
+                      : locale === "ro"
+                      ? "Se analizează documentul..."
+                      : "Analyzing document content..."
+                    : isTranscribing
+                    ? locale === "pl"
+                      ? "Przetwarzanie nagrania..."
+                      : locale === "ro"
+                      ? "Se transcrie înregistrarea..."
+                      : "Transcribing recording..."
+                    : isDictating
+                    ? t("listening")
+                    : showEmptyInputError
+                    ? locale === "pl"
+                      ? "Wpisz treść wiadomości przed wysłaniem..."
+                      : locale === "ro"
+                      ? "Scrie un mesaj înainte de a trimite..."
+                      : "Please enter a message before sending..."
+                    : t("chatPlaceholder")
+                }
+                rows={1}
+                className={`flex-1 min-w-0 bg-transparent border-0 resize-none text-[15px] leading-[1.45] text-[#1E293B] dark:text-[#F1F5F9] focus:ring-0 focus:outline-none min-h-[44px] max-h-28 py-2.5 pr-1 overflow-y-auto no-scrollbar transition-colors ${
+                  showEmptyInputError
+                    ? "placeholder-[#F87171]/85"
+                    : "placeholder-[#64748B] dark:placeholder-[#94A3B8]"
+                }`}
+              />
+              {showEmptyInputError && (
+                <span id="chat-empty-input-error" role="alert" className="sr-only">
+                  {locale === "pl"
+                    ? "Pole wiadomości nie może być puste."
+                    : locale === "ro"
+                    ? "Câmpul mesajului nu poate fi gol."
+                    : "Message field cannot be empty."}
+                </span>
+              )}
 
-            {/* Turquoise Send Button */}
+              {/* Inside right: Mic, Paperclip, Camera */}
+              <div className="flex items-center shrink-0">
+                <Tooltip
+                  side="top"
+                  content={
+                    isDictating
+                      ? locale === "pl"
+                        ? "Zatrzymaj nagrywanie"
+                        : locale === "ro"
+                        ? "Oprește înregistrarea"
+                        : "Stop Voice Recording"
+                      : locale === "pl"
+                      ? "Nagraj wiadomość głosem"
+                      : locale === "ro"
+                      ? "Dictează mesaj vocal"
+                      : "Dictate Message with Voice"
+                  }
+                >
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleDictation();
+                    }}
+                    aria-pressed={isDictating}
+                    aria-label={isDictating ? "Stop recording" : "Voice dictation"}
+                    className={`flex items-center justify-center gap-1 min-h-[44px] h-11 ${
+                      isDictating ? "px-2.5" : "min-w-[44px] w-11"
+                    } rounded-full transition-all shrink-0 cursor-pointer ${
+                      isDictating
+                        ? "bg-[#EF4444] text-white shadow-[0_0_12px_rgba(239,68,68,0.45)]"
+                        : isTranscribing
+                        ? "bg-[#F59E42]/20 text-[#F59E42] dark:text-[#FBB063]"
+                        : "text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] hover:bg-[#F8FAFC] dark:hover:bg-[#141B23]"
+                    }`}
+                  >
+                    {isTranscribing ? (
+                      <RefreshCw className="w-[18px] h-[18px] animate-spin" />
+                    ) : isDictating ? (
+                      <>
+                        <MicOff className="w-[18px] h-[18px] shrink-0" />
+                        <span className="inline-flex items-end gap-0.5 h-3.5" aria-hidden="true">
+                          {[6, 9, 12].map((barIdx, i) => (
+                            <span
+                              key={i}
+                              style={{
+                                transform: `scaleY(${Math.max(0.22, micAudioLevels[barIdx] || 0.22)})`,
+                              }}
+                              className="w-0.5 h-3.5 rounded-full bg-white stt-mic-bar-bottom"
+                            />
+                          ))}
+                        </span>
+                        <span className="text-[11px] font-mono tabular-nums font-extrabold">
+                          0:{String(recordingSeconds).padStart(2, "0")}
+                        </span>
+                      </>
+                    ) : (
+                      <Mic className="w-[18px] h-[18px]" />
+                    )}
+                  </button>
+                </Tooltip>
+
+                <Tooltip
+                  side="top"
+                  content={
+                    locale === "pl"
+                      ? "Załącz dokument z dysku (auto-rozpoznawanie PDF/umów/payslipów)"
+                      : locale === "ro"
+                      ? "Atașează document (detectare automată categorie)"
+                      : "Attach Document from Device (Auto-Classify)"
+                  }
+                >
+                  <button
+                    type="button"
+                    disabled={isAnalyzingAttachment}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      chatFileInputRef.current?.click();
+                    }}
+                    aria-label={
+                      locale === "pl"
+                        ? "Załącz dokument z systemu"
+                        : locale === "ro"
+                        ? "Atașează document"
+                        : "Attach document from system"
+                    }
+                    className="flex items-center justify-center min-w-[44px] w-11 h-11 min-h-[44px] rounded-full text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] hover:bg-[#F8FAFC] dark:hover:bg-[#141B23] transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                  >
+                    {isAnalyzingAttachment ? (
+                      <Loader2 className="w-[18px] h-[18px] animate-spin text-[#0D9488] dark:text-[#2DD4BF]" />
+                    ) : (
+                      <Paperclip className="w-[18px] h-[18px]" />
+                    )}
+                  </button>
+                </Tooltip>
+
+                <Tooltip
+                  side="top"
+                  content={
+                    locale === "pl"
+                      ? "Zrób zdjęcie dokumentu aparatem (auto-kategoryzacja)"
+                      : locale === "ro"
+                      ? "Scanează document cu camera"
+                      : "Scan Document with Camera"
+                  }
+                >
+                  <button
+                    type="button"
+                    disabled={isAnalyzingAttachment}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsChatCameraOpen(true);
+                    }}
+                    aria-label={
+                      locale === "pl"
+                        ? "Skanuj dokument aparatem"
+                        : locale === "ro"
+                        ? "Scanează document cu camera"
+                        : "Scan document with camera"
+                    }
+                    className="flex items-center justify-center min-w-[44px] w-11 h-11 min-h-[44px] rounded-full text-[#64748B] dark:text-[#94A3B8] hover:text-[#0D9488] dark:hover:text-[#2DD4BF] hover:bg-[#F8FAFC] dark:hover:bg-[#141B23] transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                  >
+                    <Camera className="w-[18px] h-[18px]" />
+                  </button>
+                </Tooltip>
+              </div>
+            </div>
+
+            {/* Outside right: Circular Turquoise Send Button with Upward Arrow */}
             {(() => {
               const hasSendableInput =
                 chatDraft.trim().length > 0 ||
@@ -7379,15 +7624,15 @@ export const ChatTab: React.FC = () => {
                   aria-disabled={isSendInactive}
                   aria-label={!isOnline ? t("msgQueuedBadge") : t("send")}
                   title={!isOnline ? t("msgQueuedBadge") : t("send")}
-                  className={`flex items-center justify-center min-w-[44px] h-11 min-h-[44px] px-3 rounded-xl font-bold text-xs transition-colors shrink-0 ${
+                  className={`flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-full transition-colors shrink-0 mb-1 ${
                     isInputInvalidShake ? "chat-input-shake" : ""
                   } ${
                     !isSendInactive
                       ? "bg-[#0D9488] hover:bg-[#0F766E] dark:bg-[#2DD4BF] dark:hover:bg-[#14B8A6] text-white dark:text-[#141B23] cursor-pointer shadow-xs"
-                      : "bg-[#F8FAFC] dark:bg-[#141B23] border border-[#E2E8F0] dark:border-[#2C3847] text-[#64748B] dark:text-[#94A3B8] cursor-not-allowed"
+                      : "bg-[#0D9488]/35 dark:bg-[#2DD4BF]/25 text-white/80 dark:text-[#2DD4BF]/60 cursor-not-allowed"
                   }`}
                 >
-                  <Send className="w-4 h-4 shrink-0" />
+                  <ArrowUp className="w-5 h-5 shrink-0" strokeWidth={2.5} />
                 </button>
               );
             })()}
@@ -7770,7 +8015,45 @@ export const ChatTab: React.FC = () => {
                 </section>
               )}
 
-              {/* 5. Full Follow-Up List (CO DALEJ) */}
+              {/* 5. Quick Topics & Follow-Up Actions (only inside Options sheet) */}
+              <section className="space-y-2">
+                <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
+                  {locale === "pl"
+                    ? "Przykładowe tematy"
+                    : locale === "ro"
+                    ? "Subiecte rapide"
+                    : "Quick Topics"}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    { key: "q1", icon: <Banknote className="w-4 h-4 text-[#FBBF24] shrink-0" /> },
+                    { key: "q2", icon: <Briefcase className="w-4 h-4 text-[#38BDF8] shrink-0" /> },
+                    { key: "q3", icon: <HeartPulse className="w-4 h-4 text-[#A78BFA] shrink-0" /> },
+                    { key: "q4", icon: <ShieldAlert className="w-4 h-4 text-[#D97724] shrink-0" /> },
+                  ].map(({ key, icon }) => {
+                    const label = t(key);
+                    return (
+                      <button
+                        key={`opt_${key}`}
+                        type="button"
+                        onClick={() => {
+                          setIsOptionsSheetOpen(false);
+                          isAutoScrollPinnedRef.current = true;
+                          setIsAutoScrollPinned(true);
+                          sendChatMessage(label);
+                        }}
+                        className="min-h-[44px] text-left px-3 py-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#141B23] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] border border-[#E2E8F0] dark:border-[#2C3847] transition-colors flex items-start gap-2.5 cursor-pointer"
+                      >
+                        <span className="mt-0.5">{icon}</span>
+                        <span className="text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9] leading-snug">
+                          {label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
               {dynamicFollowUpChips.length > 0 && (
                 <section className="space-y-2">
                   <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
@@ -7797,7 +8080,7 @@ export const ChatTab: React.FC = () => {
                           }
                           setIsOptionsSheetOpen(false);
                         }}
-                        className="min-h-[40px] px-3 py-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#141B23] border border-[#E2E8F0] dark:border-[#2C3847] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9] cursor-pointer text-left"
+                        className="min-h-[44px] px-3 py-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#141B23] border border-[#E2E8F0] dark:border-[#2C3847] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9] cursor-pointer text-left"
                       >
                         {chip.label}
                       </button>
