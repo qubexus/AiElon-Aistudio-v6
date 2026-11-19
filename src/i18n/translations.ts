@@ -658,6 +658,26 @@ export const translations: Record<string, Record<Locale, string>> = {
     en: "Case resolved",
     ro: "Caz rezolvat",
   },
+  topBannerTitle: {
+    en: "Elon, your mate",
+    pl: "Elon, Twój kumpel",
+    ro: "Elon, colegul tău",
+  },
+  topBannerLine: {
+    en: "Together, away from home",
+    pl: "Solidarni na emigracji",
+    ro: "Solidari în emigrație",
+  },
+  bottomBannerCopy: {
+    en: "UK work rights",
+    pl: "Prawo pracy UK",
+    ro: "Drepturi în UK",
+  },
+  bottomBannerDismiss: {
+    en: "Dismiss banner",
+    pl: "Zamknij baner",
+    ro: "Închide bannerul",
+  },
 };
 
 export function getTranslation(key: string, locale: Locale): string {

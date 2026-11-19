@@ -8,11 +8,38 @@ import {
   PlusCircle,
   BookOpen,
   Search,
+  X,
 } from "lucide-react";
 import { AskElonShieldLogo } from "./AskElonShieldLogo";
 import { Tooltip } from "./Tooltip";
 
 const RADIAL_ONBOARDING_STORAGE_KEY = "ask_elon_radial_onboarding_seen_v1";
+const BOTTOM_BANNER_DISMISS_KEY = "ask-elon/bottom-banner/dismissed/v1";
+const BOTTOM_BANNER_APP_VERSION = "7.1.0";
+const BOTTOM_BANNER_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+
+function isBottomBannerCurrentlyDismissed(locale: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = localStorage.getItem(BOTTOM_BANNER_DISMISS_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as {
+      dismissedAt?: number;
+      appVersion?: string;
+      locale?: string;
+    };
+    if (
+      typeof parsed.dismissedAt !== "number" ||
+      parsed.appVersion !== BOTTOM_BANNER_APP_VERSION ||
+      parsed.locale !== locale
+    ) {
+      return false;
+    }
+    return Date.now() - parsed.dismissedAt < BOTTOM_BANNER_TTL_MS;
+  } catch {
+    return false;
+  }
+}
 
 export const NavigationTabs: React.FC = () => {
   const {
@@ -38,6 +65,29 @@ export const NavigationTabs: React.FC = () => {
     vw: typeof window !== "undefined" ? window.innerWidth : 390,
   });
   const [labelShifts, setLabelShifts] = useState<Record<string, number>>({});
+  const [isBottomBannerDismissed, setIsBottomBannerDismissed] = useState<boolean>(() =>
+    isBottomBannerCurrentlyDismissed(locale)
+  );
+
+  useEffect(() => {
+    setIsBottomBannerDismissed(isBottomBannerCurrentlyDismissed(locale));
+  }, [locale]);
+
+  const handleDismissBottomBanner = useCallback(() => {
+    setIsBottomBannerDismissed(true);
+    try {
+      localStorage.setItem(
+        BOTTOM_BANNER_DISMISS_KEY,
+        JSON.stringify({
+          dismissedAt: Date.now(),
+          appVersion: BOTTOM_BANNER_APP_VERSION,
+          locale,
+        })
+      );
+    } catch {
+      // ignore storage errors
+    }
+  }, [locale]);
 
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef(false);
@@ -422,10 +472,35 @@ export const NavigationTabs: React.FC = () => {
         aria-label="Bottom Navigation"
         className="bottom-nav-shell fixed bottom-0 left-0 right-0 z-30 pointer-events-auto"
       >
+        {/* Split-wing bottom banner: fades sideways toward empty robot cut-out and downward over tab labels */}
+        {!isChatActive && !isBottomBannerDismissed && (
+          <>
+            <div className="bottom-banner-layer" aria-hidden="true">
+              <div className="bottom-banner-wing bottom-banner-wing--left">
+                <div className="bottom-banner-wing-bg" />
+                <span className="bottom-banner-copy">{t("bottomBannerCopy")}</span>
+              </div>
+              <div className="bottom-banner-wing bottom-banner-wing--right">
+                <div className="bottom-banner-wing-bg" />
+              </div>
+            </div>
+            <div className="bottom-banner-dismiss-layer">
+              <button
+                type="button"
+                onClick={handleDismissBottomBanner}
+                aria-label={t("bottomBannerDismiss")}
+                className="bottom-banner-dismiss-btn"
+              >
+                <X className="w-4 h-4" strokeWidth={2} aria-hidden="true" />
+              </button>
+            </div>
+          </>
+        )}
+
         {/* 2px Horizontal Top Accent Line: transparent -> green (40% opacity) -> transparent, strongest under the robot */}
         <div aria-hidden="true" className="nav-top-accent-line" />
 
-        <div className="max-w-5xl mx-auto w-full h-[var(--nav-bar-height)] flex items-center px-1.5 sm:px-4">
+        <div className="relative z-15 max-w-5xl mx-auto w-full h-[var(--nav-bar-height)] flex items-center px-1.5 sm:px-4">
           {/* Left 2 Navigation Tabs Wing (Sprawy, Pisma) */}
           <div className="flex-1 min-w-0 grid grid-cols-2 items-center gap-0.5 sm:gap-1 pr-1 sm:pr-2">
             {leftNavItems.map(renderNavButton)}
@@ -502,11 +577,9 @@ export const NavigationTabs: React.FC = () => {
                   clearLongPressTimer();
                   if (showRadialOnboarding) markRadialOnboardingSeen();
                   measureRobotCenter();
-                  setIsQuickActionsOpen((prev) => {
-                    const next = !prev;
-                    if (next) triggerRobotReaction("thinking", 1800);
-                    return next;
-                  });
+                  const next = !isQuickActionsOpen;
+                  setIsQuickActionsOpen(next);
+                  if (next) triggerRobotReaction("thinking", 1800);
                 }}
                 onClick={(e) => {
                   if (longPressTriggeredRef.current) {

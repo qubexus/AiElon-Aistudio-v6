@@ -250,11 +250,11 @@ export const Header: React.FC = () => {
                 setActiveTab("chat");
                 triggerRobotReaction(robotState === "happy" ? "concerned" : "happy", 3200);
               }}
-              className="relative flex items-center text-left group min-w-0 h-15 pl-[76px] min-[360px]:pl-[90px] sm:pl-[104px] cursor-pointer"
+              className="relative flex items-center text-left group min-w-0 h-15 pl-[clamp(78px,28vw,128px)] cursor-pointer"
             >
               {/* Mascot spanning upward into the gradient banner & ending flush at bottom edge of header row */}
               <div
-                className={`pointer-events-none absolute left-0 bottom-0 w-[72px] h-[72px] min-[360px]:w-[84px] min-[360px]:h-[96px] sm:w-[96px] sm:h-[96px] flex items-end justify-center shrink-0 transition-transform duration-300 ${
+                className={`pointer-events-none absolute left-0 bottom-0 w-[clamp(72px,26vw,124px)] h-[clamp(84px,31vw,136px)] flex items-end justify-center shrink-0 transition-transform duration-300 ${
                   robotState === "happy" || robotState === "typing" || robotState === "success"
                     ? "scale-[1.03] drop-shadow-[0_0_10px_rgba(45,212,191,0.35)]"
                     : robotState === "concerned"
@@ -270,7 +270,7 @@ export const Header: React.FC = () => {
                   className="pointer-events-none absolute inset-1.5 rounded-full bg-[#2DD4BF]/18 blur-md"
                 />
                 <img
-                  src="/brand/logo-mark.png"
+                  src="/brand/logo-mark.png?v=2"
                   alt="ask Elon Logo"
                   referrerPolicy="no-referrer"
                   className="relative z-10 w-full h-full object-contain object-bottom select-none"
@@ -514,8 +514,8 @@ export const Header: React.FC = () => {
       </div>
 
       {/* Compact Demo Mode Info Strip */}
-      <div className="bg-[var(--accent-green)]/8 border-t border-[var(--border-color)] px-3 py-0.5 text-center">
-        <p className="text-[10px] font-medium text-[var(--text-secondary)] tracking-wide">
+      <div className="bg-transparent px-3 py-0.5 text-center">
+        <p className="text-[11px] font-medium text-[var(--text-secondary)] tracking-wide truncate">
           {locale === "pl"
             ? "Wersja demo – przykładowe dane • Twoje rozmowy pozostają prywatne w tej przeglądarce"
             : locale === "ro"

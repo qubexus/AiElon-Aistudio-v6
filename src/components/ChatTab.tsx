@@ -5971,10 +5971,16 @@ export const ChatTab: React.FC = () => {
     <div
       className="fixed inset-0 z-40 w-full h-[100dvh] flex flex-col bg-[#F8FAFC] dark:bg-[#141B23] text-[#1E293B] dark:text-[#F1F5F9] overflow-hidden"
       style={{
-        paddingTop: "env(safe-area-inset-top, 0px)",
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
+      {/* Compact 44px + safe-area-top brand strip (white headline only, no second line) */}
+      <div className="top-ad-banner-strip top-ad-banner-strip--compact" aria-hidden="true">
+        <div className="top-ad-banner-col top-ad-banner-col--compact">
+          <span className="top-ad-banner-title">{t("topBannerTitle")}</span>
+        </div>
+      </div>
+
       {/* Clean 52px Full-Screen Chat Top Bar: Back + Circular Avatar w/ online dot + "Elon" | Right: "⋯ Opcje" */}
       <header className="h-[52px] min-h-[52px] shrink-0 px-2.5 sm:px-4 border-b border-[#E2E8F0] dark:border-[#2C3847] bg-[#FFFFFF]/95 dark:bg-[#1E2732]/95 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">

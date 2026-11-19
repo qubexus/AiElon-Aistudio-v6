@@ -23,16 +23,18 @@ import { RegisterModal } from "./components/RegisterModal";
 import { Toast } from "./components/Toast";
 
 const AppContent: React.FC = () => {
-  const { activeTab, lastNonChatTab } = useApp();
+  const { activeTab, lastNonChatTab, t } = useApp();
   const backgroundTab = activeTab === "chat" ? lastNonChatTab : activeTab;
 
   return (
     <div className="min-h-screen pb-28 sm:pb-32 bg-[#F8FAFC] dark:bg-[#141B23] text-[#1E293B] dark:text-[#F1F5F9] flex flex-col font-sans selection:bg-[#2E6F57] selection:text-white transition-colors duration-200">
-      {/* Górny pasek z gradientem nad nagłówkiem (ok. 80px) z dyskretnym podpisem */}
-      <div className="top-ad-banner-strip">
-        <span className="top-ad-banner-signature" translate="no">
-          Elon, your mate
-        </span>
+      {/* Top gradient banner above header (80px / 88px tablet + safe-area-top), dark side on right */}
+      <div className="top-ad-banner-strip" aria-hidden="true">
+        <div className="top-ad-banner-col">
+          <span className="top-ad-banner-title">{t("topBannerTitle")}</span>
+          <span className="top-ad-banner-rule" />
+          <span className="top-ad-banner-line">{t("topBannerLine")}</span>
+        </div>
       </div>
 
       {/* Top Header */}
