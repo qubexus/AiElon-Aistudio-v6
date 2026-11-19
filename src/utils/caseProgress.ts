@@ -24,14 +24,40 @@ export interface CaseDocumentProgress {
   items: CaseRequiredDocItem[];
 }
 
+export const MANUAL_CASE_DOCS_STORAGE_KEY = "ask_elon_manual_case_docs_v1";
+
+export function getStoredManualCompletedDocs(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(MANUAL_CASE_DOCS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function getCaseProgressWidthClass(percentage: number): string {
+  if (percentage <= 0) return "w-[0%]";
+  if (percentage <= 25) return "w-[25%]";
+  if (percentage <= 34) return "w-[33.333%]";
+  if (percentage <= 50) return "w-[50%]";
+  if (percentage <= 67) return "w-[66.667%]";
+  if (percentage <= 75) return "w-[75%]";
+  return "w-[100%]";
+}
+
 export function computeCaseDocumentProgress(
   caseItem: WorkplaceCase,
   documents: UserDocument[],
   sentLetters: SentLetter[],
   user: UserProfile,
   locale: Locale,
-  manualCompletedDocIds: string[] = []
+  manualCompletedDocIds?: string[]
 ): CaseDocumentProgress {
+  const effectiveManualIds =
+    manualCompletedDocIds !== undefined
+      ? manualCompletedDocIds
+      : getStoredManualCompletedDocs();
   const combinedText = `${caseItem.title} ${caseItem.description} ${caseItem.sector}`.toLowerCase();
   const isResolved = caseItem.status === "resolved";
   const notesText = caseItem.notes.map((n) => n.text.toLowerCase()).join(" ");
@@ -269,7 +295,7 @@ export function computeCaseDocumentProgress(
     id: item.id,
     label: item.label,
     shortLabel: item.shortLabel,
-    completed: item.autoCompleted || manualCompletedDocIds.includes(item.id),
+    completed: item.autoCompleted || effectiveManualIds.includes(item.id),
     actionKind: item.actionKind,
     recommendedTemplateId: item.recommendedTemplateId,
   }));

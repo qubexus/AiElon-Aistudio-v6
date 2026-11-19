@@ -32,6 +32,8 @@ import {
   Eye,
   RefreshCw,
   Filter,
+  LogOut,
+  UserPlus,
 } from "lucide-react";
 import { ContractType, DocumentCategoryTag } from "../types";
 import {
@@ -62,6 +64,9 @@ export const ProfileTab: React.FC = () => {
     setIsEmployerLookupModalOpen,
     setIsPaywallModalOpen,
     setIsVoicePreferencesModalOpen,
+    setIsTermsPrivacyModalOpen,
+    setIsRegisterModalOpen,
+    logoutAndClearDevice,
     voiceConfig,
     showToast,
     locale,
@@ -569,7 +574,7 @@ export const ProfileTab: React.FC = () => {
           onClick={() => setProfileSubTab("details")}
           className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
             profileSubTab === "details"
-              ? "bg-[#1D6852] text-white shadow-xs"
+              ? "bg-[#0F766E] text-white dark:bg-[#2DD4BF] dark:text-[#141B23] shadow-xs"
               : "text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-white"
           }`}
         >
@@ -581,7 +586,7 @@ export const ProfileTab: React.FC = () => {
           onClick={() => setProfileSubTab("docs")}
           className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
             profileSubTab === "docs"
-              ? "bg-[#1D6852] text-white shadow-xs"
+              ? "bg-[#0F766E] text-white dark:bg-[#2DD4BF] dark:text-[#141B23] shadow-xs"
               : "text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-white"
           }`}
         >
@@ -596,7 +601,7 @@ export const ProfileTab: React.FC = () => {
           onClick={() => setProfileSubTab("notes")}
           className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
             profileSubTab === "notes"
-              ? "bg-[#1D6852] text-white shadow-xs"
+              ? "bg-[#0F766E] text-white dark:bg-[#2DD4BF] dark:text-[#141B23] shadow-xs"
               : "text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-white"
           }`}
         >
@@ -611,7 +616,7 @@ export const ProfileTab: React.FC = () => {
           onClick={() => setProfileSubTab("settings")}
           className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
             profileSubTab === "settings"
-              ? "bg-[#1D6852] text-white shadow-xs"
+              ? "bg-[#0F766E] text-white dark:bg-[#2DD4BF] dark:text-[#141B23] shadow-xs"
               : "text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-white"
           }`}
         >
@@ -1493,6 +1498,78 @@ export const ProfileTab: React.FC = () => {
             >
               {locale === "pl" ? "Konfiguruj głos Elona" : "Configure Voice"}
             </button>
+          </div>
+
+          {/* Account, Terms & Privacy and Clean Logout Card */}
+          <div className="bg-white dark:bg-[#131B2E] border border-slate-200/80 dark:border-white/10 rounded-2xl p-5 space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-[#0F766E]/15 dark:bg-[#2DD4BF]/15 border border-[#0D9488]/30 dark:border-[#2DD4BF]/30 flex items-center justify-center text-[#0F766E] dark:text-[#2DD4BF] shrink-0">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-sm text-slate-900 dark:text-[#F1F5F9]">
+                  {locale === "pl"
+                    ? "Konto, Regulamin i Prywatność (UK GDPR)"
+                    : locale === "ro"
+                    ? "Cont, Termeni și Confidențialitate (UK GDPR)"
+                    : "Account, Terms & Privacy (UK GDPR)"}
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-[#94A3B8] mt-0.5 leading-relaxed">
+                  {locale === "pl"
+                    ? "Przeczytaj 14 punktów Regulaminu i Polityki Prywatności, utwórz konto lub wyczyść dane z tego urządzenia przy wylogowaniu."
+                    : locale === "ro"
+                    ? "Citește cele 14 secțiuni ale Termenilor și Politicii de confidențialitate, înregistrează contul sau șterge datele la deconectare."
+                    : "Read the 14-section Terms & Privacy Notice, manage account registration, or clear personal data from this device on logout."}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsTermsPrivacyModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-[#1E2732] hover:bg-slate-200/80 dark:hover:bg-[#2C3847] border border-slate-200 dark:border-[#2C3847] text-[#0F766E] dark:text-[#2DD4BF] underline text-xs font-extrabold transition-colors cursor-pointer"
+              >
+                <ShieldCheck className="w-4 h-4 shrink-0" />
+                <span>
+                  {locale === "pl"
+                    ? "Regulamin i Polityka Prywatności"
+                    : locale === "ro"
+                    ? "Termeni și Confidențialitate"
+                    : "Terms & Privacy Notice"}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsRegisterModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-[#1E2732] hover:bg-slate-200/80 dark:hover:bg-[#2C3847] border border-slate-200 dark:border-[#2C3847] text-slate-800 dark:text-[#F1F5F9] text-xs font-bold transition-colors cursor-pointer"
+              >
+                <UserPlus className="w-4 h-4 text-[#0F766E] dark:text-[#2DD4BF] shrink-0" />
+                <span>
+                  {locale === "pl"
+                    ? "Rejestracja konta"
+                    : locale === "ro"
+                    ? "Înregistrare cont"
+                    : "Account Registration"}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={logoutAndClearDevice}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-600 dark:text-[#F87171] text-xs font-extrabold transition-colors cursor-pointer"
+              >
+                <LogOut className="w-4 h-4 shrink-0" />
+                <span>
+                  {locale === "pl"
+                    ? "Wyloguj i wyczyść dane z urządzenia"
+                    : locale === "ro"
+                    ? "Deconectare și ștergere date"
+                    : "Log out & clear device data"}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       )}

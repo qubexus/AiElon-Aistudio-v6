@@ -19,6 +19,7 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
+import { LegalLetterFooter } from "./LegalLetterFooter";
 
 export const SentLettersModal: React.FC = () => {
   const {
@@ -323,6 +324,12 @@ export const SentLettersModal: React.FC = () => {
                 <pre className="font-mono text-xs sm:text-sm text-[#161B22] whitespace-pre-wrap leading-relaxed select-all">
                   {activeLetter.content}
                 </pre>
+                <LegalLetterFooter
+                  locale={locale}
+                  page={1}
+                  totalPages={1}
+                  paperSurface={true}
+                />
               </div>
             </div>
           ) : filteredLetters.length > 0 ? (

@@ -22,6 +22,7 @@ import {
 import { LegalTemplate, SentLetter, SentLetterCategoryTag, Locale } from "../types";
 import { SENT_LETTER_TAG_CATEGORIES, getSentLetterTagMeta } from "../data/legalTemplates";
 import { downloadLetterAsPDF } from "../utils/pdfGenerator";
+import { LegalLetterFooter } from "./LegalLetterFooter";
 
 function getTemplateTitle(tpl: LegalTemplate, locale: Locale): string {
   if (locale === "pl") return tpl.titlePl || tpl.titleEn;
@@ -355,9 +356,12 @@ export const TemplatesTab: React.FC = () => {
               </div>
             </div>
 
-            <pre className="whitespace-pre-wrap font-mono text-xs sm:text-sm text-slate-800 dark:text-[#F1F5F9] bg-slate-50 dark:bg-[#131B2E]/60 p-4 rounded-xl border border-slate-200/80 dark:border-white/5 leading-relaxed overflow-x-auto">
-              {generatedLetter}
-            </pre>
+            <div className="bg-slate-50 dark:bg-[#131B2E]/60 p-4 rounded-xl border border-slate-200/80 dark:border-white/5 overflow-x-auto">
+              <pre className="whitespace-pre-wrap font-mono text-xs sm:text-sm text-slate-800 dark:text-[#F1F5F9] leading-relaxed">
+                {generatedLetter}
+              </pre>
+              <LegalLetterFooter locale={locale} page={1} totalPages={1} variant="auto" />
+            </div>
 
             <div className="flex items-start gap-2 text-[11px] text-slate-500 dark:text-[#94A3B8] bg-slate-100 dark:bg-[#131B2E]/40 p-3 rounded-xl">
               <AlertCircle className="w-4 h-4 text-[#D97724] shrink-0 mt-0.5" />
@@ -393,7 +397,7 @@ export const TemplatesTab: React.FC = () => {
             onClick={() => setActiveView("catalog")}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
               activeView === "catalog"
-                ? "bg-[#1D6852] text-white shadow-xs"
+                ? "bg-[#0F766E] text-white dark:bg-[#2DD4BF] dark:text-[#141B23] shadow-xs"
                 : "text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-white"
             }`}
           >
@@ -414,7 +418,7 @@ export const TemplatesTab: React.FC = () => {
             onClick={() => setActiveView("archive")}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
               activeView === "archive"
-                ? "bg-[#1D6852] text-white shadow-xs"
+                ? "bg-[#0F766E] text-white dark:bg-[#2DD4BF] dark:text-[#141B23] shadow-xs"
                 : "text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-white"
             }`}
           >
@@ -445,7 +449,7 @@ export const TemplatesTab: React.FC = () => {
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
                     selectedCategory === cat
-                      ? "bg-[#1D6852] text-white"
+                      ? "bg-[#0F766E] text-white dark:bg-[#2DD4BF] dark:text-[#141B23]"
                       : "bg-slate-100 dark:bg-[#0B0F17] text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
@@ -737,9 +741,12 @@ export const TemplatesTab: React.FC = () => {
                         )}
 
                         {isExpanded && (
-                          <pre className="whitespace-pre-wrap font-mono text-xs text-slate-800 dark:text-[#F1F5F9] bg-slate-50 dark:bg-[#0B0F17] p-4 rounded-xl border border-slate-200 dark:border-white/10 leading-relaxed max-h-80 overflow-y-auto">
-                            {s.content}
-                          </pre>
+                          <div className="bg-slate-50 dark:bg-[#0B0F17] p-4 rounded-xl border border-slate-200 dark:border-white/10 max-h-96 overflow-y-auto">
+                            <pre className="whitespace-pre-wrap font-mono text-xs text-slate-800 dark:text-[#F1F5F9] leading-relaxed">
+                              {s.content}
+                            </pre>
+                            <LegalLetterFooter locale={locale} page={1} totalPages={1} variant="auto" />
+                          </div>
                         )}
                       </div>
                     );

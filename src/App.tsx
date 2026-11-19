@@ -18,39 +18,39 @@ import { SentLettersModal } from "./components/SentLettersModal";
 import { VoicePreferencesModal } from "./components/VoicePreferencesModal";
 import { LegalDictionaryModal } from "./components/LegalDictionaryModal";
 import { QuickSearchModal } from "./components/QuickSearchModal";
+import { TermsPrivacyModal } from "./components/TermsPrivacyModal";
+import { RegisterModal } from "./components/RegisterModal";
 import { Toast } from "./components/Toast";
 
 const AppContent: React.FC = () => {
-  const { activeTab } = useApp();
+  const { activeTab, lastNonChatTab } = useApp();
+  const backgroundTab = activeTab === "chat" ? lastNonChatTab : activeTab;
 
   return (
-    <div
-      className={`${
-        activeTab === "chat"
-          ? "app-chat-shell"
-          : "min-h-screen pb-28 sm:pb-32"
-      } bg-[#F4F6F9] dark:bg-[#0B0F17] text-[#0F172A] dark:text-[#F1F5F9] flex flex-col font-sans selection:bg-[#1D6852] selection:text-white transition-colors duration-200`}
-    >
+    <div className="min-h-screen pb-28 sm:pb-32 bg-[#F8FAFC] dark:bg-[#141B23] text-[#1E293B] dark:text-[#F1F5F9] flex flex-col font-sans selection:bg-[#2E6F57] selection:text-white transition-colors duration-200">
+      {/* Górny pasek z gradientem nad nagłówkiem (ok. 80px) z dyskretnym podpisem */}
+      <div className="top-ad-banner-strip">
+        <span className="top-ad-banner-signature" translate="no">
+          Elon, your mate
+        </span>
+      </div>
+
       {/* Top Header */}
       <Header />
 
-      {/* Main Content Area */}
-      <main
-        className={`flex-1 w-full mx-auto ${
-          activeTab === "chat"
-            ? "max-w-7xl min-h-0 overflow-hidden flex flex-col"
-            : "max-w-5xl"
-        }`}
-      >
-        {activeTab === "chat" && <ChatTab />}
-        {activeTab === "cases" && <CasesTab />}
-        {activeTab === "templates" && <TemplatesTab />}
-        {activeTab === "forum" && <ForumTab />}
-        {activeTab === "profile" && <ProfileTab />}
+      {/* Main Content Area (non-chat views live here cleanly underneath full-screen chat) */}
+      <main className="flex-1 w-full mx-auto max-w-5xl">
+        {backgroundTab === "cases" && <CasesTab />}
+        {backgroundTab === "templates" && <TemplatesTab />}
+        {backgroundTab === "forum" && <ForumTab />}
+        {backgroundTab === "profile" && <ProfileTab />}
       </main>
 
       {/* Bottom Navigation */}
       <NavigationTabs />
+
+      {/* Full-Screen Chat View covering header & bottom bar */}
+      {activeTab === "chat" && <ChatTab />}
 
       {/* Modals & Overlays */}
       <NewCaseModal />
@@ -64,6 +64,8 @@ const AppContent: React.FC = () => {
       <VoicePreferencesModal />
       <LegalDictionaryModal />
       <QuickSearchModal />
+      <TermsPrivacyModal />
+      <RegisterModal />
       <Toast />
     </div>
   );

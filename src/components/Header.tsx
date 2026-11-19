@@ -117,13 +117,13 @@ export const Header: React.FC = () => {
   }[] = [
     {
       id: "chat",
-      label: locale === "pl" ? "Doradca AI" : locale === "ro" ? "Consilier AI" : "AI Advisor",
+      label: locale === "pl" ? "Asystent AI" : locale === "ro" ? "Asistent AI" : "AI Assistant",
       tooltip:
         locale === "pl"
-          ? "Otwórz czat z doradcą prawnym AI"
+          ? "Otwórz czat z asystentem AI"
           : locale === "ro"
-          ? "Deschide chatul cu consilierul AI"
-          : "Open AI Legal Advisor Chat",
+          ? "Deschide chatul cu asistentul AI"
+          : "Open AI Assistant Chat",
       icon: <MessageSquare className="w-3.5 h-3.5" />,
     },
     {
@@ -222,41 +222,18 @@ export const Header: React.FC = () => {
           : "Done! Dossier updated";
       default:
         return locale === "pl"
-          ? "Doradca Prawa Pracy w UK"
+          ? "Asystent AI Prawa Pracy UK"
           : locale === "ro"
-          ? "Consilier Dreptul Muncii UK"
-          : "UK Workplace Rights Advisor";
+          ? "Asistent AI Dreptul Muncii UK"
+          : "UK Workplace AI Assistant";
     }
   })();
 
   return (
     <header className="sticky top-0 z-30 bg-[var(--bg-surface)]/95 backdrop-blur-md border-b border-[var(--border-color)] transition-colors duration-200">
-      {/* Top Demo Strip matching specification mockup */}
-      <div className="bg-[#FDE6CE] dark:bg-[#3A2E25] border-b border-[#F59E42]/25 dark:border-[#FBB063]/20 px-3 py-1 text-center">
-        <div className="max-w-7xl mx-auto flex items-center justify-center gap-1.5 text-[11px] font-semibold text-[#9A4D06] dark:text-[#FBB063]">
-          <svg
-            viewBox="0 0 20 20"
-            fill="none"
-            className="w-3.5 h-3.5 shrink-0 stroke-current"
-             strokeWidth="1.8"
-            aria-hidden="true"
-          >
-            <path d="M8 3h4M9 3v4.5L4.8 14.2A1.8 1.8 0 0 0 6.3 17h7.4a1.8 1.8 0 0 0 1.5-2.8L11 7.5V3" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M6.5 12.5h7" strokeLinecap="round" />
-          </svg>
-          <span>
-            {locale === "pl"
-              ? "Wersja demo – przykładowe dane"
-              : locale === "ro"
-              ? "Versiune demo – date exemplificative"
-              : "Demo version – sample workplace data"}
-          </span>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-3 sm:px-5 h-15 flex items-center justify-between gap-2">
-        {/* Left: Top-Left Robot Graphic on Banner + Hamburger Menu + Brand Identity */}
-        <div className="flex items-center gap-2.5 min-w-0">
+      <div className="max-w-7xl mx-auto px-2.5 sm:px-5 h-15 flex items-center justify-between gap-1.5 sm:gap-2">
+        {/* Left: Full-Height Mascot (72px <360px, 96px >=360px) spanning into gradient banner + Title/Subtitle to right + Hamburger Menu */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
           <Tooltip
             side="bottom"
             content={
@@ -273,27 +250,33 @@ export const Header: React.FC = () => {
                 setActiveTab("chat");
                 triggerRobotReaction(robotState === "happy" ? "concerned" : "happy", 3200);
               }}
-              className="flex items-center gap-2.5 text-left group min-w-0 cursor-pointer"
+              className="relative flex items-center text-left group min-w-0 h-15 pl-[76px] min-[360px]:pl-[90px] sm:pl-[104px] cursor-pointer"
             >
+              {/* Mascot spanning upward into the gradient banner & ending flush at bottom edge of header row */}
               <div
-                className={`relative w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center shrink-0 transition-transform duration-300 ${
+                className={`pointer-events-none absolute left-0 bottom-0 w-[72px] h-[72px] min-[360px]:w-[84px] min-[360px]:h-[96px] sm:w-[96px] sm:h-[96px] flex items-end justify-center shrink-0 transition-transform duration-300 ${
                   robotState === "happy" || robotState === "typing" || robotState === "success"
-                    ? "scale-105 drop-shadow-[0_0_10px_rgba(82,183,152,0.45)]"
+                    ? "scale-[1.03] drop-shadow-[0_0_10px_rgba(45,212,191,0.35)]"
                     : robotState === "concerned"
-                    ? "scale-105 drop-shadow-[0_0_10px_rgba(245,158,11,0.45)]"
+                    ? "scale-[1.03] drop-shadow-[0_0_10px_rgba(245,158,11,0.4)]"
                     : robotState === "speaking" || robotState === "listening"
-                    ? "scale-105 drop-shadow-[0_0_12px_rgba(249,115,22,0.5)]"
-                    : "group-hover:scale-105"
+                    ? "scale-[1.03] drop-shadow-[0_0_12px_rgba(249,115,22,0.45)]"
+                    : "group-hover:scale-[1.03]"
                 }`}
               >
+                {/* Soft subtle turquoise glow (#2DD4BF, low opacity) behind mascot */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-1.5 rounded-full bg-[#2DD4BF]/18 blur-md"
+                />
                 <img
-                  src="/brand/elon-robot-oryginal-przezroczysty.png"
-                  alt="ask Elon Robot"
+                  src="/brand/logo-mark.png"
+                  alt="ask Elon Logo"
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-contain select-none"
+                  className="relative z-10 w-full h-full object-contain object-bottom select-none"
                 />
                 <span
-                  className={`absolute bottom-0.5 right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-[#141B23] ${
+                  className={`z-20 absolute bottom-1 right-1 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-[#141B23] ${
                     !isOnline
                       ? "bg-[var(--accent-orange)]"
                       : robotState === "speaking" || robotState === "listening"
@@ -302,16 +285,17 @@ export const Header: React.FC = () => {
                   }`}
                 />
               </div>
-              <div className="leading-tight truncate">
-                <div className="flex items-center gap-2">
-                  <span className="logo-ask-elon text-base sm:text-lg">
+
+              <div className="leading-tight min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="logo-ask-elon text-[15px] sm:text-lg whitespace-nowrap">
                     <span className="part-ask">ask</span>
                     <span className="part-elon">Elon</span>
                   </span>
-                  <span className="badge-demo-pill">DEMO</span>
+                  <span className="badge-demo-pill shrink-0">DEMO</span>
                 </div>
                 <span
-                  className={`block text-[10px] font-medium truncate transition-colors ${
+                  className={`block text-[10px] font-medium truncate max-w-[116px] min-[390px]:max-w-[140px] sm:max-w-[200px] transition-colors ${
                     robotState !== "idle"
                       ? "text-[var(--accent-green)] font-semibold"
                       : "text-[var(--text-secondary)]"
@@ -335,10 +319,10 @@ export const Header: React.FC = () => {
           >
             <button
               onClick={() => setIsMenuDrawerOpen(true)}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-100 dark:bg-[#1E2732] hover:bg-slate-200/80 dark:hover:bg-[#232E3C] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-primary)] transition-colors shrink-0 cursor-pointer"
+              className="w-8 h-8 min-[380px]:w-9 min-[380px]:h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-100 dark:bg-[#1E2732] hover:bg-slate-200/80 dark:hover:bg-[#232E3C] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-primary)] transition-colors shrink-0 cursor-pointer"
               aria-label="Open menu"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </Tooltip>
         </div>
@@ -356,7 +340,7 @@ export const Header: React.FC = () => {
                   onClick={() => setActiveTab(item.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                     isActive
-                      ? "bg-[#1D6852] text-white shadow-xs"
+                      ? "bg-[#0F766E] text-white dark:bg-[#2DD4BF] dark:text-[#141B23] shadow-xs"
                       : "text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-[#F1F5F9]"
                   }`}
                 >
@@ -366,7 +350,7 @@ export const Header: React.FC = () => {
                     <span
                       className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold tabular-nums ${
                         isActive
-                          ? "bg-white/20 text-white"
+                          ? "bg-white/25 text-white dark:bg-[#141B23]/20 dark:text-[#141B23]"
                           : "bg-slate-200 dark:bg-[#1A243B] text-slate-700 dark:text-[#38B28B]"
                       }`}
                     >
@@ -380,7 +364,7 @@ export const Header: React.FC = () => {
         </nav>
 
         {/* Right: Quick Utilities, Theme Switcher & Compact Flag Language Selector */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Messages / Notifications Bell */}
           <Tooltip
             side="bottom"
@@ -403,7 +387,7 @@ export const Header: React.FC = () => {
           >
             <button
               onClick={() => setIsMessagesModalOpen(true)}
-              className="relative w-9 h-9 rounded-xl bg-slate-100 dark:bg-[#131B2E] hover:bg-slate-200/80 dark:hover:bg-[#1A243B] border border-slate-200/80 dark:border-white/10 flex items-center justify-center text-slate-700 dark:text-[#F1F5F9] transition-colors shrink-0 cursor-pointer"
+              className="relative w-8 h-8 min-[380px]:w-9 min-[380px]:h-9 rounded-xl bg-slate-100 dark:bg-[#131B2E] hover:bg-slate-200/80 dark:hover:bg-[#1A243B] border border-slate-200/80 dark:border-white/10 flex items-center justify-center text-slate-700 dark:text-[#F1F5F9] transition-colors shrink-0 cursor-pointer"
               aria-label="Messages"
             >
               <Bell className="w-4 h-4" />
@@ -434,7 +418,7 @@ export const Header: React.FC = () => {
           >
             <button
               onClick={toggleThemeMode}
-              className="h-9 px-2.5 rounded-xl bg-slate-100 dark:bg-[#131B2E] hover:bg-slate-200/80 dark:hover:bg-[#1A243B] border border-slate-200/80 dark:border-white/10 flex items-center gap-1.5 text-slate-700 dark:text-[#F1F5F9] transition-colors shrink-0 cursor-pointer"
+              className="h-8 min-[380px]:h-9 px-2 sm:px-2.5 rounded-xl bg-slate-100 dark:bg-[#131B2E] hover:bg-slate-200/80 dark:hover:bg-[#1A243B] border border-slate-200/80 dark:border-white/10 flex items-center gap-1.5 text-slate-700 dark:text-[#F1F5F9] transition-colors shrink-0 cursor-pointer"
               aria-label="Toggle color theme"
             >
               {themeMode === "dark" ? (
@@ -481,9 +465,9 @@ export const Header: React.FC = () => {
                     ? `Limbă selectată: ${currentLocaleItem.name}. Click pentru a schimba`
                     : `Selected language: ${currentLocaleItem.name}. Click to change language`
                 }
-                className={`w-9 h-9 rounded-xl bg-slate-100 dark:bg-[#131B2E] hover:bg-slate-200/80 dark:hover:bg-[#1A243B] border flex items-center justify-center transition-all cursor-pointer ${
+                className={`w-8 h-8 min-[380px]:w-9 min-[380px]:h-9 rounded-xl bg-slate-100 dark:bg-[#131B2E] hover:bg-slate-200/80 dark:hover:bg-[#1A243B] border flex items-center justify-center transition-all cursor-pointer ${
                   isLangMenuOpen
-                    ? "border-[#38B28B] ring-2 ring-[#38B28B]/30"
+                    ? "border-[#0D9488] dark:border-[#2DD4BF] ring-2 ring-[#2DD4BF]/30"
                     : "border-slate-200/80 dark:border-white/10"
                 }`}
               >
@@ -527,6 +511,17 @@ export const Header: React.FC = () => {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Compact Demo Mode Info Strip */}
+      <div className="bg-[var(--accent-green)]/8 border-t border-[var(--border-color)] px-3 py-0.5 text-center">
+        <p className="text-[10px] font-medium text-[var(--text-secondary)] tracking-wide">
+          {locale === "pl"
+            ? "Wersja demo – przykładowe dane • Twoje rozmowy pozostają prywatne w tej przeglądarce"
+            : locale === "ro"
+            ? "Versiune demo – date exemplificative • Conversațiile rămân private în browser"
+            : "Demo version – sample data • Your chats stay private in this browser"}
+        </p>
       </div>
 
       {/* Persistent Offline / Reconnecting Banner */}

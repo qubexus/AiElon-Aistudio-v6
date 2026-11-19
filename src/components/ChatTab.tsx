@@ -20,10 +20,14 @@ import {
 } from "../data/legalTemplates";
 import { AskElonShieldLogo, analyzeAiResponseSentiment } from "./AskElonShieldLogo";
 import { ElonPeekingBubbleGrip, PeekEdgeSide } from "./ElonPeekingBubbleGrip";
+import { LegalLetterFooter } from "./LegalLetterFooter";
 import { Tooltip } from "./Tooltip";
 import { CameraScannerModal } from "./CameraScannerModal";
 import { analyzeUploadedDocument, DOCUMENT_TAG_STYLES } from "../utils/documentClassifier";
-import { computeCaseDocumentProgress } from "../utils/caseProgress";
+import {
+  computeCaseDocumentProgress,
+  getCaseProgressWidthClass,
+} from "../utils/caseProgress";
 import {
   Send,
   Mic,
@@ -80,6 +84,7 @@ import {
   Flag,
   Pin,
   MoreHorizontal,
+  ArrowLeft,
 } from "lucide-react";
 
 const SPEECH_RATES = [0.92, 1.0, 1.15] as const;
@@ -629,6 +634,7 @@ export const ChatTab: React.FC = () => {
     templates,
     setActiveTemplateId,
     setActiveTab,
+    closeChat,
     saveSentLetter,
     sentLetters,
     cases,
@@ -918,9 +924,11 @@ export const ChatTab: React.FC = () => {
     deliveryId?: string;
   } | null>(null);
 
-  // Legal Summary Side-Panel State (closed by default on initial launch for uncluttered chat)
-  const [isDesktopPanelOpen, setIsDesktopPanelOpen] = useState<boolean>(false);
-  const [isMobilePanelOpen, setIsMobilePanelOpen] = useState<boolean>(false);
+  // Options Bottom Sheet State (houses Summary, History, Voice, Persona, Smart Context, Path, Follow-Ups, Actions)
+  const [isOptionsSheetOpen, setIsOptionsSheetOpen] = useState<boolean>(false);
+  const [optionsSheetDragY, setOptionsSheetDragY] = useState<number>(0);
+  const optionsSheetStartYRef = useRef<number | null>(null);
+  const optionsSheetScrollRef = useRef<HTMLDivElement | null>(null);
   const [historyViewTab, setHistoryViewTab] = useState<"active" | "archived">("active");
   const [selectedHistoryTagFilter, setSelectedHistoryTagFilter] = useState<ChatSessionTag | "ALL">("ALL");
   const [openTagPickerChatId, setOpenTagPickerChatId] = useState<string | null>(null);
@@ -928,6 +936,29 @@ export const ChatTab: React.FC = () => {
     extractInstantLegalSummary(chatMessages, locale)
   );
   const [isUpdatingSummary, setIsUpdatingSummary] = useState<boolean>(false);
+
+  const hasUserMessages = useMemo(
+    () => chatMessages.some((m) => m.role === "user"),
+    [chatMessages]
+  );
+  const hasElonReplied = useMemo(
+    () =>
+      chatMessages.some(
+        (m) => m.role === "assistant" && m.id !== "msg_init" && !m.isSystemBroadcast
+      ),
+    [chatMessages]
+  );
+
+  useEffect(() => {
+    if (!isOptionsSheetOpen) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsOptionsSheetOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [isOptionsSheetOpen]);
 
   // Orientation path metadata (current legal category, linked case/thread, and full date range)
   const conversationPathMeta = useMemo(() => {
@@ -3144,7 +3175,9 @@ export const ChatTab: React.FC = () => {
       .join("\n");
 
     const summarySectionLines: string[] = [
-      `## 1. ${locale === "pl" ? "Podsumowanie Prawne i Kontekst (ACAS / ERA 1996)" : "Legal Summary & Statutory Context"}`,
+      `## 1. ${locale === "pl" ? "Podsumowanie i Kontekst (ACAS / ERA 1996)" : locale === "ro" ? "Rezumat & Context (ACAS / ERA 1996)" : "Summary & Statutory Context"}`,
+      "",
+      `*${t("aiDisclaimer")}*`,
       "",
       `> ${legalSummary.topicSummary}`,
       "",
@@ -3188,7 +3221,7 @@ export const ChatTab: React.FC = () => {
       const speakerLabel = msg.isSystemBroadcast
         ? `System Broadcast (${msg.senderLabel || "Admin Hub"})`
         : isAI
-        ? "Elon (UK Employment Law Advisor)"
+        ? "Elon (UK Workplace AI Assistant)"
         : user.fullName || (locale === "pl" ? "Pracownik" : "Employee");
 
       const cleanBody = isAI ? stripEmbeddedEnglishLetter(msg.text).trim() : msg.text.trim();
@@ -3373,7 +3406,7 @@ export const ChatTab: React.FC = () => {
   const handleOpenTemplate = (templateId: string) => {
     setActiveTemplateId(templateId);
     setActiveTab("templates");
-    setIsMobilePanelOpen(false);
+    setIsOptionsSheetOpen(false);
   };
 
   // Snap a character index forward to the end of the current word so words appear cleanly
@@ -4621,10 +4654,10 @@ export const ChatTab: React.FC = () => {
     }
   };
 
-  // Reusable Side-Panel Content (10 Recent Unsaved Conversations History + Legal Summary)
-  const renderLegalSummaryContent = (isMobileDrawer: boolean = false) => (
-    <div className="flex flex-col h-full bg-[#0B2038] border border-white/10 rounded-2xl overflow-hidden shadow-xl">
-      {/* Side-Panel Header */}
+  // Reusable Legal Summary & Conversation History Content (embedded cleanly in Options Bottom Sheet)
+  const renderLegalSummaryContent = (isInsideSheet: boolean = false) => (
+    <div className="flex flex-col bg-[#0B2038] border border-white/10 rounded-2xl overflow-hidden shadow-md">
+      {/* Summary Header */}
       <div className="px-4 py-3 bg-[#131B2E] border-b border-white/10 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-xl bg-[#1D6852]/30 border border-[#38B28B]/40 flex items-center justify-center text-[#38B28B] shrink-0">
@@ -4632,11 +4665,12 @@ export const ChatTab: React.FC = () => {
           </div>
           <div className="min-w-0">
             <h3 className="text-xs font-extrabold text-white tracking-tight truncate">
+              {t("chat.legalSummary")} ·{" "}
               {locale === "pl"
-                ? "Historia Rozmów i Analiza Prawna"
+                ? "Historia i Analiza"
                 : locale === "ro"
-                ? "Istoric Conversații & Analiză"
-                : "Recent Chats & Legal Summary"}
+                ? "Istoric & Analiză"
+                : "History & Legal Analysis"}
             </h3>
             <p className="text-[11px] text-[#94A3B8] truncate flex items-center gap-1.5">
               {isChatLoading ? (
@@ -4697,40 +4731,21 @@ export const ChatTab: React.FC = () => {
             </button>
           </Tooltip>
 
-          {isMobileDrawer ? (
-            <Tooltip
-              side="bottom"
-              content={locale === "pl" ? "Zamknij analizę prawną" : locale === "ro" ? "Închide analiza juridică" : "Close Legal Summary"}
+          {!isInsideSheet && (
+            <button
+              type="button"
+              onClick={() => setIsOptionsSheetOpen(false)}
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors cursor-pointer"
+              aria-label="Close Summary"
             >
-              <button
-                type="button"
-                onClick={() => setIsMobilePanelOpen(false)}
-                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors cursor-pointer"
-                aria-label="Close Legal Summary"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </Tooltip>
-          ) : (
-            <Tooltip
-              side="bottom"
-              content={locale === "pl" ? "Ukryj panel analizy prawnej" : locale === "ro" ? "Ascunde analiza juridică" : "Hide Legal Summary"}
-            >
-              <button
-                type="button"
-                onClick={() => setIsDesktopPanelOpen(false)}
-                aria-label="Hide Legal Summary"
-                className="hidden lg:inline-flex p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors cursor-pointer"
-              >
-                <PanelRightClose className="w-3.5 h-3.5" />
-              </button>
-            </Tooltip>
+              <X className="w-4 h-4" />
+            </button>
           )}
         </div>
       </div>
 
       {/* Scrollable Body */}
-      <div className="chat-legal-scroll flex-1 overflow-y-auto p-3.5 space-y-4">
+      <div className="p-3.5 space-y-4">
         {/* SECTION 0: HISTORY OF CONVERSATIONS WITH ACTIVE / ARCHIVED TABS & COLOR-CODED TAGS */}
         <div className="rounded-2xl bg-[#131B2E]/90 border border-[#D97724]/40 p-3 space-y-2.5 shadow-md">
           <div className="flex items-center justify-between gap-2">
@@ -4913,7 +4928,7 @@ export const ChatTab: React.FC = () => {
                               fullyRevealedMsgIdsRef.current.add(m.id)
                             );
                             restoreUnsavedChat(item.id);
-                            if (isMobileDrawer) setIsMobilePanelOpen(false);
+                            setIsOptionsSheetOpen(false);
                           }}
                           className={`group rounded-xl p-2.5 border transition-all cursor-pointer flex flex-col gap-2 ${
                             isActiveSession
@@ -5247,7 +5262,7 @@ export const ChatTab: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setActiveTab("cases");
-                  setIsMobilePanelOpen(false);
+                  setIsOptionsSheetOpen(false);
                 }}
                 className="text-[10px] font-bold text-[#D97724] hover:text-[#F59E0B] transition-colors cursor-pointer shrink-0"
               >
@@ -5279,14 +5294,14 @@ export const ChatTab: React.FC = () => {
                     onClick={() => {
                       setActiveCaseId(c.id);
                       setActiveTab("cases");
-                      setIsMobilePanelOpen(false);
+                      setIsOptionsSheetOpen(false);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         setActiveCaseId(c.id);
                         setActiveTab("cases");
-                        setIsMobilePanelOpen(false);
+                        setIsOptionsSheetOpen(false);
                       }
                     }}
                     className={`group rounded-xl p-2.5 border transition-all cursor-pointer ${
@@ -5310,24 +5325,46 @@ export const ChatTab: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Subtle Segmented Document Progress Bar */}
+                    {/* Smooth Width-Animated Document Progress Bar + Step Track */}
                     <div
-                      className="grid grid-cols-4 gap-1 mb-1.5"
+                      role="progressbar"
+                      aria-valuenow={progress.percentage}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
                       aria-label={`Postęp dokumentów: ${progress.percentage}%`}
+                      className="space-y-1 mb-1.5"
                     >
-                      {progress.items.map((item) => (
+                      <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
                         <div
-                          key={item.id}
-                          title={`${item.label}: ${item.completed ? "Gotowe" : "Brakuje"}`}
-                          className={`h-1.5 rounded-full transition-all duration-300 ${
-                            item.completed
-                              ? isReady
-                                ? "bg-[#38B28B]"
-                                : "bg-gradient-to-r from-[#D97724] to-[#38B28B]"
-                              : "bg-white/10"
+                          className={`h-full rounded-full case-progress-bar-fill ${getCaseProgressWidthClass(
+                            progress.percentage
+                          )} ${
+                            isReady
+                              ? "bg-[#38B28B] shadow-[0_0_8px_rgba(56,178,139,0.45)]"
+                              : "bg-gradient-to-r from-[#D97724] to-[#38B28B]"
                           }`}
                         />
-                      ))}
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-1 h-1">
+                        {progress.items.map((item) => (
+                          <div
+                            key={item.id}
+                            title={`${item.label}: ${item.completed ? "Gotowe" : "Brakuje"}`}
+                            className="h-full rounded-full bg-white/10 overflow-hidden"
+                          >
+                            <div
+                              className={`h-full rounded-full case-progress-segment-fill ${
+                                item.completed
+                                  ? isReady
+                                    ? "w-full bg-[#38B28B]"
+                                    : "w-full bg-gradient-to-r from-[#D97724] to-[#38B28B]"
+                                  : "w-0 bg-transparent"
+                              }`}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between gap-2 text-[10px]">
@@ -5369,6 +5406,9 @@ export const ChatTab: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-[#F1F5F9] leading-relaxed">{legalSummary.topicSummary}</p>
+          <p className="mt-2 pt-2 border-t border-white/10 text-[11px] text-[#94A3B8] italic">
+            {t("aiDisclaimer")}
+          </p>
         </div>
 
         {/* SECTION 1: STATUTORY DEADLINES & TIME LIMITS */}
@@ -5532,7 +5572,7 @@ export const ChatTab: React.FC = () => {
                 type="button"
                 onClick={() => {
                   saveCurrentChatAsCase();
-                  if (isMobileDrawer) setIsMobilePanelOpen(false);
+                  setIsOptionsSheetOpen(false);
                 }}
                 className="py-2 px-2 rounded-xl bg-[#1D6852] hover:bg-[#1D6852]/90 border border-[#38B28B]/30 text-[11px] font-extrabold text-white flex items-center justify-center gap-1 transition-colors cursor-pointer"
               >
@@ -5576,7 +5616,7 @@ export const ChatTab: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  if (isMobileDrawer) setIsMobilePanelOpen(false);
+                  setIsOptionsSheetOpen(false);
                   handleOpenEmailTranscriptDialog();
                 }}
                 className="py-2 px-2 rounded-xl bg-[#1A243B] hover:bg-[#163a5f] border border-[#38B28B]/40 text-[11px] font-extrabold text-[#38B28B] hover:text-white flex items-center justify-center gap-1 transition-colors cursor-pointer"
@@ -5594,445 +5634,109 @@ export const ChatTab: React.FC = () => {
   );
 
   return (
-    <div className="chat-tab-container flex-1 min-h-0 h-full w-full flex flex-col max-w-7xl mx-auto relative overflow-hidden">
-      {/* UPPER WORKSPACE ROW: Main Chat Stream + Optional Collapsible Legal Summary Side-Panel */}
-      <div className="chat-workspace-row flex-1 min-h-0 w-full flex flex-col lg:flex-row overflow-hidden">
-        {/* LEFT / MAIN COLUMN: Controls + Messages Stream */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden">
-          {/* Clean Single-Row Controls Bar inside Chat */}
-          <div className="shrink-0 flex items-center justify-between py-2 border-b border-white/10 mb-2 gap-2">
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-            <Tooltip
-              side="bottom"
-              content={
-                autoReadAloud
-                  ? locale === "pl"
-                    ? "Wycisz automatyczne czytanie głosem"
-                    : locale === "ro"
-                    ? "Oprește citirea automată"
-                    : "Mute Auto-Read Voice"
-                  : locale === "pl"
-                  ? "Włącz automatyczne czytanie odpowiedzi"
-                  : locale === "ro"
-                  ? "Activează citirea automată"
-                  : "Enable Auto-Read Voice"
-              }
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  const nextVal = !autoReadAloud;
-                  setAutoReadAloud(nextVal);
-                  updateVoiceConfig({ autoReadAloud: nextVal });
-                  if (!nextVal && speakingMsgId) {
-                    handleStopSpeech();
-                  }
-                }}
-                aria-pressed={autoReadAloud}
-                aria-label={t("autoRead")}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                  autoReadAloud
-                    ? "bg-[#D97724]/20 border-[#D97724]/40 text-[#D97724]"
-                    : "bg-white/5 border-white/10 text-[#94A3B8] hover:text-white"
-                }`}
-              >
-                {autoReadAloud ? (
-                  <Volume2 className="w-3.5 h-3.5" />
-                ) : (
-                  <VolumeX className="w-3.5 h-3.5" />
-                )}
-                <span className="hidden sm:inline">{t("autoRead")}</span>
-              </button>
-            </Tooltip>
+    <div
+      className="fixed inset-0 z-40 w-full h-[100dvh] flex flex-col bg-[#F8FAFC] dark:bg-[#141B23] text-[#1E293B] dark:text-[#F1F5F9] overflow-hidden"
+      style={{
+        paddingTop: "env(safe-area-inset-top, 0px)",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      }}
+    >
+      {/* Clean 52px Full-Screen Chat Top Bar: Back + 28px Robot + "Elon" | Right: "⋯ Opcje" */}
+      <header className="h-[52px] min-h-[52px] shrink-0 px-2.5 sm:px-4 border-b border-[#E2E8F0] dark:border-[#2C3847] bg-[#FFFFFF]/95 dark:bg-[#1E2732]/95 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={() => {
+              handleStopSpeech();
+              closeChat();
+            }}
+            aria-label={t("chatBackBtn")}
+            className="min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-[#1E293B] dark:text-[#F1F5F9] hover:bg-[#F8FAFC] dark:hover:bg-[#141B23] transition-colors cursor-pointer shrink-0"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
 
-            {/* Quick Voice Settings Trigger */}
-            <Tooltip
-              side="bottom"
-              content={
-                locale === "pl"
-                  ? "Ustawienia głosu i szybkości Elona"
-                  : locale === "ro"
-                  ? "Setări voce Elon"
-                  : "Elon Voice Settings"
-              }
-              hint={
-                voiceConfig?.preset === "young_professional"
-                  ? locale === "pl"
-                    ? "Młody / Profesjonalny (~28 lat)"
-                    : "Young / Professional (~28 y/o)"
-                  : locale === "pl"
-                  ? "Standardowy asystent AI"
-                  : "Standard AI"
-              }
-            >
-              <button
-                type="button"
-                onClick={() => setIsVoicePreferencesModalOpen(true)}
-                aria-label="Elon Voice Settings"
-                className="flex items-center justify-center p-1.5 rounded-lg bg-white/5 hover:bg-[#1A243B] border border-white/10 hover:border-[#38B28B]/40 text-[#94A3B8] hover:text-white transition-all shrink-0 cursor-pointer"
-              >
-                <Headphones className="w-3.5 h-3.5 text-[#38B28B]" />
-              </button>
-            </Tooltip>
-
-            {/* AI Document Library Context Privacy Toggle */}
-            <Tooltip
-              side="bottom"
-              content={
-                allowDocLibraryContext
-                  ? locale === "pl"
-                    ? "AI korzysta z kontekstu biblioteki dokumentów — kliknij, aby wyłączyć przy wrażliwych pytaniach"
-                    : locale === "ro"
-                    ? "AI accesează contextul bibliotecii de documente — apasă pentru întrebări sensibile"
-                    : "AI can access your document library context — click to disable for sensitive questions"
-                  : locale === "pl"
-                  ? "Dostęp AI do dokumentów wyłączony (tryb prywatny) — kliknij, aby włączyć"
-                  : locale === "ro"
-                  ? "Acces AI la documente dezactivat (mod privat) — apasă pentru a activa"
-                  : "AI document library access disabled (private) — click to enable"
-              }
-            >
-              <button
-                type="button"
-                role="switch"
-                aria-checked={allowDocLibraryContext}
-                onClick={handleToggleDocLibraryContext}
-                aria-label={
-                  locale === "pl"
-                    ? "Dostęp AI do kontekstu biblioteki dokumentów"
-                    : locale === "ro"
-                    ? "Acces AI la contextul bibliotecii de documente"
-                    : "AI access to document library context"
-                }
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#38B28B] ${
-                  allowDocLibraryContext
-                    ? "bg-[#1D6852]/20 border-[#38B28B]/40 text-[#38B28B] hover:bg-[#1D6852]/30"
-                    : "bg-[#D97724]/15 border-[#D97724]/55 text-[#D97724] hover:bg-[#D97724]/25"
-                }`}
-              >
-                {allowDocLibraryContext ? (
-                  <FileCheck2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                ) : (
-                  <FileLock2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                )}
-                <span className="hidden sm:inline">
-                  {locale === "pl" ? "Dok. AI" : "Doc AI"}
-                </span>
-                <span className="text-[10px] font-mono font-extrabold uppercase">
-                  {allowDocLibraryContext
-                    ? locale === "pl"
-                      ? "Wł."
-                      : "On"
-                    : locale === "pl"
-                    ? "Wył."
-                    : locale === "ro"
-                    ? "Oprit"
-                    : "Off"}
-                </span>
-              </button>
-            </Tooltip>
-          </div>
-
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Mobile / Tablet Legal Summary Drawer Button */}
-            <Tooltip
-              side="bottom"
-              content={
-                locale === "pl"
-                  ? "Otwórz analizę prawną i historię"
-                  : locale === "ro"
-                  ? "Deschide analiza juridică și istoricul"
-                  : "Open Legal Summary & History"
-              }
-            >
-              <button
-                type="button"
-                onClick={() => setIsMobilePanelOpen(true)}
-                className="lg:hidden flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#131B2E] hover:bg-[#1A243B] border border-[#38B28B]/35 text-xs font-bold text-[#38B28B] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-              >
-                <Scale className="w-3.5 h-3.5 shrink-0" />
-                <span>{t("legalSummaryBtn")}</span>
-              </button>
-            </Tooltip>
-
-            {/* Desktop Toggle Legal Summary & History Button */}
-            <Tooltip
-              side="bottom"
-              content={
-                isDesktopPanelOpen
-                  ? locale === "pl"
-                    ? "Ukryj panel analizy prawnej i historii"
-                    : "Hide Legal Summary & History"
-                  : locale === "pl"
-                  ? "Pokaż panel analizy prawnej i historii"
-                  : "Show Legal Summary & History"
-              }
-            >
-              <button
-                type="button"
-                onClick={() => setIsDesktopPanelOpen(!isDesktopPanelOpen)}
-                aria-pressed={isDesktopPanelOpen}
-                aria-label={t("legalSummaryTitle")}
-                className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-bold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                  isDesktopPanelOpen
-                    ? "bg-[#131B2E] border-[#38B28B]/40 text-[#38B28B]"
-                    : "bg-white/5 border-white/10 text-[#94A3B8] hover:text-white"
-                }`}
-              >
-                {isDesktopPanelOpen ? (
-                  <PanelRightClose className="w-3.5 h-3.5 shrink-0" />
-                ) : (
-                  <PanelRightOpen className="w-3.5 h-3.5 shrink-0" />
-                )}
-                <span>{t("legalSummaryBtn")}</span>
-              </button>
-            </Tooltip>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 shrink-0 flex items-center justify-center">
+              <AskElonShieldLogo
+                variant="head-only"
+                className="w-7 h-7"
+                active
+                activityState={robotState}
+              />
+            </div>
+            <span className="text-base font-bold tracking-tight text-[#1E293B] dark:text-[#F1F5F9] truncate">
+              Elon
+            </span>
           </div>
         </div>
 
-        {/* Contextual Offline Protection Alert Banner during Chat */}
-        {!isOnline && (
-          <div className="shrink-0 mb-3 rounded-2xl bg-[#EF4444]/10 border border-[#EF4444]/40 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-start gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#EF4444]/20 border border-[#EF4444]/40 flex items-center justify-center text-[#EF4444] shrink-0 mt-0.5">
-                <WifiOff className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-xs font-extrabold text-white">
-                    {t("chatOfflineBannerTitle")}
-                  </h4>
-                  {queuedMessagesCount > 0 && (
-                    <span className="text-[11px] font-mono tabular-nums font-bold text-[#D97724]">
-                      · {queuedMessagesCount} queued
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-[#94A3B8] leading-relaxed mt-0.5">
-                  {t("chatOfflineBannerSub")}
-                </p>
-              </div>
-            </div>
+        <button
+          type="button"
+          onClick={() => setIsOptionsSheetOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={isOptionsSheetOpen}
+          aria-label={t("chatOptionsBtn")}
+          className="min-h-[44px] px-3 rounded-xl border border-[#E2E8F0] dark:border-[#2C3847] bg-[#F8FAFC] dark:bg-[#141B23] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] text-xs font-bold text-[#1E293B] dark:text-[#F1F5F9] inline-flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer"
+        >
+          <MoreHorizontal className="w-4 h-4 text-[#0D9488] dark:text-[#2DD4BF] shrink-0" aria-hidden="true" />
+          <span>{t("chatOptionsBtn")}</span>
+        </button>
+      </header>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={async () => {
-                  if (isSimulatedOffline) {
-                    setIsSimulatedOffline(false);
-                  } else {
-                    const ok = await checkConnectionNow();
-                    if (ok && queuedMessagesCount > 0) {
-                      retryQueuedMessages();
-                    }
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1A243B] hover:bg-[#163a5f] border border-white/15 text-xs font-bold text-[#38B28B] transition-colors whitespace-nowrap shrink-0"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>
-                  {isSimulatedOffline ? t("netRestoreOnline") : t("netCheckNow")}
-                </span>
-              </button>
+      {/* Contextual Offline Protection Alert Banner during Chat */}
+      {!isOnline && (
+        <div className="shrink-0 mx-4 mt-2 rounded-2xl bg-[#EF4444]/10 border border-[#EF4444]/40 p-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <WifiOff className="w-4 h-4 text-[#EF4444] shrink-0" />
+            <div className="min-w-0">
+              <span className="text-xs font-bold text-[#1E293B] dark:text-[#F1F5F9] block truncate">
+                {t("chatOfflineBannerTitle")}
+                {queuedMessagesCount > 0 ? ` · ${queuedMessagesCount} queued` : ""}
+              </span>
             </div>
           </div>
-        )}
-
-        {/* Subtle Sentiment-Tinted 'Path' Indicator & Breadcrumb Navigation Trail */}
-        {conversationBreadcrumbs.length >= 1 && (
-          <nav
-            data-testid="chat-path-indicator"
-            data-sentiment={conversationPathMeta.sentimentTone}
-            aria-label={
-              locale === "pl"
-                ? "Ścieżka konsultacji i wskaźnik nastroju sprawy"
-                : locale === "ro"
-                ? "Parcurs consultație și indicator stare caz"
-                : "Consultation path and case sentiment indicator"
-            }
-            className={`shrink-0 mb-2 px-3 py-1.5 rounded-xl border flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] transition-all duration-500 ${conversationPathMeta.sentimentNavTintClass}`}
+          <button
+            type="button"
+            onClick={async () => {
+              if (isSimulatedOffline) {
+                setIsSimulatedOffline(false);
+              } else {
+                const ok = await checkConnectionNow();
+                if (ok && queuedMessagesCount > 0) {
+                  retryQueuedMessages();
+                }
+              }
+            }}
+            className="min-h-[36px] flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white dark:bg-[#1E2732] border border-[#E2E8F0] dark:border-[#2C3847] text-xs font-bold text-[#2E6F57] dark:text-[#52B798] whitespace-nowrap shrink-0 cursor-pointer"
           >
-            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-              <Tooltip
-                side="bottom"
-                content={
-                  locale === "pl"
-                    ? "Przełącz panel historii i spraw"
-                    : locale === "ro"
-                    ? "Comută istoricul și cazurile"
-                    : "Toggle History & Cases Panel"
-                }
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
-                      setIsDesktopPanelOpen((prev) => !prev);
-                    } else {
-                      setIsMobilePanelOpen(true);
-                    }
-                  }}
-                  aria-label={
-                    locale === "pl"
-                      ? "Historia i sprawy"
-                      : locale === "ro"
-                      ? "Istoric și cazuri"
-                      : "History & Cases"
-                  }
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors shrink-0 cursor-pointer"
-                >
-                  <Briefcase
-                    className={`w-3.5 h-3.5 transition-colors duration-300 ${conversationPathMeta.sentimentIconAccentClass}`}
-                    aria-hidden="true"
-                  />
-                  <span className="font-mono text-[10px] font-extrabold uppercase tracking-wider text-white/85">
-                    {locale === "pl" ? "Ścieżka" : locale === "ro" ? "Parcurs" : "Path"}
-                  </span>
-                </button>
-              </Tooltip>
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>{isSimulatedOffline ? t("netRestoreOnline") : t("netCheckNow")}</span>
+          </button>
+        </div>
+      )}
 
-              <span className="text-white/20 select-none" aria-hidden="true">
-                |
-              </span>
+      {/* MIDDLE: Message Stream Only (stationary Robot Watermark behind scrollable message list) */}
+      <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div className="chat-robot-watermark" aria-hidden="true">
+          <img
+            src="/brand/elon-robot-oryginal-przezroczysty.png"
+            alt=""
+            draggable={false}
+            referrerPolicy="no-referrer"
+            className="chat-robot-watermark-img"
+          />
+        </div>
 
-              <ol className="flex items-center gap-1 min-w-0 overflow-x-auto no-scrollbar py-0.5">
-                {conversationBreadcrumbs.map((stage, sIdx) => {
-                  const isLast = sIdx === conversationBreadcrumbs.length - 1;
-                  const isActive = activeBreadcrumbStageId === stage.id;
-                  return (
-                    <li key={stage.id} className="flex items-center gap-1 min-w-0 shrink-0">
-                      {sIdx > 0 && (
-                        <ChevronRight
-                          className="w-3 h-3 text-[#94A3B8]/55 shrink-0"
-                          aria-hidden="true"
-                        />
-                      )}
-                      <Tooltip
-                        side="bottom"
-                        content={stage.tooltip}
-                        hint={stage.hint}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => navigateToBreadcrumbStage(stage)}
-                          aria-current={isActive ? "step" : undefined}
-                          className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-md transition-all duration-300 whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#38B28B] ${
-                            isActive
-                              ? conversationPathMeta.sentimentActiveStepClass
-                              : isLast
-                              ? conversationPathMeta.sentimentLastStepTextClass
-                              : "text-[#94A3B8] hover:text-[#F1F5F9] hover:bg-white/5 font-medium"
-                          }`}
-                        >
-                          {stage.kind === "issue" && (
-                            <span
-                              key={conversationPathMeta.categoryType}
-                              className={`inline-flex items-center shrink-0${
-                                animatePathCategory ? " path-category-slide-in" : ""
-                              }`}
-                              aria-hidden="true"
-                            >
-                              {conversationPathMeta.categoryIcon}
-                            </span>
-                          )}
-                          {stage.kind === "advice" && (
-                            <Scale className="w-3 h-3 text-[#38B28B] shrink-0" aria-hidden="true" />
-                          )}
-                          {stage.kind === "letter" && (
-                            <Mail className="w-3 h-3 text-[#D97724] shrink-0" aria-hidden="true" />
-                          )}
-                          <span
-                            className={
-                              stage.kind === "inquiry"
-                                ? "truncate max-w-[125px] sm:max-w-[170px]"
-                                : stage.kind === "letter"
-                                ? "truncate max-w-[155px] sm:max-w-[220px]"
-                                : ""
-                            }
-                          >
-                            {stage.label}
-                          </span>
-                        </button>
-                      </Tooltip>
-                    </li>
-                  );
-                })}
-                {conversationBreadcrumbs.length === 1 && (
-                  <li className="flex items-center gap-1 min-w-0 shrink-0 text-[#94A3B8]">
-                    <ChevronRight className="w-3 h-3 text-[#94A3B8]/55 shrink-0" aria-hidden="true" />
-                    <span className="truncate max-w-[160px] sm:max-w-[220px]">
-                      {conversationPathMeta.threadLeafLabel}
-                    </span>
-                  </li>
-                )}
-              </ol>
-
-              {conversationPathMeta.isArchived && (
-                <span className="text-[#D97724] font-semibold whitespace-nowrap shrink-0">
-                  · {locale === "pl" ? "Archiwum" : locale === "ro" ? "Arhivat" : "Archived"}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              {/* Case Sentiment Indicator Pill */}
-              <Tooltip
-                side="bottom"
-                wrap
-                content={conversationPathMeta.sentimentDescription}
-              >
-                <span
-                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-bold tracking-tight transition-all duration-500 select-none ${conversationPathMeta.sentimentBadgeClass}`}
-                >
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${conversationPathMeta.sentimentDotClass}`}
-                    aria-hidden="true"
-                  />
-                  <span>{conversationPathMeta.sentimentLabel}</span>
-                </span>
-              </Tooltip>
-
-              <Tooltip
-                side="bottom"
-                content={
-                  locale === "pl"
-                    ? "Zakres dat i liczba wiadomości"
-                    : locale === "ro"
-                    ? "Interval de date și număr de mesaje"
-                    : "Consultation date range & messages"
-                }
-              >
-                <div className="hidden sm:flex items-center gap-1.5 font-mono tabular-nums text-[11px] text-[#94A3B8] whitespace-nowrap shrink-0">
-                  <Calendar
-                    className={`w-3.5 h-3.5 shrink-0 transition-colors duration-300 ${conversationPathMeta.sentimentIconAccentClass}`}
-                    aria-hidden="true"
-                  />
-                  <span className="text-[#F1F5F9] font-semibold">
-                    {conversationPathMeta.dateRangeText}
-                  </span>
-                  <span className="text-[#94A3B8]/55" aria-hidden="true">
-                    ·
-                  </span>
-                  <span>
-                    {conversationPathMeta.messageCount}{" "}
-                    {locale === "pl" ? "wiad." : locale === "ro" ? "mes." : "msgs"}
-                  </span>
-                </div>
-              </Tooltip>
-            </div>
-          </nav>
-        )}
-
-        {/* Messages Stream (Scrolls independently above the hard-pinned composer) */}
         <div
           ref={scrollContainerRef}
           onScroll={handleScrollContainer}
           onWheel={handleUserWheel}
           onTouchStart={handleUserTouchStart}
           onTouchMove={handleUserTouchMove}
-          className="chat-messages-scroll flex-1 min-h-0 overflow-y-auto pr-1"
+          className="relative z-10 flex-1 min-h-0 overflow-y-auto px-4 py-3"
         >
-          <div ref={messagesContentRef} className="space-y-3.5 pb-3">
+          <div ref={messagesContentRef} className="max-w-3xl mx-auto space-y-3.5 pb-2">
           {(() => {
             const renderChatMessageItem = (
               msg: ChatMessage,
@@ -6370,7 +6074,7 @@ export const ChatTab: React.FC = () => {
                     </div>
 
                     {/* Message Body synchronized with Elon's speech (strictly in user's native language) */}
-                    <div className="relative z-10 text-body text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap font-normal text-[var(--text-primary)]">
+                    <div className="relative z-10 text-body text-[15px] sm:text-base leading-[1.5] whitespace-pre-wrap font-normal text-[var(--text-primary)]">
                       {displayedText}
                       {(isActivelyStreaming || (isCurrentSpeaking && !isSpeechPaused && isProgressiveRevealing)) && (
                         <span
@@ -7006,7 +6710,9 @@ export const ChatTab: React.FC = () => {
                   key={group.id}
                   className={`${
                     hasAiMsg ? "mx-6 sm:mx-7 w-[calc(100%-3rem)] sm:w-[calc(100%-3.5rem)]" : "w-full sm:max-w-[97%]"
-                  } rounded-2xl bg-[var(--bg-surface)] border shadow-xs overflow-visible transition-all duration-300 ${
+                  } rounded-2xl ${
+                    isCollapsed ? "bg-[var(--bubble-elon)] backdrop-blur-[6px]" : "bg-transparent"
+                  } border shadow-xs overflow-visible transition-all duration-300 ${
                     hasActiveChild
                       ? "border-[var(--accent-orange)]/60 shadow-[0_0_20px_rgba(245,158,66,0.12)]"
                       : "border-[var(--border-color)]"
@@ -7026,8 +6732,10 @@ export const ChatTab: React.FC = () => {
                         toggleGroupCollapsed(group.id, isCollapsed);
                       }
                     }}
-                    className={`px-3.5 py-2 bg-[#1A243B]/75 border-b border-white/10 flex flex-wrap items-center justify-between gap-2 transition-colors ${
-                      hasActiveChild ? "cursor-default" : "cursor-pointer hover:bg-[#1A243B]"
+                    className={`px-3.5 py-2 rounded-t-2xl ${
+                      isCollapsed ? "bg-transparent" : "bg-[var(--bubble-elon)] backdrop-blur-[6px]"
+                    } border-b border-[var(--border-color)] flex flex-wrap items-center justify-between gap-2 transition-colors ${
+                      hasActiveChild ? "cursor-default" : "cursor-pointer"
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-wrap text-[11px] text-[#94A3B8]">
@@ -7137,7 +6845,7 @@ export const ChatTab: React.FC = () => {
           {/* Loading Indicator before first stream chunk arrives */}
           {isChatLoading && chatMessages[chatMessages.length - 1]?.role !== "assistant" && (
             <div className="flex items-start">
-              <div className="bg-[#131B2E] border border-white/10 rounded-2xl px-4 py-3 text-sm text-[#94A3B8] flex items-center gap-2 shadow-md">
+              <div className="chat-bubble-elon rounded-2xl px-4 py-3 text-sm text-[var(--text-secondary)] flex items-center gap-2 shadow-xs">
                 <span className="inline-block w-2 h-2 rounded-full bg-[#38B28B] animate-bounce"></span>
                 <span className="inline-block w-2 h-2 rounded-full bg-[#38B28B] animate-bounce [animation-delay:0.2s]"></span>
                 <span className="inline-block w-2 h-2 rounded-full bg-[#38B28B] animate-bounce [animation-delay:0.4s]"></span>
@@ -7146,10 +6854,10 @@ export const ChatTab: React.FC = () => {
             </div>
           )}
 
-          {/* Clear Quick-Start Topic Prompts on Fresh Launch */}
-          {chatMessages.length === 1 && !isChatLoading && (
+          {/* Clear Quick-Start Topic Prompts ONLY on Empty Chat (disappears after first user message) */}
+          {!hasUserMessages && !isChatLoading && (
             <div className="pt-1 space-y-2">
-              <div className="text-[11px] font-semibold text-[#94A3B8] px-1">
+              <div className="text-[11px] font-semibold text-[#64748B] dark:text-[#94A3B8] px-1">
                 {locale === "pl"
                   ? "Wybierz temat rozmowy lub opisz własną sytuację poniżej:"
                   : locale === "ro"
@@ -7173,10 +6881,10 @@ export const ChatTab: React.FC = () => {
                         setIsAutoScrollPinned(true);
                         sendChatMessage(label);
                       }}
-                      className="text-left p-3 rounded-xl bg-[#131B2E] hover:bg-[#1A243B] border border-white/10 hover:border-[#38B28B]/45 transition-all flex items-start gap-2.5 cursor-pointer group"
+                      className="text-left p-3 rounded-2xl bg-[#FFFFFF] dark:bg-[#1E2732] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] border border-[#E2E8F0] dark:border-[#2C3847] transition-all flex items-start gap-2.5 cursor-pointer group shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none"
                     >
                       <span className="mt-0.5">{icon}</span>
-                      <span className="text-xs font-medium text-[#F1F5F9] group-hover:text-white leading-snug">
+                      <span className="text-xs font-medium text-[#1E293B] dark:text-[#F1F5F9] leading-snug">
                         {label}
                       </span>
                     </button>
@@ -7186,251 +6894,52 @@ export const ChatTab: React.FC = () => {
             </div>
           )}
 
-          <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} />
           </div>
         </div>
-
-        {/* Floating Follow-Stream & Auto-Scroll Override Pill (Appears when user manually scrolls up to review history or during active speech/stream) */}
-        {(!isAutoScrollPinned || (speakingMsgId && isChatLoading)) && (
-          <div className="shrink-0 flex items-center justify-center py-1 z-20">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#123258]/95 border border-[#D97724]/60 shadow-[0_6px_20px_rgba(0,0,0,0.5)] backdrop-blur-md">
-              {speakingMsgId && (
-                <>
-                  <span className="inline-flex items-center gap-0.5 h-3" aria-hidden="true">
-                    {[1, 2, 3, 4, 5].map((bar) => (
-                      <span
-                        key={bar}
-                        className={`w-0.5 h-3 rounded-full origin-bottom ${
-                          isSpeechPaused
-                            ? "bg-[#38B28B] scale-y-50"
-                            : `bg-[#D97724] audio-wave-bar-${bar}`
-                        }`}
-                      />
-                    ))}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handlePauseResumeSpeech}
-                    className="px-2 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-[11px] font-extrabold text-white transition-colors cursor-pointer"
-                  >
-                    {isSpeechPaused ? t("resumeListen") : t("pauseListen")}
-                  </button>
-                </>
-              )}
-
-              <button
-                type="button"
-                onClick={() => scrollToActiveStreamOrBottom("smooth", true)}
-                className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#38B28B] hover:text-white transition-colors cursor-pointer"
-                aria-label={
-                  locale === "pl"
-                    ? "Przewiń płynnie do najnowszej wiadomości"
-                    : locale === "ro"
-                    ? "Derulează la ultimul mesaj"
-                    : "Smoothly scroll to latest message"
-                }
-              >
-                {unreadBelowCount > 0 && (
-                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-[#D97724] text-[#0B0F17] font-mono text-[10px] font-extrabold leading-none">
-                    {unreadBelowCount}
-                  </span>
-                )}
-                <span>
-                  {unreadBelowCount > 0
-                    ? locale === "pl"
-                      ? unreadBelowCount === 1
-                        ? "Nowa wiadomość · Przewiń na dół"
-                        : `Nowe wiadomości (${unreadBelowCount}) · Przewiń na dół`
-                      : locale === "ro"
-                      ? `Mesaj nou (${unreadBelowCount}) · Derulează în jos`
-                      : `New message (${unreadBelowCount}) · Jump to latest`
-                    : isChatLoading || speakingMsgId
-                    ? locale === "pl"
-                      ? "Wstrzymano auto-przewijanie · Podążaj za Elonem"
-                      : locale === "ro"
-                      ? "Auto-scroll oprit · Urmărește răspunsul"
-                      : "Auto-scroll paused · Follow Elon's response"
-                    : locale === "pl"
-                    ? "Przeglądasz historię · Przewiń do najnowszej"
-                    : locale === "ro"
-                    ? "Istoric · Derulează la ultimul mesaj"
-                    : "Reviewing history · Jump to latest"}
-                </span>
-                <ChevronDown className="w-4 h-4 text-[#D97724] animate-bounce" />
-              </button>
-            </div>
-          </div>
-        )}
-        </div>
-
-        {/* RIGHT COLUMN (Desktop): Collapsible Legal Summary Side-Panel */}
-        {isDesktopPanelOpen && (
-          <aside
-            aria-label={t("legalSummaryTitle")}
-            className="chat-legal-aside hidden lg:block shrink-0 h-full overflow-hidden"
-          >
-            {renderLegalSummaryContent(false)}
-          </aside>
-        )}
       </div>
 
-      {/* Hard-Pinned Full-Width Bottom Composer Dock: Chat Input Window Above Center Robot Head + Symmetric Flank Action Buttons Left/Right */}
-      <div className="chat-composer-dock shrink-0 bg-[#0B0F17] border-t border-white/10 z-20">
-          {/* Smart Context Action Chips Bar (Proactive Missing Profile Data Suggestions) */}
-          {smartContextSuggestions.length > 0 && (
-            <div className="px-1">
-              {activeSmartSuggestion && (
-                <div className="mb-1.5 p-2.5 rounded-xl bg-[#131B2E] border border-[#38B28B]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-md">
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#38B28B] block">
-                      Smart Context ·{" "}
-                      {activeSmartSuggestion.mode === "profile_field"
-                        ? locale === "pl"
-                          ? "Uzupełnienie danych do sprawy"
-                          : locale === "ro"
-                          ? "Completare date caz"
-                          : "Case Profile Detail"
-                        : locale === "pl"
-                        ? "Dopasuj szczegóły do pytania"
+      {/* Clean Bottom Dock: optional Scroll-to-latest round button, Voice Visualizer, max 1 row CO DALEJ, Input + Send, 11px disclaimer */}
+      <div className="shrink-0 bg-[#F8FAFC] dark:bg-[#141B23] border-t border-[#E2E8F0] dark:border-[#2C3847] px-3 sm:px-4 pt-2 pb-2.5 z-20">
+        <div className="max-w-3xl mx-auto space-y-1.5">
+          {/* Non-overlapping Scroll-to-latest + compact analyzing chip row above input */}
+          {(!isAutoScrollPinned || isAnalyzingAttachment) && (
+            <div className="flex items-center justify-between gap-2 min-h-[36px]">
+              <div className="min-w-0 flex-1">
+                {isAnalyzingAttachment && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#FFFFFF] dark:bg-[#1E2732] border border-[#E2E8F0] dark:border-[#2C3847] text-[11px] font-semibold text-[#1E293B] dark:text-[#F1F5F9] max-w-full"
+                  >
+                    <Loader2 className="w-3.5 h-3.5 text-[#0D9488] dark:text-[#2DD4BF] animate-spin shrink-0" />
+                    <span className="truncate">
+                      {locale === "pl"
+                        ? "AI analizuje załącznik..."
                         : locale === "ro"
-                        ? "Adaugă detalii relevante"
-                        : "Add Context for Your Question"}
+                        ? "AI analizează atașamentul..."
+                        : "Analyzing attachment..."}
                     </span>
-                    <label className="text-xs font-semibold text-[#F1F5F9] block mt-0.5">
-                      {activeSmartSuggestion.promptTitle}
-                    </label>
                   </div>
-                  <div className="flex items-center gap-1.5 w-full sm:w-auto">
-                    <input
-                      type="text"
-                      value={smartFieldDraftValue}
-                      onChange={(e) => setSmartFieldDraftValue(e.target.value)}
-                      placeholder={activeSmartSuggestion.placeholder}
-                      className="flex-1 sm:w-60 bg-[#0B0F17] border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-[#F1F5F9] focus:outline-none focus:border-[#38B28B]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const val = smartFieldDraftValue.trim();
-                        if (val) {
-                          if (
-                            activeSmartSuggestion.mode === "profile_field" &&
-                            activeSmartSuggestion.fieldKey
-                          ) {
-                            updateUser({
-                              [activeSmartSuggestion.fieldKey]: val,
-                            });
-                            showToast(
-                              locale === "pl"
-                                ? "Zapisano informację w aktach sprawy i profilu!"
-                                : "Saved detail to your case profile!"
-                            );
-                          } else {
-                            const entry = `${activeSmartSuggestion.appendPrefix || ""}${val}`;
-                            const existing = chatDraft.trim();
-                            setChatDraft(existing ? `${existing}\n${entry}` : entry);
-                            showToast(
-                              locale === "pl"
-                                ? "Dodano kontekst do Twojej wiadomości!"
-                                : "Added context to your message!"
-                            );
-                          }
-                        }
-                        setDismissedSmartChipIds((prev) => [
-                          ...prev,
-                          activeSmartSuggestion.id,
-                        ]);
-                        setActiveSmartChipId(null);
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-[#1D6852] hover:bg-[#258066] text-white text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
-                    >
-                      {activeSmartSuggestion.mode === "profile_field"
-                        ? locale === "pl"
-                          ? "Zapisz"
-                          : "Save"
-                        : locale === "pl"
-                        ? "Dodaj"
-                        : "Add"}
-                    </button>
-                    <Tooltip
-                      side="top"
-                      content={locale === "pl" ? "Zamknij edytor pola" : "Close field editor"}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setActiveSmartChipId(null)}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-white shrink-0 cursor-pointer"
-                        aria-label="Close"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </Tooltip>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 no-scrollbar">
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#38B28B] bg-[#1D6852]/20 border border-[#38B28B]/30 px-2 py-1 rounded-lg whitespace-nowrap shrink-0">
-                  <Sparkles className="w-3 h-3 text-[#D97724]" />
-                  Smart Context
-                </span>
-
-                {smartContextSuggestions.map((chip) => {
-                  const isSelected = activeSmartChipId === chip.id;
-                  return (
-                    <div
-                      key={chip.id}
-                      className={`inline-flex items-center gap-1 rounded-lg border text-[11px] font-semibold transition-all whitespace-nowrap shrink-0 ${
-                        isSelected
-                          ? "bg-[#1D6852] text-white border-[#38B28B]"
-                          : "bg-[#131B2E] hover:bg-[#1A243B] text-[#F1F5F9] border-white/10"
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            setActiveSmartChipId(null);
-                          } else {
-                            setActiveSmartChipId(chip.id);
-                            setSmartFieldDraftValue(chip.currentValue || "");
-                          }
-                        }}
-                        className="px-2.5 py-1 flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#D97724]" />
-                        <span>{chip.chipLabel}</span>
-                      </button>
-                      <Tooltip
-                        side="top"
-                        content={locale === "pl" ? "Ukryj sugestię" : "Dismiss suggestion"}
-                      >
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setDismissedSmartChipIds((prev) => [...prev, chip.id])
-                          }
-                          aria-label={locale === "pl" ? "Ukryj sugestię" : "Dismiss"}
-                          className="pr-1.5 py-1 text-[#94A3B8] hover:text-white cursor-pointer"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </Tooltip>
-                    </div>
-                  );
-                })}
-
+              {!isAutoScrollPinned && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setProfileSubTab("details");
-                    setActiveTab("profile");
-                  }}
-                  className="text-[11px] font-semibold text-[#94A3B8] hover:text-[#38B28B] px-2 py-1 whitespace-nowrap shrink-0 cursor-pointer"
+                  onClick={() => scrollToActiveStreamOrBottom("smooth", true)}
+                  aria-label={t("chatScrollToLatest")}
+                  title={t("chatScrollToLatest")}
+                  className="relative w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-[#FFFFFF] dark:bg-[#1E2732] border border-[#E2E8F0] dark:border-[#2C3847] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] text-[#0D9488] dark:text-[#2DD4BF] shadow-md flex items-center justify-center transition-colors shrink-0 ml-auto cursor-pointer"
                 >
-                  {locale === "pl" ? "Pełny profil →" : "Full profile →"}
+                  <ChevronDown className="w-5 h-5" />
+                  {unreadBelowCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#F59E42] dark:bg-[#FBB063] text-[#141B23] font-mono text-[10px] font-extrabold flex items-center justify-center leading-none">
+                      {unreadBelowCount}
+                    </span>
+                  )}
                 </button>
-              </div>
+              )}
             </div>
           )}
 
@@ -7592,772 +7101,18 @@ export const ChatTab: React.FC = () => {
             </div>
           )}
 
-          {/* Expandable Processed Document Details Card (Opened by tapping any thumbnail in the stack) */}
-          {expandedThumbnailDoc && (() => {
-            const expTag =
-              expandedThumbnailDoc.categoryTag ||
-              (expandedThumbnailDoc.type === "payslip"
-                ? expandedThumbnailDoc.mimeType?.startsWith("image/")
-                  ? "Image Paystub"
-                  : "PDF Paystub"
-                : expandedThumbnailDoc.type === "contract"
-                ? "Employment Contract"
-                : expandedThumbnailDoc.type === "hr_letter"
-                ? "Letter to HR"
-                : "Workplace Document");
-            const expStyle = DOCUMENT_TAG_STYLES[expTag] || DOCUMENT_TAG_STYLES["Workplace Document"];
-            const isDocAttached = activeDocumentContext.docs.some(
-              (d) => d.id === expandedThumbnailDoc.id
-            );
-            const fmtLabel =
-              expandedThumbnailDoc.detectionMeta?.detectedFileFormat ||
-              (expandedThumbnailDoc.mimeType === "application/pdf"
-                ? "PDF"
-                : expandedThumbnailDoc.mimeType?.startsWith("image/")
-                ? "IMAGE"
-                : "DOC");
-            const methodLabel =
-              expandedThumbnailDoc.detectionMeta?.analysisMethod === "ai_multimodal"
-                ? "AI Vision"
-                : expandedThumbnailDoc.detectionMeta?.analysisMethod === "ai_text"
-                ? "AI Content"
-                : expandedThumbnailDoc.detectionMeta?.analysisMethod === "content_heuristic"
-                ? locale === "pl"
-                  ? "Skan treści"
-                  : "Content Scan"
-                : locale === "pl"
-                ? "Audyt prawny"
-                : "Legal Audit";
-
-            return (
+          {/* Max 1 horizontally scrollable row of 2-3 CO DALEJ chips, ONLY after Elon has answered */}
+          {hasElonReplied &&
+            !isChatLoading &&
+            dynamicFollowUpChips.length > 0 &&
+            !isDictating &&
+            !isTranscribing && (
               <div
                 role="region"
-                aria-label={
-                  locale === "pl"
-                    ? `Szczegóły dokumentu: ${expandedThumbnailDoc.name}`
-                    : `Document details: ${expandedThumbnailDoc.name}`
-                }
-                className="path-category-slide-in rounded-xl bg-[#131B2E] border border-[#38B28B]/40 p-2.5 sm:p-3 shadow-xl"
+                aria-label={t("chatFollowUpsSection")}
+                className="flex items-center gap-1.5 overflow-x-auto py-0.5 no-scrollbar"
               >
-                <div className="flex items-start gap-2.5 sm:gap-3">
-                  {/* Large Preview Thumbnail */}
-                  <div className="w-12 h-14 sm:w-14 sm:h-16 rounded-lg overflow-hidden border border-white/15 bg-[#0B0F17] shrink-0 flex flex-col items-center justify-center relative">
-                    {expandedThumbnailDoc.previewDataUrl ? (
-                      <img
-                        src={expandedThumbnailDoc.previewDataUrl}
-                        alt={expandedThumbnailDoc.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full p-1.5 flex flex-col justify-between bg-gradient-to-b from-[#1A243B] to-[#0F172A]">
-                        <div className="flex items-center justify-between gap-1">
-                          <span
-                            className={`w-2 h-2 rounded-full ${expStyle.dotClass}`}
-                            aria-hidden="true"
-                          />
-                          <span className="text-[8px] font-mono font-extrabold text-[#94A3B8]">
-                            {fmtLabel}
-                          </span>
-                        </div>
-                        <div className="space-y-1 my-auto">
-                          <span className="block h-1 w-full rounded bg-white/20" />
-                          <span className="block h-1 w-4/5 rounded bg-white/15" />
-                          <span className="block h-1 w-3/5 rounded bg-white/10" />
-                        </div>
-                        <FileText className="w-3.5 h-3.5 text-[#38B28B] self-end" />
-                      </div>
-                    )}
-                    <span
-                      className={`absolute bottom-1 right-1 w-2 h-2 rounded-full ring-1 ring-[#0B0F17] ${
-                        isDocAttached ? "bg-[#38B28B]" : "bg-[#D97724]"
-                      }`}
-                    />
-                  </div>
-
-                  {/* Classification & Key Extracted Data Points */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs font-bold text-[#F1F5F9] truncate max-w-[190px] sm:max-w-[280px]">
-                            {expandedThumbnailDoc.name}
-                          </span>
-                          <span className="text-[10px] font-mono text-[#94A3B8]">
-                            {fmtLabel} · {expandedThumbnailDoc.fileSize}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-extrabold ${expStyle.badgeClass}`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full ${expStyle.dotClass}`} />
-                            <span>{expTag}</span>
-                          </span>
-
-                          {expandedThumbnailDoc.detectionMeta && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-mono text-[#94A3B8]">
-                              <Sparkles className="w-2.5 h-2.5 text-[#38B28B]" />
-                              {methodLabel} · {expandedThumbnailDoc.detectionMeta.confidence}%
-                            </span>
-                          )}
-
-                          {expandedThumbnailDoc.auditResult && (
-                            <span
-                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-bold ${
-                                expandedThumbnailDoc.auditResult.valid
-                                  ? "bg-[#1D6852]/20 border-[#38B28B]/40 text-[#38B28B]"
-                                  : "bg-[#EF4444]/15 border-[#EF4444]/40 text-[#FCA5A5]"
-                              }`}
-                            >
-                              {expandedThumbnailDoc.auditResult.valid
-                                ? locale === "pl"
-                                  ? "Audyt OK"
-                                  : "Audit OK"
-                                : locale === "pl"
-                                ? "Uwaga audytu"
-                                : "Audit Flag"}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Attach / Collapse Controls */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Tooltip
-                          side="top"
-                          content={
-                            !allowDocLibraryContext
-                              ? locale === "pl"
-                                ? "Dostęp AI do dokumentów jest wyłączony — włącz go w nagłówku czatu, aby załączyć dokument"
-                                : locale === "ro"
-                                ? "Accesul AI la documente este oprit — activează-l din antet"
-                                : "AI document library access is disabled — enable it in the header to attach"
-                              : isDocAttached
-                              ? locale === "pl"
-                                ? "Odłącz od bieżącej wiadomości"
-                                : "Detach from current prompt"
-                              : locale === "pl"
-                              ? "Załącz do kontekstu AI"
-                              : "Attach to AI context"
-                          }
-                        >
-                          <button
-                            type="button"
-                            disabled={!allowDocLibraryContext}
-                            onClick={() => {
-                              if (!allowDocLibraryContext) return;
-                              if (isDocAttached) {
-                                setAttachedDocIds((prev) =>
-                                  prev.filter((id) => id !== expandedThumbnailDoc.id)
-                                );
-                                setDismissedAutoDocIds((prev) =>
-                                  prev.includes(expandedThumbnailDoc.id)
-                                    ? prev
-                                    : [...prev, expandedThumbnailDoc.id]
-                                );
-                              } else {
-                                setDismissedAutoDocIds((prev) =>
-                                  prev.filter((id) => id !== expandedThumbnailDoc.id)
-                                );
-                                setAttachedDocIds((prev) =>
-                                  prev.includes(expandedThumbnailDoc.id)
-                                    ? prev
-                                    : [expandedThumbnailDoc.id, ...prev]
-                                );
-                              }
-                            }}
-                            className={`px-2 py-1 rounded-lg border text-[10px] font-bold transition-colors whitespace-nowrap ${
-                              !allowDocLibraryContext
-                                ? "bg-[#D97724]/10 border-[#D97724]/30 text-[#D97724]/80 cursor-not-allowed"
-                                : isDocAttached
-                                ? "bg-[#1D6852]/25 border-[#38B28B]/50 text-[#38B28B] hover:bg-[#1D6852]/40 cursor-pointer"
-                                : "bg-white/5 border-white/15 text-[#F1F5F9] hover:border-[#38B28B]/50 hover:text-[#38B28B] cursor-pointer"
-                            }`}
-                          >
-                            {!allowDocLibraryContext
-                              ? locale === "pl"
-                                ? "Dostęp AI wył."
-                                : locale === "ro"
-                                ? "Acces AI oprit"
-                                : "AI Access Off"
-                              : isDocAttached
-                              ? locale === "pl"
-                                ? "Załączony ✓"
-                                : locale === "ro"
-                                ? "Atașat ✓"
-                                : "Attached ✓"
-                              : locale === "pl"
-                              ? "Załącz do AI"
-                              : locale === "ro"
-                              ? "Atașează la AI"
-                              : "Attach to AI"}
-                          </button>
-                        </Tooltip>
-
-                        <button
-                          type="button"
-                          onClick={() => setExpandedThumbnailDocId(null)}
-                          aria-label={locale === "pl" ? "Zwiń szczegóły" : "Collapse details"}
-                          className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Key Extracted Data Points */}
-                    <div className="mt-2 space-y-1.5">
-                      {expandedThumbnailDoc.detectionMeta?.detectedSignals &&
-                        expandedThumbnailDoc.detectionMeta.detectedSignals.length > 0 && (
-                          <div className="flex flex-wrap items-center gap-1">
-                            {expandedThumbnailDoc.detectionMeta.detectedSignals
-                              .slice(0, 4)
-                              .map((sig, i) => (
-                                <span
-                                  key={i}
-                                  className="px-1.5 py-0.5 rounded bg-[#0B0F17]/80 border border-white/10 text-[10px] text-[#CBD5E1]"
-                                >
-                                  {sig}
-                                </span>
-                              ))}
-                          </div>
-                        )}
-
-                      {(expandedThumbnailDoc.detectionMeta?.contentSummary ||
-                        expandedThumbnailDoc.auditResult?.summary) && (
-                        <p className="text-[11px] text-[#CBD5E1] leading-snug line-clamp-2">
-                          {expandedThumbnailDoc.detectionMeta?.contentSummary ||
-                            expandedThumbnailDoc.auditResult?.summary}
-                        </p>
-                      )}
-
-                      {expandedThumbnailDoc.auditResult && (
-                        <div className="flex flex-wrap items-center gap-2 text-[10.5px]">
-                          {typeof expandedThumbnailDoc.auditResult.calculatedHourly === "number" && (
-                            <span className="px-1.5 py-0.5 rounded bg-[#1A243B] border border-white/10 font-mono font-bold text-[#38B28B]">
-                              £{expandedThumbnailDoc.auditResult.calculatedHourly.toFixed(2)}/h
-                            </span>
-                          )}
-                          {expandedThumbnailDoc.auditResult.holidayPayStatus && (
-                            <span className="text-[#94A3B8]">
-                              {expandedThumbnailDoc.auditResult.holidayPayStatus}
-                            </span>
-                          )}
-                          {expandedThumbnailDoc.auditResult.items?.[0] && (
-                            <span className="text-[#FDE68A] truncate max-w-full">
-                              • {expandedThumbnailDoc.auditResult.items[0].issue}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {expandedThumbnailDoc.detectionMeta?.extractedTextSnippet && (
-                        <p className="text-[10px] font-mono text-[#94A3B8]/85 bg-[#0B0F17]/75 border border-white/5 rounded-md px-2 py-1 line-clamp-2">
-                          “{expandedThumbnailDoc.detectionMeta.extractedTextSnippet}”
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Visual Stack of Processed Document Thumbnails + Dynamic AI Context Status + Active AI Persona Indicator */}
-          <div className="flex items-center justify-between gap-2 px-1 min-h-[26px]">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              {/* Visual Stack of Processed Document Thumbnails */}
-                {processedThumbnailDocs.length > 0 && (
-                  <div
-                    role="group"
-                    aria-label={
-                      locale === "pl"
-                        ? "Stos przetworzonych dokumentów — kliknij miniaturę, aby rozwinąć"
-                        : locale === "ro"
-                        ? "Stivă de documente procesate — apasă pentru detalii"
-                        : "Processed documents stack — tap thumbnail to inspect"
-                    }
-                    className="flex items-center shrink-0"
-                  >
-                    <div
-                      className={`flex items-center transition-all duration-200 ${
-                        showAllStackThumbs ? "gap-1.5" : "-space-x-2 hover:space-x-0.5"
-                      }`}
-                    >
-                      {(showAllStackThumbs
-                        ? processedThumbnailDocs
-                        : processedThumbnailDocs.slice(0, 4)
-                      ).map((doc, idx) => {
-                        const docTag = doc.categoryTag || "Workplace Document";
-                        const tagStyle =
-                          DOCUMENT_TAG_STYLES[docTag] || DOCUMENT_TAG_STYLES["Workplace Document"];
-                        const isAttached = activeDocumentContext.docs.some((d) => d.id === doc.id);
-                        const isExpanded = expandedThumbnailDocId === doc.id;
-                        const tiltClass =
-                          !showAllStackThumbs && !isExpanded
-                            ? idx % 3 === 0
-                              ? "-rotate-3"
-                              : idx % 3 === 1
-                              ? "rotate-2"
-                              : "-rotate-1"
-                            : "rotate-0";
-                        const shortFmt =
-                          doc.detectionMeta?.detectedFileFormat ||
-                          (doc.mimeType === "application/pdf"
-                            ? "PDF"
-                            : doc.mimeType?.startsWith("image/")
-                            ? "IMG"
-                            : "DOC");
-
-                        return (
-                          <Tooltip
-                            key={doc.id}
-                            side="top"
-                            content={`${doc.name} (${docTag})`}
-                            hint={
-                              locale === "pl"
-                                ? "Kliknij, aby rozwinąć dane i klasyfikację"
-                                : locale === "ro"
-                                ? "Apasă pentru clasificare și date extrase"
-                                : "Tap to expand classification & extracted data"
-                            }
-                          >
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setExpandedThumbnailDocId((prev) =>
-                                  prev === doc.id ? null : doc.id
-                                )
-                              }
-                              aria-expanded={isExpanded}
-                              aria-label={`${doc.name} — ${docTag}`}
-                              className={`relative w-7 h-8 sm:w-8 sm:h-9 rounded-md overflow-hidden border-2 shadow-md transition-all duration-200 cursor-pointer shrink-0 hover:rotate-0 hover:-translate-y-1 hover:z-30 ${tiltClass} ${
-                                isExpanded
-                                  ? "border-[#D97724] ring-2 ring-[#D97724]/40 -translate-y-1 z-20"
-                                  : isAttached
-                                  ? "border-[#38B28B] z-10"
-                                  : "border-white/25 hover:border-white/60"
-                              } bg-[#131B2E]`}
-                            >
-                              {doc.previewDataUrl ? (
-                                <img
-                                  src={doc.previewDataUrl}
-                                  alt={doc.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full p-0.5 flex flex-col justify-between bg-gradient-to-b from-[#1E293B] to-[#0F172A]">
-                                  <div className="flex items-center justify-between px-0.5">
-                                    <span className={`w-1.5 h-1.5 rounded-full ${tagStyle.dotClass}`} />
-                                    <span className="text-[6.5px] font-mono font-extrabold text-[#CBD5E1] leading-none">
-                                      {shortFmt.slice(0, 3)}
-                                    </span>
-                                  </div>
-                                  <div className="space-y-0.5 px-0.5 my-auto">
-                                    <span className="block h-[2px] w-full rounded bg-white/25" />
-                                    <span className="block h-[2px] w-3/4 rounded bg-white/15" />
-                                    <span className="block h-[2px] w-4/5 rounded bg-white/15" />
-                                  </div>
-                                </div>
-                              )}
-
-                              <span
-                                aria-hidden="true"
-                                className={`absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full ring-1 ring-[#0B0F17] ${
-                                  isAttached ? "bg-[#38B28B]" : "bg-[#D97724]"
-                                }`}
-                              />
-                            </button>
-                          </Tooltip>
-                        );
-                      })}
-
-                      {processedThumbnailDocs.length > 4 && (
-                        <Tooltip
-                          side="top"
-                          content={
-                            showAllStackThumbs
-                              ? locale === "pl"
-                                ? "Zwiń stos miniatur"
-                                : "Collapse stack"
-                              : locale === "pl"
-                              ? `Pokaż wszystkie (${processedThumbnailDocs.length})`
-                              : `Show all (${processedThumbnailDocs.length})`
-                          }
-                        >
-                          <button
-                            type="button"
-                            onClick={() => setShowAllStackThumbs((prev) => !prev)}
-                            className="w-7 h-8 sm:w-8 sm:h-9 rounded-md bg-[#1A243B] hover:bg-[#243252] border border-white/25 text-[10px] font-mono font-extrabold text-[#F1F5F9] flex items-center justify-center shadow-md cursor-pointer transition-colors shrink-0 z-10"
-                          >
-                            {showAllStackThumbs ? "−" : `+${processedThumbnailDocs.length - 4}`}
-                          </button>
-                        </Tooltip>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Context Status Badge */}
-                {isAnalyzingAttachment ? (
-                  <div
-                    role="status"
-                    aria-live="polite"
-                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#D97724]/15 border border-[#D97724]/35 text-[10.5px] font-semibold text-[#FDE68A] max-w-full min-w-0"
-                  >
-                    <Loader2 className="w-3 h-3 text-[#D97724] animate-spin shrink-0" />
-                    <span className="truncate">
-                      {locale === "pl"
-                        ? "AI analizuje i dopasowuje kontekst dokumentu..."
-                        : locale === "ro"
-                        ? "AI analizează și atașează contextul documentului..."
-                        : "AI analyzing & attaching document context..."}
-                    </span>
-                  </div>
-                ) : !allowDocLibraryContext ? (
-                  <div
-                    role="status"
-                    aria-live="polite"
-                    className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-0.5 rounded-lg bg-[#D97724]/15 border border-[#D97724]/45 text-[10.5px] font-semibold text-[#D97724] max-w-full min-w-0"
-                  >
-                    <FileLock2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                    <span className="truncate">
-                      {locale === "pl"
-                        ? "Tryb prywatny: dostęp AI do biblioteki dokumentów wyłączony"
-                        : locale === "ro"
-                        ? "Mod privat: acces AI la documente dezactivat"
-                        : "Private mode: AI access to document library disabled"}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleToggleDocLibraryContext}
-                      className="ml-0.5 px-1.5 py-0.2 rounded bg-[#D97724]/25 hover:bg-[#D97724]/35 text-[10px] font-extrabold text-[#F1F5F9] transition-colors shrink-0 cursor-pointer"
-                    >
-                      {locale === "pl" ? "Włącz" : locale === "ro" ? "Activează" : "Enable"}
-                    </button>
-                  </div>
-                ) : activeDocumentContext.primaryDoc ? (
-                  <div ref={contextPreviewRef} className="relative max-w-full min-w-0">
-                    {/* Small Read-Only Attached Documents List Popover */}
-                    {isContextPreviewOpen && (
-                      <div
-                        id="chat-context-preview-popover"
-                        role="region"
-                        aria-label={
-                          locale === "pl"
-                            ? "Podgląd załączonych dokumentów (tylko do odczytu)"
-                            : locale === "ro"
-                            ? "Previzualizare documente atașate (doar citire)"
-                            : "Attached context documents preview (read-only)"
-                        }
-                        className="path-category-slide-in absolute bottom-full left-0 mb-2 w-[min(340px,calc(100vw-32px))] z-40 rounded-xl bg-[#131B2E] border border-[#38B28B]/45 shadow-[0_14px_32px_rgba(0,0,0,0.55)] overflow-hidden"
-                      >
-                        <div className="px-3 py-2 bg-[#1A243B]/80 border-b border-white/10 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <FileCheck2 className="w-3.5 h-3.5 text-[#38B28B] shrink-0" aria-hidden="true" />
-                            <span className="text-[11px] font-bold text-[#F1F5F9] truncate">
-                              {locale === "pl"
-                                ? "Kontekst AI · Tylko do odczytu"
-                                : locale === "ro"
-                                ? "Context AI · Doar citire"
-                                : "AI Context · Read-Only"}
-                            </span>
-                            <span className="text-[10px] font-mono tabular-nums text-[#38B28B] font-bold shrink-0">
-                              ({activeDocumentContext.docs.length})
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setIsContextPreviewOpen(false)}
-                            aria-label={locale === "pl" ? "Zamknij podgląd kontekstu" : "Close context preview"}
-                            className="p-0.5 rounded hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors shrink-0 cursor-pointer"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-
-                        <ul className="max-h-44 overflow-y-auto divide-y divide-white/10">
-                          {activeDocumentContext.items.map(({ doc, reason }) => {
-                            const docTag = doc.categoryTag || "Workplace Document";
-                            return (
-                              <li
-                                key={doc.id}
-                                className="px-3 py-2 flex items-center justify-between gap-2.5 select-text"
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-[11px] font-semibold text-[#F1F5F9] truncate">
-                                    {doc.name}
-                                  </p>
-                                  <div className="flex items-center gap-1.5 text-[10px] text-[#94A3B8] mt-0.5 truncate">
-                                    <span className="text-[#38B28B] font-medium truncate">
-                                      {docTag}
-                                    </span>
-                                    {doc.fileSize && (
-                                      <>
-                                        <span aria-hidden="true">·</span>
-                                        <span className="font-mono tabular-nums shrink-0">
-                                          {doc.fileSize}
-                                        </span>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                                <span className="text-[10px] font-medium text-[#94A3B8] shrink-0">
-                                  {reason === "attached"
-                                    ? locale === "pl"
-                                      ? "Załączony"
-                                      : locale === "ro"
-                                      ? "Atașat"
-                                      : "Attached"
-                                    : locale === "pl"
-                                    ? "Dopasowany"
-                                    : locale === "ro"
-                                    ? "Potrivit"
-                                    : "Matched"}
-                                </span>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </div>
-                    )}
-
-                    <Tooltip
-                      side="top"
-                      disabled={isContextPreviewOpen}
-                      content={
-                        locale === "pl"
-                          ? `Przeanalizowany kontekst: ${activeDocumentContext.primaryDoc.name}`
-                          : locale === "ro"
-                          ? `Context analizat: ${activeDocumentContext.primaryDoc.name}`
-                          : `Analyzed context: ${activeDocumentContext.primaryDoc.name}`
-                      }
-                      hint={
-                        activeDocumentContext.primaryDoc.detectionMeta
-                          ? `${activeDocumentContext.primaryDoc.categoryTag || "Document"} · ${
-                              activeDocumentContext.primaryDoc.detectionMeta.confidence
-                            }%${
-                              activeDocumentContext.primaryDoc.detectionMeta.detectedSignals.length > 0
-                                ? ` · ${activeDocumentContext.primaryDoc.detectionMeta.detectedSignals
-                                    .slice(0, 3)
-                                    .join(", ")}`
-                                : ""
-                            }`
-                          : activeDocumentContext.primaryDoc.categoryTag || "Workplace Document"
-                      }
-                    >
-                      <div
-                        key={activeDocumentContext.primaryDoc.id}
-                        role="status"
-                        aria-live="polite"
-                        className="path-category-slide-in inline-flex items-center gap-1.5 pl-2 pr-1 py-0.5 rounded-lg bg-[#1D6852]/20 border border-[#38B28B]/40 text-[10.5px] font-semibold text-[#38B28B] max-w-full min-w-0"
-                      >
-                        <FileCheck2 className="w-3.5 h-3.5 text-[#38B28B] shrink-0" />
-                        <span
-                          className="w-1.5 h-1.5 rounded-full bg-[#38B28B] animate-pulse shrink-0"
-                          aria-hidden="true"
-                        />
-                        <span className="truncate text-[#F1F5F9]">
-                          {locale === "pl"
-                            ? "Kontekst AI załączony:"
-                            : locale === "ro"
-                            ? "Context AI atașat:"
-                            : "AI context attached:"}{" "}
-                          <span className="font-bold text-[#38B28B]">
-                            {activeDocumentContext.primaryDoc.name}
-                          </span>
-                          {activeDocumentContext.primaryDoc.categoryTag && (
-                            <span className="text-[#94A3B8] font-medium">
-                              {" "}
-                              ({activeDocumentContext.primaryDoc.categoryTag})
-                            </span>
-                          )}
-                          {activeDocumentContext.extraCount > 0 && (
-                            <span className="ml-1 text-[#D97724] font-mono font-bold">
-                              +{activeDocumentContext.extraCount}
-                            </span>
-                          )}
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsContextPreviewOpen((prev) => !prev);
-                          }}
-                          aria-expanded={isContextPreviewOpen}
-                          aria-controls="chat-context-preview-popover"
-                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                            isContextPreviewOpen
-                              ? "bg-[#38B28B] text-[#0B0F17]"
-                              : "bg-white/10 hover:bg-white/20 text-[#F1F5F9]"
-                          }`}
-                        >
-                          <Eye className="w-3 h-3 shrink-0" aria-hidden="true" />
-                          <span>
-                            {locale === "pl"
-                              ? "Podgląd kontekstu"
-                              : locale === "ro"
-                              ? "Previzualizare context"
-                              : "Preview context"}
-                          </span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const idsToDismiss = activeDocumentContext.docs.map((d) => d.id);
-                            setAttachedDocIds((prev) =>
-                              prev.filter((id) => !idsToDismiss.includes(id))
-                            );
-                            setDismissedAutoDocIds((prev) =>
-                              Array.from(new Set([...prev, ...idsToDismiss]))
-                            );
-                          }}
-                          aria-label={
-                            locale === "pl"
-                              ? "Odłącz kontekst dokumentu"
-                              : locale === "ro"
-                              ? "Detașează contextul documentului"
-                              : "Detach document context"
-                          }
-                          className="p-0.5 rounded hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors shrink-0 cursor-pointer"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </Tooltip>
-                  </div>
-                ) : processedThumbnailDocs.length > 0 ? (
-                  <div
-                    role="status"
-                    aria-live="polite"
-                    className="inline-flex items-center gap-1.5 text-[10px] text-[#94A3B8]/70 min-w-0"
-                  >
-                    <FileSearch className="w-3 h-3 text-[#94A3B8]/65 shrink-0" />
-                    <span className="truncate">
-                      {locale === "pl"
-                        ? `${processedThumbnailDocs.length} dok. gotowe — dotknij miniaturę`
-                        : locale === "ro"
-                        ? `${processedThumbnailDocs.length} doc. gata — apasă miniatura`
-                        : `${processedThumbnailDocs.length} processed — tap thumbnail`}
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-
-              {/* Active AI Persona Visual Indicator ('Employment Law' vs 'Trade Union') */}
-              <div className="flex items-center shrink-0 ml-auto">
-                <Tooltip
-                  side="top"
-                  content={
-                    activeAiPersona === "employment_law"
-                      ? locale === "pl"
-                        ? "Aktywna persona AI: Employment Law (Prawo Pracy UK — ERA 1996 / ACAS)"
-                        : locale === "ro"
-                        ? "Persona AI activă: Employment Law (Dreptul Muncii UK — ERA 1996)"
-                        : "Active AI Persona: Employment Law (UK Statutory Rights & ERA 1996)"
-                      : locale === "pl"
-                      ? "Aktywna persona AI: Trade Union (Reprezentant Związkowy — Taktyka HR / Section 10)"
-                      : locale === "ro"
-                      ? "Persona AI activă: Trade Union (Reprezentant Sindical — Tactică HR)"
-                      : "Active AI Persona: Trade Union (Union Rep & Disciplinary Tactics)"
-                  }
-                  hint={
-                    locale === "pl"
-                      ? "Kliknij, aby przełączyć tryb persony (Employment Law / Trade Union)"
-                      : locale === "ro"
-                      ? "Apasă pentru a comuta persona AI (Employment Law / Trade Union)"
-                      : "Click to switch AI persona (Employment Law / Trade Union)"
-                  }
-                >
-                  <button
-                    type="button"
-                    onClick={handleToggleAiPersona}
-                    role="status"
-                    aria-live="polite"
-                    aria-label={
-                      activeAiPersona === "employment_law"
-                        ? "AI Persona: Employment Law"
-                        : "AI Persona: Trade Union"
-                    }
-                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border text-[10px] sm:text-[10.5px] font-bold tracking-tight transition-all cursor-pointer select-none ${
-                      activeAiPersona === "employment_law"
-                        ? "bg-[#1D6852]/20 hover:bg-[#1D6852]/30 border-[#38B28B]/40 text-[#38B28B]"
-                        : "bg-[#D97724]/18 hover:bg-[#D97724]/28 border-[#D97724]/45 text-[#FBBF24]"
-                    }`}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`w-1.5 h-1.5 rounded-full shrink-0 animate-pulse ${
-                        activeAiPersona === "employment_law"
-                          ? "bg-[#38B28B] shadow-[0_0_6px_rgba(56,178,139,0.85)]"
-                          : "bg-[#D97724] shadow-[0_0_6px_rgba(217,119,36,0.85)]"
-                      }`}
-                    />
-                    {activeAiPersona === "employment_law" ? (
-                      <Scale className="w-3 h-3 shrink-0" aria-hidden="true" />
-                    ) : (
-                      <ShieldCheck className="w-3 h-3 shrink-0" aria-hidden="true" />
-                    )}
-                    <span className="hidden sm:inline text-[#94A3B8] font-medium">
-                      {locale === "pl"
-                        ? "Tryb AI:"
-                        : locale === "ro"
-                        ? "Mod AI:"
-                        : "Persona:"}
-                    </span>
-                    <span className="text-[#F1F5F9] font-extrabold whitespace-nowrap">
-                      {activeAiPersona === "employment_law"
-                        ? "Employment Law"
-                        : "Trade Union"}
-                    </span>
-                  </button>
-                </Tooltip>
-              </div>
-            </div>
-
-          {/* Dynamic Follow-Up Question & Action Chips Row (Contextually generated from the last AI message) */}
-          {dynamicFollowUpChips.length > 0 && !isDictating && !isTranscribing && (
-            <div
-              role="region"
-              aria-label={
-                locale === "pl"
-                  ? "Sugerowane pytania uzupełniające i akcje"
-                  : locale === "ro"
-                  ? "Întrebări suplimentare și acțiuni sugerate"
-                  : "Suggested follow-up questions and actions"
-              }
-              className="flex items-center gap-1.5 overflow-x-auto px-1 py-1 no-scrollbar"
-            >
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#1A243B]/90 border border-white/10 text-[10px] font-extrabold uppercase tracking-wider text-[#94A3B8] whitespace-nowrap shrink-0 select-none">
-                <Sparkles className="w-2.5 h-2.5 text-[#D97724] shrink-0" aria-hidden="true" />
-                <span>
-                  {locale === "pl"
-                    ? "Co dalej:"
-                    : locale === "ro"
-                    ? "Pașii următori:"
-                    : "Follow-ups:"}
-                </span>
-              </span>
-
-              {dynamicFollowUpChips.map((chip) => {
-                const chipColorClasses =
-                  chip.accent === "orange"
-                    ? "bg-[#131B2E] hover:bg-[#1E293B] border-[#D97724]/45 hover:border-[#D97724] text-[#F1F5F9]"
-                    : chip.accent === "blue"
-                    ? "bg-[#131B2E] hover:bg-[#1E293B] border-[#38BDF8]/40 hover:border-[#38BDF8] text-[#F1F5F9]"
-                    : "bg-[#131B2E] hover:bg-[#1E293B] border-[#38B28B]/40 hover:border-[#38B28B] text-[#F1F5F9]";
-
-                const dotColorClass =
-                  chip.accent === "orange"
-                    ? "bg-[#D97724]"
-                    : chip.accent === "blue"
-                    ? "bg-[#38BDF8]"
-                    : "bg-[#38B28B]";
-
-                return (
+                {dynamicFollowUpChips.slice(0, 3).map((chip) => (
                   <button
                     key={chip.id}
                     type="button"
@@ -8376,39 +7131,32 @@ export const ChatTab: React.FC = () => {
                         handleToggleAiPersona();
                       }
                     }}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold transition-all whitespace-nowrap shrink-0 cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed ${chipColorClasses}`}
+                    className="inline-flex items-center gap-1.5 min-h-[34px] px-3 py-1 rounded-full border border-[#E2E8F0] dark:border-[#2C3847] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] bg-[#FFFFFF] dark:bg-[#1E2732] text-[#1E293B] dark:text-[#F1F5F9] text-[12px] font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer disabled:opacity-50"
                   >
-                    {chip.actionType === "pin_last_ai" ? (
-                      <Pin className="w-3 h-3 text-[#38B28B] shrink-0" aria-hidden="true" />
-                    ) : chip.actionType === "switch_persona" ? (
-                      <ShieldCheck className="w-3 h-3 text-[#38BDF8] shrink-0" aria-hidden="true" />
-                    ) : (
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColorClass}`}
-                        aria-hidden="true"
-                      />
-                    )}
+                    <span
+                      className="w-1.5 h-1.5 rounded-full bg-[#0D9488] dark:bg-[#2DD4BF] shrink-0"
+                      aria-hidden="true"
+                    />
                     <span>{chip.label}</span>
                   </button>
-                );
-              })}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
 
-          {/* Dedicated Chat Input Box positioned directly ABOVE the protruding center robot head */}
+          {/* Input Row: Mic / Clip / Camera + Textarea + Turquoise Send Button */}
           <div
-            className={`chat-input-bar gap-1.5 sm:gap-2 bg-[#131B2E] border rounded-2xl px-2 py-1.5 shadow-lg transition-colors ${
+            className={`flex items-end gap-1.5 bg-[#FFFFFF] dark:bg-[#1E2732] border rounded-2xl px-2 py-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none transition-colors ${
               isInputInvalidShake ? "chat-input-shake" : ""
             } ${
               isDictating
                 ? isVoiceDetected
-                  ? "border-[#38B28B] shadow-[0_0_16px_rgba(56,178,139,0.22)]"
-                  : "border-[#EF4444] shadow-[0_0_16px_rgba(239,68,68,0.25)]"
+                  ? "border-[#52B798]"
+                  : "border-[#EF4444]"
                 : showEmptyInputError
-                ? "border-[#EF4444]/80 shadow-[0_0_14px_rgba(239,68,68,0.2)]"
+                ? "border-[#F87171]"
                 : !isOnline
-                ? "border-[#D97724]/50 focus-within:border-[#D97724]"
-                : "border-white/15 focus-within:border-[#38B28B]"
+                ? "border-[#F59E42]/60 dark:border-[#FBB063]/60"
+                : "border-[#E2E8F0] dark:border-[#2C3847] focus-within:border-[#0D9488] dark:focus-within:border-[#2DD4BF]"
             }`}
           >
             {/* Voice Recording / Dictation Button with Reactive Mini Audio Meter */}
@@ -8441,14 +7189,14 @@ export const ChatTab: React.FC = () => {
                 }}
                 aria-pressed={isDictating}
                 aria-label={isDictating ? "Stop recording" : "Voice dictation"}
-                className={`flex items-center justify-center gap-1.5 h-9 sm:h-10 ${
-                  isDictating ? "px-2.5" : "w-9 sm:w-10"
+                className={`flex items-center justify-center gap-1.5 min-h-[44px] h-11 ${
+                  isDictating ? "px-2.5" : "w-10 sm:w-11"
                 } rounded-xl transition-all shrink-0 cursor-pointer ${
                   isDictating
-                    ? "bg-[#EF4444] text-white shadow-[0_0_12px_rgba(239,68,68,0.5)]"
+                    ? "bg-[#EF4444] text-white shadow-[0_0_12px_rgba(239,68,68,0.45)]"
                     : isTranscribing
-                    ? "bg-[#D97724]/25 border border-[#D97724]/50 text-[#D97724]"
-                    : "bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-white"
+                    ? "bg-[#F59E42]/20 border border-[#F59E42]/50 text-[#F59E42] dark:text-[#FBB063]"
+                    : "bg-[#F8FAFC] dark:bg-[#141B23] hover:bg-[#E2E8F0]/60 dark:hover:bg-[#25303E] text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]"
                 }`}
               >
                 {isTranscribing ? (
@@ -8515,7 +7263,7 @@ export const ChatTab: React.FC = () => {
                     ? "Załącz dokument z systemu"
                     : "Attach document from system"
                 }
-                className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-white transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                className="flex items-center justify-center w-10 sm:w-11 h-11 min-h-[44px] rounded-xl bg-[#F8FAFC] dark:bg-[#141B23] hover:bg-[#E2E8F0]/60 dark:hover:bg-[#25303E] text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] transition-all shrink-0 cursor-pointer disabled:opacity-50"
               >
                 {isAnalyzingAttachment ? (
                   <Loader2 className="w-4 h-4 sm:w-[18px] sm:h-[18px] animate-spin text-[#38B28B]" />
@@ -8551,7 +7299,7 @@ export const ChatTab: React.FC = () => {
                 aria-label={
                   locale === "pl" ? "Skanuj dokument aparatem" : "Scan document with camera"
                 }
-                className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-[#38B28B] transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                className="flex items-center justify-center w-10 sm:w-11 h-11 min-h-[44px] rounded-xl bg-[#F8FAFC] dark:bg-[#141B23] hover:bg-[#E2E8F0]/60 dark:hover:bg-[#25303E] text-[#64748B] dark:text-[#94A3B8] hover:text-[#0D9488] dark:hover:text-[#2DD4BF] transition-all shrink-0 cursor-pointer disabled:opacity-50"
               >
                 <Camera className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
               </button>
@@ -8593,10 +7341,10 @@ export const ChatTab: React.FC = () => {
                   : "Ask Elon a question..."
               }
               rows={1}
-              className={`flex-1 min-w-0 bg-transparent border-0 resize-none text-sm leading-5 text-white focus:ring-0 focus:outline-none min-h-[36px] sm:min-h-[40px] max-h-28 py-2 px-1.5 overflow-y-auto no-scrollbar transition-colors ${
+              className={`flex-1 min-w-0 bg-transparent border-0 resize-none text-[15px] leading-[1.45] text-[#1E293B] dark:text-[#F1F5F9] focus:ring-0 focus:outline-none min-h-[44px] max-h-28 py-2.5 px-1.5 overflow-y-auto no-scrollbar transition-colors ${
                 showEmptyInputError
                   ? "placeholder-[#F87171]/85"
-                  : "placeholder-[#94A3B8]/60"
+                  : "placeholder-[#64748B] dark:placeholder-[#94A3B8]"
               }`}
             />
             {showEmptyInputError && (
@@ -8608,19 +7356,122 @@ export const ChatTab: React.FC = () => {
                   : "Message field cannot be empty."}
               </span>
             )}
+
+            {/* Turquoise Send Button */}
+            {(() => {
+              const hasSendableInput =
+                chatDraft.trim().length > 0 ||
+                isDictating ||
+                (allowDocLibraryContext && activeDocumentContext.docs.length > 0);
+              const isSendInactive = !hasSendableInput || isChatLoading;
+
+              return (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    if (isSendInactive) {
+                      e.preventDefault();
+                      return;
+                    }
+                    handleSend();
+                  }}
+                  disabled={isSendInactive}
+                  aria-disabled={isSendInactive}
+                  aria-label={!isOnline ? t("msgQueuedBadge") : t("send")}
+                  title={!isOnline ? t("msgQueuedBadge") : t("send")}
+                  className={`flex items-center justify-center min-w-[44px] h-11 min-h-[44px] px-3 rounded-xl font-bold text-xs transition-colors shrink-0 ${
+                    isInputInvalidShake ? "chat-input-shake" : ""
+                  } ${
+                    !isSendInactive
+                      ? "bg-[#0D9488] hover:bg-[#0F766E] dark:bg-[#2DD4BF] dark:hover:bg-[#14B8A6] text-white dark:text-[#141B23] cursor-pointer shadow-xs"
+                      : "bg-[#F8FAFC] dark:bg-[#141B23] border border-[#E2E8F0] dark:border-[#2C3847] text-[#64748B] dark:text-[#94A3B8] cursor-not-allowed"
+                  }`}
+                >
+                  <Send className="w-4 h-4 shrink-0" />
+                </button>
+              );
+            })()}
           </div>
 
-          {/* Bottom Flank Action Strip: [Usuń + Wyślij] | [Center Robot Gap] | [Zapisz + Ściągnij] (Mirror-Symmetric) */}
-          <div className="chat-flank-strip">
-            {/* LEFT FLANK: Usuń (outer) & Wyślij (inner next to gap) */}
-            <div className="chat-flank-left">
-              <div className="chat-flank-pair chat-flank-pair-left">
-                <Tooltip
-                  side="top"
-                  wrap
-                  wrapperClassName="flex w-full min-w-0"
-                  content={t("clearChat")}
+          <p className="text-[11px] leading-tight text-center text-[#64748B] dark:text-[#94A3B8] px-1">
+            {t("aiDisclaimer")}
+          </p>
+        </div>
+      </div>
+
+      {/* SLIDE-UP OPTIONS BOTTOM SHEET ("⋯ Opcje", max 75% height, swipe down or tap outside to close) */}
+      {isOptionsSheetOpen && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end bg-black/55 backdrop-blur-xs"
+          onClick={() => {
+            setOptionsSheetDragY(0);
+            setIsOptionsSheetOpen(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("chatOptionsTitle")}
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => {
+              const scrollTop = optionsSheetScrollRef.current?.scrollTop ?? 0;
+              if (scrollTop <= 2) {
+                optionsSheetStartYRef.current = e.touches[0].clientY;
+              } else {
+                optionsSheetStartYRef.current = null;
+              }
+            }}
+            onTouchMove={(e) => {
+              if (optionsSheetStartYRef.current === null) return;
+              const delta = e.touches[0].clientY - optionsSheetStartYRef.current;
+              if (delta > 0) {
+                setOptionsSheetDragY(Math.min(delta, 240));
+              }
+            }}
+            onTouchEnd={() => {
+              if (optionsSheetDragY > 64) {
+                setOptionsSheetDragY(0);
+                setIsOptionsSheetOpen(false);
+              } else {
+                setOptionsSheetDragY(0);
+              }
+              optionsSheetStartYRef.current = null;
+            }}
+            style={{
+              transform: optionsSheetDragY > 0 ? `translateY(${optionsSheetDragY}px)` : undefined,
+              paddingBottom: "env(safe-area-inset-bottom, 0px)",
+            }}
+            className="w-full max-w-2xl mx-auto max-h-[75dvh] rounded-t-3xl bg-[#FFFFFF] dark:bg-[#1E2732] border-t border-x border-[#E2E8F0] dark:border-[#2C3847] shadow-2xl flex flex-col overflow-hidden transition-transform duration-200"
+          >
+            {/* Drag Handle + Header */}
+            <div className="shrink-0 pt-2.5 pb-2 px-4 border-b border-[#E2E8F0] dark:border-[#2C3847] flex flex-col gap-2">
+              <div className="w-10 h-1 rounded-full bg-[#CBD5E1] dark:bg-[#2C3847] mx-auto" aria-hidden="true" />
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-extrabold text-[#1E293B] dark:text-[#F1F5F9] tracking-tight">
+                  {t("chatOptionsTitle")}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setIsOptionsSheetOpen(false)}
+                  aria-label={locale === "pl" ? "Zamknij opcje" : locale === "ro" ? "Închide opțiunile" : "Close options"}
+                  className="min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] hover:bg-[#F8FAFC] dark:hover:bg-[#141B23] transition-colors cursor-pointer"
                 >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable Options Sections */}
+            <div
+              ref={optionsSheetScrollRef}
+              className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-5"
+            >
+              {/* 1. Conversation Actions (Usuń / Zapisz / Ściągnij / Email .MD) */}
+              <section className="space-y-2">
+                <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
+                  {t("chatActionsSection")}
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -8630,119 +7481,339 @@ export const ChatTab: React.FC = () => {
                       setShowEmptyInputError(false);
                       setIsInputInvalidShake(false);
                       clearChatMessages();
+                      setIsOptionsSheetOpen(false);
                     }}
-                    className="w-full h-[38px] sm:h-[40px] px-1.5 sm:px-3 py-1.5 rounded-xl bg-white/5 hover:bg-[#EF4444]/20 border border-white/10 hover:border-[#EF4444]/40 text-[#94A3B8] hover:text-[#F26D6D] text-[11px] sm:text-xs font-bold whitespace-nowrap flex items-center justify-center gap-1 sm:gap-1.5 transition-colors cursor-pointer"
-                    aria-label={t("clearChat")}
+                    className="h-[44px] min-h-[44px] px-2.5 rounded-[14px] bg-[#F8FAFC] dark:bg-[#141B23] hover:border-[#F87171] border border-[#E2E8F0] dark:border-[#2C3847] text-[#1E293B] dark:text-[#F1F5F9] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
-                    <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                    <span className="chat-flank-secondary-label truncate">
-                      {locale === "pl" ? "Usuń" : locale === "ro" ? "Șterge" : "Clear"}
-                    </span>
+                    <Trash2 className="w-4 h-4 text-[#F87171] shrink-0" />
+                    <span className="truncate">{t("chatClearBtnShort")}</span>
                   </button>
-                </Tooltip>
 
-                <Tooltip
-                  side="top"
-                  wrap
-                  wrapperClassName="flex w-full min-w-0"
-                  content={!isOnline ? t("msgQueuedBadge") : t("send")}
-                >
                   <button
                     type="button"
-                    onClick={handleSend}
-                    disabled={isChatLoading}
-                    aria-disabled={
-                      (!chatDraft.trim() &&
-                        !isDictating &&
-                        (!allowDocLibraryContext || activeDocumentContext.docs.length === 0)) ||
-                      isChatLoading
-                    }
-                    className={`w-full h-[38px] sm:h-[40px] px-1.5 sm:px-3 py-1.5 rounded-xl font-extrabold text-[11px] sm:text-xs whitespace-nowrap flex items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${
-                      isInputInvalidShake ? "chat-input-shake" : ""
-                    } ${
-                      (!chatDraft.trim() &&
-                        !isDictating &&
-                        (!allowDocLibraryContext || activeDocumentContext.docs.length === 0)) ||
-                      isChatLoading
-                        ? showEmptyInputError
-                          ? "bg-[#EF4444]/15 border border-[#EF4444]/60 text-[#F87171]"
-                          : "bg-white/5 border border-white/10 text-[#94A3B8]/60 hover:border-white/20 disabled:cursor-not-allowed"
-                        : !isOnline
-                        ? "bg-[#D97724] text-black hover:opacity-90 shadow-md"
-                        : "bg-gradient-to-r from-[#1D6852] to-[#38B28B] text-black hover:opacity-90 shadow-md"
+                    onClick={() => {
+                      saveCurrentChatAsCase();
+                      setIsOptionsSheetOpen(false);
+                    }}
+                    className="h-[44px] min-h-[44px] px-2.5 rounded-[14px] bg-[#F8FAFC] dark:bg-[#141B23] border border-[#2E6F57] dark:border-[#52B798] text-[#1E293B] dark:text-[#F1F5F9] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <BookmarkPlus className="w-4 h-4 text-[#2E6F57] dark:text-[#52B798] shrink-0" />
+                    <span className="truncate">{t("chatSaveBtnShort")}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleExportChatMarkdown();
+                      setIsOptionsSheetOpen(false);
+                    }}
+                    className="h-[44px] min-h-[44px] px-2.5 rounded-[14px] bg-[#F8FAFC] dark:bg-[#141B23] hover:border-[#F59E42] border border-[#E2E8F0] dark:border-[#2C3847] text-[#1E293B] dark:text-[#F1F5F9] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Download className="w-4 h-4 text-[#F59E42] dark:text-[#FBB063] shrink-0" />
+                    <span className="truncate">{t("chatDownloadBtnShort")}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOptionsSheetOpen(false);
+                      handleOpenEmailTranscriptDialog();
+                    }}
+                    className="h-[44px] min-h-[44px] px-2.5 rounded-[14px] bg-[#F8FAFC] dark:bg-[#141B23] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] border border-[#E2E8F0] dark:border-[#2C3847] text-[#1E293B] dark:text-[#F1F5F9] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Mail className="w-4 h-4 text-[#0D9488] dark:text-[#2DD4BF] shrink-0" />
+                    <span className="truncate">E-mail .MD</span>
+                  </button>
+                </div>
+              </section>
+
+              {/* 2. Voice & Privacy Toggles (Tryb głośny / Słuchawki / Dok. AI WŁ.) */}
+              <section className="space-y-2">
+                <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
+                  {t("chatVoiceSection")}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !autoReadAloud;
+                      setAutoReadAloud(next);
+                      updateVoiceConfig({ autoReadAloud: next });
+                      if (!next) {
+                        handleStopSpeech();
+                      }
+                    }}
+                    className={`min-h-[44px] px-3 rounded-xl border text-xs font-bold flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                      autoReadAloud
+                        ? "bg-[#0D9488]/10 dark:bg-[#2DD4BF]/15 border-[#0D9488] dark:border-[#2DD4BF] text-[#0D9488] dark:text-[#2DD4BF]"
+                        : "bg-[#F8FAFC] dark:bg-[#141B23] border-[#E2E8F0] dark:border-[#2C3847] text-[#64748B] dark:text-[#94A3B8]"
                     }`}
-                    aria-label={t("send")}
                   >
-                    <Send className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{t("send")}</span>
-                  </button>
-                </Tooltip>
-              </div>
-            </div>
-
-            {/* CENTER RESERVE GAP FOR PROTRUDING ANIMATED ROBOT HEAD */}
-            <div className="chat-flank-robot-gap shrink-0 pointer-events-none" aria-hidden="true" />
-
-            {/* RIGHT FLANK: Zapisz (inner next to gap, mirror of Wyślij) & Ściągnij (outer, mirror of Usuń) */}
-            <div className="chat-flank-right">
-              <div className="chat-flank-pair chat-flank-pair-right">
-                <Tooltip
-                  side="top"
-                  wrap
-                  wrapperClassName="flex w-full min-w-0"
-                  content={t("saveAsCase")}
-                >
-                  <button
-                    type="button"
-                    onClick={saveCurrentChatAsCase}
-                    className="w-full h-[38px] sm:h-[40px] px-1.5 sm:px-3 py-1.5 rounded-xl bg-[#1A243B] hover:bg-[#163a5f] border border-[#38B28B]/40 text-[#38B28B] hover:text-white text-[11px] sm:text-xs font-bold whitespace-nowrap flex items-center justify-center gap-1 sm:gap-1.5 transition-colors cursor-pointer"
-                    aria-label={t("saveAsCase")}
-                  >
-                    <BookmarkPlus className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">
-                      {locale === "pl" ? "Zapisz" : locale === "ro" ? "Salvează" : "Save"}
+                    <span className="inline-flex items-center gap-2 min-w-0">
+                      <Volume2 className="w-4 h-4 shrink-0" />
+                      <span className="truncate">
+                        {locale === "pl" ? "Tryb głośny" : locale === "ro" ? "Citire vocală" : "Read aloud"}
+                      </span>
+                    </span>
+                    <span className="font-mono text-[11px] uppercase shrink-0">
+                      {autoReadAloud ? "ON" : "OFF"}
                     </span>
                   </button>
-                </Tooltip>
 
-                <Tooltip
-                  side="top"
-                  wrap
-                  wrapperClassName="flex w-full min-w-0"
-                  content={
-                    locale === "pl"
-                      ? "Eksportuj do Markdown (.md)"
-                      : locale === "ro"
-                      ? "Exportă în Markdown (.md)"
-                      : "Export to Markdown"
-                  }
-                >
                   <button
                     type="button"
-                    onClick={handleExportChatMarkdown}
-                    className="w-full h-[38px] sm:h-[40px] px-1.5 sm:px-3 py-1.5 rounded-xl bg-white/5 hover:bg-[#1A243B] border border-white/10 hover:border-[#D97724]/50 text-[#F1F5F9] hover:text-[#D97724] text-[11px] sm:text-xs font-bold whitespace-nowrap flex items-center justify-center gap-1 sm:gap-1.5 transition-colors cursor-pointer"
-                    aria-label={
-                      locale === "pl"
-                        ? "Ściągnij zapis czatu do pliku Markdown (.md)"
-                        : "Download chat transcript as Markdown (.md)"
-                    }
+                    onClick={() => {
+                      setIsOptionsSheetOpen(false);
+                      setIsVoicePreferencesModalOpen(true);
+                    }}
+                    className="min-h-[44px] px-3 rounded-xl border border-[#E2E8F0] dark:border-[#2C3847] bg-[#F8FAFC] dark:bg-[#141B23] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] text-[#1E293B] dark:text-[#F1F5F9] text-xs font-bold flex items-center justify-between gap-2 transition-colors cursor-pointer"
                   >
-                    <Download className="w-3.5 h-3.5 text-[#D97724] shrink-0" />
-                    <span className="chat-flank-secondary-label truncate">
-                      {locale === "pl" ? "Ściągnij" : locale === "ro" ? "Descarcă" : "Download"}
+                    <span className="inline-flex items-center gap-2 min-w-0">
+                      <Headphones className="w-4 h-4 text-[#0D9488] dark:text-[#2DD4BF] shrink-0" />
+                      <span className="truncate">
+                        {locale === "pl" ? "Głos i słuchawki" : locale === "ro" ? "Setări voce" : "Voice & headphones"}
+                      </span>
+                    </span>
+                    <span className="font-mono text-[11px] text-[#64748B] dark:text-[#94A3B8] shrink-0">
+                      {speechRate}x
                     </span>
                   </button>
-                </Tooltip>
-              </div>
-            </div>
-          </div>
-      </div>
 
-      {/* MOBILE / TABLET DRAWER: Legal Summary Slide-Over */}
-      {isMobilePanelOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex justify-end bg-black/70 backdrop-blur-xs">
-          <div className="w-full max-w-md h-full p-2 sm:p-3 flex flex-col">
-            {renderLegalSummaryContent(true)}
+                  <button
+                    type="button"
+                    onClick={handleToggleDocLibraryContext}
+                    className={`min-h-[44px] px-3 rounded-xl border text-xs font-bold flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                      allowDocLibraryContext
+                        ? "bg-[#2E6F57]/10 dark:bg-[#52B798]/15 border-[#2E6F57] dark:border-[#52B798] text-[#2E6F57] dark:text-[#52B798]"
+                        : "bg-[#F8FAFC] dark:bg-[#141B23] border-[#F59E42] dark:border-[#FBB063] text-[#F59E42] dark:text-[#FBB063]"
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-2 min-w-0">
+                      {allowDocLibraryContext ? (
+                        <FileCheck2 className="w-4 h-4 shrink-0" />
+                      ) : (
+                        <FileLock2 className="w-4 h-4 shrink-0" />
+                      )}
+                      <span className="truncate">
+                        {locale === "pl" ? "Dok. AI" : locale === "ro" ? "Doc. AI" : "AI Docs"}
+                      </span>
+                    </span>
+                    <span className="font-mono text-[11px] uppercase shrink-0">
+                      {allowDocLibraryContext
+                        ? locale === "pl"
+                          ? "WŁ."
+                          : "ON"
+                        : locale === "pl"
+                        ? "WYŁ."
+                        : "OFF"}
+                    </span>
+                  </button>
+                </div>
+              </section>
+
+              {/* 3. AI Persona & Document Context & Smart Context */}
+              <section className="space-y-2.5">
+                <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
+                  {t("chatTopicsSection")}
+                </h3>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleToggleAiPersona}
+                    className={`min-h-[44px] px-3.5 py-2 rounded-xl border text-xs font-bold inline-flex items-center gap-2 transition-colors cursor-pointer ${
+                      activeAiPersona === "employment_law"
+                        ? "bg-[#0D9488]/10 dark:bg-[#2DD4BF]/15 border-[#0D9488] dark:border-[#2DD4BF] text-[#0D9488] dark:text-[#2DD4BF]"
+                        : "bg-[#F59E42]/10 dark:bg-[#FBB063]/15 border-[#F59E42] dark:border-[#FBB063] text-[#F59E42] dark:text-[#FBB063]"
+                    }`}
+                  >
+                    {activeAiPersona === "employment_law" ? (
+                      <Scale className="w-4 h-4 shrink-0" />
+                    ) : (
+                      <ShieldCheck className="w-4 h-4 shrink-0" />
+                    )}
+                    <span>
+                      {activeAiPersona === "employment_law" ? "Employment Law" : "Trade Union"}
+                    </span>
+                  </button>
+
+                  {allowDocLibraryContext && activeDocumentContext.primaryDoc && (
+                    <div className="inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#141B23] border border-[#E2E8F0] dark:border-[#2C3847] text-xs">
+                      <FileCheck2 className="w-3.5 h-3.5 text-[#0D9488] dark:text-[#2DD4BF] shrink-0" />
+                      <span className="font-semibold text-[#1E293B] dark:text-[#F1F5F9] truncate max-w-[180px]">
+                        {activeDocumentContext.primaryDoc.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const idsToDismiss = activeDocumentContext.docs.map((d) => d.id);
+                          setAttachedDocIds((prev) => prev.filter((id) => !idsToDismiss.includes(id)));
+                          setDismissedAutoDocIds((prev) =>
+                            Array.from(new Set([...prev, ...idsToDismiss]))
+                          );
+                        }}
+                        aria-label="Detach context"
+                        className="p-1 text-[#64748B] dark:text-[#94A3B8] hover:text-[#F87171] cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {smartContextSuggestions.length > 0 && (
+                  <div className="space-y-2 pt-1">
+                    {activeSmartSuggestion && (
+                      <div className="p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#141B23] border border-[#0D9488]/40 dark:border-[#2DD4BF]/40 flex flex-col sm:flex-row sm:items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9] block">
+                            {activeSmartSuggestion.promptTitle}
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={smartFieldDraftValue}
+                            onChange={(e) => setSmartFieldDraftValue(e.target.value)}
+                            placeholder={activeSmartSuggestion.placeholder}
+                            className="flex-1 bg-white dark:bg-[#1E2732] border border-[#E2E8F0] dark:border-[#2C3847] rounded-lg px-2.5 py-1.5 text-xs text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:border-[#0D9488] dark:focus:border-[#2DD4BF]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const val = smartFieldDraftValue.trim();
+                              if (val) {
+                                if (
+                                  activeSmartSuggestion.mode === "profile_field" &&
+                                  activeSmartSuggestion.fieldKey
+                                ) {
+                                  updateUser({ [activeSmartSuggestion.fieldKey]: val });
+                                  showToast(
+                                    locale === "pl"
+                                      ? "Zapisano informację w aktach sprawy i profilu!"
+                                      : "Saved detail to your case profile!"
+                                  );
+                                } else {
+                                  const entry = `${activeSmartSuggestion.appendPrefix || ""}${val}`;
+                                  const existing = chatDraft.trim();
+                                  setChatDraft(existing ? `${existing}\n${entry}` : entry);
+                                  showToast(
+                                    locale === "pl"
+                                      ? "Dodano kontekst do Twojej wiadomości!"
+                                      : "Added context to your message!"
+                                  );
+                                }
+                              }
+                              setDismissedSmartChipIds((prev) => [...prev, activeSmartSuggestion.id]);
+                              setActiveSmartChipId(null);
+                            }}
+                            className="min-h-[36px] px-3 py-1 rounded-lg bg-[#0D9488] dark:bg-[#2DD4BF] text-white dark:text-[#141B23] text-xs font-bold cursor-pointer"
+                          >
+                            {locale === "pl" ? "Zapisz" : "Save"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {smartContextSuggestions.map((chip) => (
+                        <button
+                          key={chip.id}
+                          type="button"
+                          onClick={() => {
+                            if (activeSmartChipId === chip.id) {
+                              setActiveSmartChipId(null);
+                            } else {
+                              setActiveSmartChipId(chip.id);
+                              setSmartFieldDraftValue(chip.currentValue || "");
+                            }
+                          }}
+                          className="min-h-[36px] px-3 py-1 rounded-full bg-[#F8FAFC] dark:bg-[#141B23] border border-[#E2E8F0] dark:border-[#2C3847] text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9] cursor-pointer"
+                        >
+                          + {chip.chipLabel}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* 4. Ścieżka sprawy (Breadcrumb milestones) */}
+              {conversationBreadcrumbs.length > 0 && (
+                <section className="space-y-2">
+                  <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
+                    {t("chatPathSection")}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {conversationBreadcrumbs.map((stage, idx) => {
+                      const isActiveStage = activeBreadcrumbStageId === stage.id;
+                      return (
+                        <button
+                          key={stage.id}
+                          type="button"
+                          onClick={() => {
+                            navigateToBreadcrumbStage(stage);
+                            setIsOptionsSheetOpen(false);
+                          }}
+                          className={`min-h-[36px] px-3 py-1 rounded-xl border text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                            isActiveStage
+                              ? "bg-[#0D9488]/10 dark:bg-[#2DD4BF]/15 border-[#0D9488] dark:border-[#2DD4BF] text-[#0D9488] dark:text-[#2DD4BF]"
+                              : "bg-[#F8FAFC] dark:bg-[#141B23] border-[#E2E8F0] dark:border-[#2C3847] text-[#1E293B] dark:text-[#F1F5F9]"
+                          }`}
+                        >
+                          <span className="font-mono text-[10px] opacity-70">{idx + 1}.</span>
+                          <span>{stage.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {/* 5. Full Follow-Up List (CO DALEJ) */}
+              {dynamicFollowUpChips.length > 0 && (
+                <section className="space-y-2">
+                  <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
+                    {t("chatFollowUpsSection")}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {dynamicFollowUpChips.map((chip) => (
+                      <button
+                        key={`sheet_${chip.id}`}
+                        type="button"
+                        disabled={isChatLoading && chip.actionType === "send_prompt"}
+                        onClick={() => {
+                          if (chip.actionType === "send_prompt" && chip.promptText) {
+                            isAutoScrollPinnedRef.current = true;
+                            setIsAutoScrollPinned(true);
+                            setUnreadBelowCount(0);
+                            sendChatMessage(chip.promptText);
+                          } else if (chip.actionType === "pin_last_ai" && chip.targetMsgId) {
+                            pinChatMessageToCase(chip.targetMsgId);
+                          } else if (chip.actionType === "open_template" && chip.templateId) {
+                            handleOpenTemplate(chip.templateId);
+                          } else if (chip.actionType === "switch_persona") {
+                            handleToggleAiPersona();
+                          }
+                          setIsOptionsSheetOpen(false);
+                        }}
+                        className="min-h-[40px] px-3 py-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#141B23] border border-[#E2E8F0] dark:border-[#2C3847] hover:border-[#0D9488] dark:hover:border-[#2DD4BF] text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9] cursor-pointer text-left"
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* 6. Podsumowanie & Historia rozmów */}
+              <section className="space-y-2">
+                <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
+                  {t("chat.legalSummary")}
+                </h3>
+                {renderLegalSummaryContent(true)}
+              </section>
+            </div>
           </div>
         </div>
       )}
@@ -8805,6 +7876,7 @@ export const ChatTab: React.FC = () => {
                 <pre className="text-xs sm:text-sm leading-relaxed font-mono whitespace-pre-wrap text-[#161B22] select-all">
                   {previewModalLetter.contentEn}
                 </pre>
+                <LegalLetterFooter locale={locale} page={1} totalPages={1} paperSurface={true} />
               </div>
             </div>
 

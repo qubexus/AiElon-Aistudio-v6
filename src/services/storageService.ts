@@ -520,5 +520,25 @@ export function resetAllData(): void {
   } catch {}
 }
 
-
-
+export function clearUserSessionOnLogout(): void {
+  try {
+    const keysToRemove = [
+      STORAGE_KEYS.USER,
+      STORAGE_KEYS.CASES,
+      STORAGE_KEYS.DOCS,
+      STORAGE_KEYS.NOTES,
+      STORAGE_KEYS.CHAT,
+      STORAGE_KEYS.SENT_LETTERS,
+      STORAGE_KEYS.MESSAGES,
+      STORAGE_KEYS.CHAT_DRAFT,
+      STORAGE_KEYS.LETTER_DRAFT,
+      STORAGE_KEYS.RECENT_UNSAVED_CHATS,
+      STORAGE_KEYS.ADMIN_CHAT_LOGS,
+      "ask_elon_case_box_docs_v1",
+      "ask_elon_manual_case_docs_v1",
+      "ask_elon_offline_settings",
+      "ask_elon_pending_sync_actions",
+    ];
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  } catch {}
+}

@@ -625,7 +625,7 @@ export const AdminModal: React.FC = () => {
                             Bezpłatny dostęp (Free Access)
                           </option>
                           <option value="free" className="bg-[#071424]">
-                            Plan darmowy
+                            Brak aktywnej subskrypcji
                           </option>
                         </select>
                       </div>
@@ -708,7 +708,7 @@ export const AdminModal: React.FC = () => {
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/5 border border-white/15 text-[#9BB0C5] text-[10px] font-bold">
-                                    Plan darmowy
+                                    Brak subskrypcji
                                   </span>
                                 )}
                               </td>

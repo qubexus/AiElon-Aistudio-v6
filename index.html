@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Ask Elon - UK Employment Law & Trade Union Companion</title>
     <meta name="description" content="AI-powered UK employment rights assistant. Audit payslips, calculate unpaid wages, draft formal grievance and statutory letters to HR, manage workplace dispute cases, and get advice in Polish, English, and Romanian." />
     <meta property="og:title" content="Ask Elon - UK Employment Law & Trade Union Companion" />
@@ -12,6 +12,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("ask_elon_theme_mode");
+          var mode = saved === "light" || saved === "dark" ? saved : "dark";
+          var root = document.documentElement;
+          root.classList.toggle("dark", mode === "dark");
+          root.classList.toggle("light-theme", mode === "light");
+          root.setAttribute("data-theme", mode);
+          root.style.colorScheme = mode;
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-[#F8FAFC] dark:bg-[#141B23] text-[#1E293B] dark:text-[#F1F5F9] antialiased min-h-screen selection:bg-[#2E6F57] selection:text-white">
     <div id="root"></div>

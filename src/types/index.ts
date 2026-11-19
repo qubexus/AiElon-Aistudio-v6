@@ -56,6 +56,7 @@ export interface UserProfile {
   lastPasswordResetToken?: string;
   lastPasswordResetAt?: string;
   voiceConfig?: ElonVoiceConfig;
+  acceptedTermsAt?: string;
 }
 
 export interface CaseNote {
@@ -84,6 +85,8 @@ export interface WorkplaceCase {
   priority: "low" | "medium" | "high";
   createdAt: string;
   updatedAt: string;
+  deadlineDate?: string; // ISO YYYY-MM-DD or timestamp
+  deadlineLabel?: string;
   notes: CaseNote[];
   pinnedItems?: CasePinnedItem[];
 }

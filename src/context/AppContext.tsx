@@ -45,7 +45,9 @@ export type ProfileSubTab = "details" | "docs" | "notes" | "settings";
 
 interface AppContextType {
   activeTab: TabType;
+  lastNonChatTab: TabType;
   setActiveTab: (tab: TabType) => void;
+  closeChat: () => void;
   profileSubTab: ProfileSubTab;
   setProfileSubTab: (subTab: ProfileSubTab) => void;
   themeMode: ThemeMode;
@@ -172,6 +174,10 @@ interface AppContextType {
   setIsLegalDictionaryModalOpen: (open: boolean) => void;
   isQuickSearchModalOpen: boolean;
   setIsQuickSearchModalOpen: (open: boolean) => void;
+  isTermsPrivacyModalOpen: boolean;
+  setIsTermsPrivacyModalOpen: (open: boolean) => void;
+  isRegisterModalOpen: boolean;
+  setIsRegisterModalOpen: (open: boolean) => void;
   voiceConfig: ElonVoiceConfig;
   updateVoiceConfig: (updates: Partial<ElonVoiceConfig>) => void;
 
@@ -217,14 +223,25 @@ interface AppContextType {
     message: string;
   }) => void;
 
-  // Global reset
+  // Global reset & clean logout
+  logoutAndClearDevice: () => void;
   resetAll: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [activeTab, setActiveTab] = useState<TabType>("chat");
+  const [activeTab, setActiveTabState] = useState<TabType>("chat");
+  const [lastNonChatTab, setLastNonChatTab] = useState<TabType>("cases");
+  const setActiveTab = useCallback((tab: TabType) => {
+    if (tab !== "chat") {
+      setLastNonChatTab(tab);
+    }
+    setActiveTabState(tab);
+  }, []);
+  const closeChat = useCallback(() => {
+    setActiveTabState(lastNonChatTab);
+  }, [lastNonChatTab]);
   const [profileSubTab, setProfileSubTab] = useState<ProfileSubTab>("details");
   const [themeMode, setThemeModeState] = useState<ThemeMode>(storage.loadThemeMode);
   const [isElonSpeaking, setIsElonSpeaking] = useState<boolean>(false);
@@ -375,6 +392,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isVoicePreferencesModalOpen, setIsVoicePreferencesModalOpen] = useState(false);
   const [isLegalDictionaryModalOpen, setIsLegalDictionaryModalOpen] = useState(false);
   const [isQuickSearchModalOpen, setIsQuickSearchModalOpen] = useState(false);
+  const [isTermsPrivacyModalOpen, setIsTermsPrivacyModalOpen] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [voiceConfig, setVoiceConfigState] = useState<ElonVoiceConfig>(() => storage.loadVoiceConfig());
 
   const updateVoiceConfig = useCallback((updates: Partial<ElonVoiceConfig>) => {
@@ -925,7 +944,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     savePendingSyncActions,
   ]);
 
+  // Sync user profile from server on mount (if present on server)
+  useEffect(() => {
+    const accountKey = user.accountId || user.id;
+    if (!accountKey || isSimulatedOffline) return;
+    let cancelled = false;
+    fetch(`/api/profile/${encodeURIComponent(accountKey)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.ok && data.profile) {
+          setUserState((prev) => {
+            const merged = { ...prev, ...data.profile };
+            storage.saveUserProfile(merged);
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const updateUser = (updates: Partial<UserProfile>) => {
+    let updatedProfileSnapshot: UserProfile | null = null;
     setUserState((prev) => {
       const next: UserProfile = {
         ...prev,
@@ -937,6 +979,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               : updates.isPro ?? prev.isPro
             : updates.isPro ?? prev.isPro,
       };
+      updatedProfileSnapshot = next;
       storage.saveUserProfile(next);
 
       // Sync active user into adminUsers table
@@ -963,6 +1006,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       return next;
     });
+
+    if (updatedProfileSnapshot) {
+      if (isOnline) {
+        fetch("/api/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedProfileSnapshot),
+        }).catch(() => {
+          appendPendingSyncAction({
+            type: "profile_sync",
+            title:
+              locale === "pl"
+                ? "Synchronizacja profilu użytkownika"
+                : locale === "ro"
+                ? "Sincronizare profil utilizator"
+                : "User profile sync",
+            subtitle:
+              locale === "pl"
+                ? "Oczekuje na połączenie z serwerem"
+                : "Awaiting server connection",
+          });
+        });
+      } else {
+        appendPendingSyncAction({
+          type: "profile_sync",
+          title:
+            locale === "pl"
+              ? "Synchronizacja profilu użytkownika"
+              : locale === "ro"
+              ? "Sincronizare profil utilizator"
+              : "User profile sync",
+          subtitle:
+            locale === "pl"
+              ? "Zapisano lokalnie — wyśle się po odzyskaniu sieci"
+              : "Saved locally — queued for server sync",
+        });
+      }
+    }
     showToast(t("profileSavedToast"));
   };
 
@@ -2341,6 +2422,63 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const logoutAndClearDevice = () => {
+    storage.clearUserSessionOnLogout();
+    const blankUser: UserProfile = {
+      id: `user_${Date.now()}`,
+      accountId: "",
+      fullName: "",
+      email: "",
+      phone: "",
+      homeAddress: "",
+      employerName: "",
+      companyNumber: "",
+      employerAddress: "",
+      jobTitle: "",
+      startDate: new Date().toISOString().slice(0, 10),
+      hourlyRate: 0,
+      hoursPerWeek: 0,
+      contractType: "permanent",
+      industry: "",
+      isPro: false,
+      free_access: false,
+      subscriptionStatus: "free",
+      role: "user",
+      onboarded: false,
+    };
+    setUserState(blankUser);
+    setCasesState([]);
+    setDocumentsState([]);
+    setNotesState([]);
+    setSentLettersState([]);
+    setBroadcastMessagesState([]);
+    setRecentUnsavedChatsState([]);
+    setPendingSyncActionsState([]);
+    setChatDraft("");
+    saveCurrentLetterDraft(null);
+    setActiveCaseId(null);
+    isCurrentChatSavedAsCaseRef.current = false;
+    setActiveUnsavedChatId(`unsaved_${Date.now()}`);
+    setChatMessagesState([
+      {
+        id: "msg_init",
+        role: "assistant",
+        text: getTranslation("elonGreeting", locale),
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        status: "sent",
+      },
+    ]);
+    setActiveTab("chat");
+    setIsMenuDrawerOpen(false);
+    showToast(
+      locale === "pl"
+        ? "Wylogowano i wyczyszczono dane z tego urządzenia."
+        : locale === "ro"
+        ? "Deconectat și datele au fost șterse de pe acest dispozitiv."
+        : "Logged out and cleared device data."
+    );
+  };
+
   const resetAll = () => {
     storage.resetAllData();
     window.location.reload();
@@ -2350,7 +2488,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider
       value={{
         activeTab,
+        lastNonChatTab,
         setActiveTab,
+        closeChat,
         profileSubTab,
         setProfileSubTab,
         themeMode,
@@ -2451,6 +2591,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsLegalDictionaryModalOpen,
         isQuickSearchModalOpen,
         setIsQuickSearchModalOpen,
+        isTermsPrivacyModalOpen,
+        setIsTermsPrivacyModalOpen,
+        isRegisterModalOpen,
+        setIsRegisterModalOpen,
         voiceConfig,
         updateVoiceConfig,
         broadcastMessages,
@@ -2471,6 +2615,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsMarketingPopupVisible,
         adminChatDeliveryLogs,
         sendAdminSystemChatMessage,
+        logoutAndClearDevice,
         resetAll
       }}
     >

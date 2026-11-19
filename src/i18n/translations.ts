@@ -62,9 +62,9 @@ export const translations: Record<string, Record<Locale, string>> = {
     ro: "Preferințe voce Elon",
   },
   aiDisclaimer: {
-    pl: "Elon to asystent AI oparty na brytyjskim prawie pracy (ACAS Code, ERA 1996). Nie zastępuje formalnego radcy prawnego (solicitora).",
-    en: "Elon is an AI assistant grounded in UK employment law (ACAS Code, ERA 1996). Does not replace a formal solicitor.",
-    ro: "Elon este un asistent AI bazat pe legea muncii din UK (ACAS Code, ERA 1996). Nu înlocuiește un avocat oficial.",
+    pl: "Elon jest asystentem AI, a nie prawnikiem. To nie jest porada prawna.",
+    en: "Elon is an AI assistant, not a lawyer. This is not legal advice.",
+    ro: "Elon este un asistent AI, nu un avocat. Aceasta nu este consultanță juridică.",
   },
 
   // Suggested Prompts
@@ -263,15 +263,15 @@ export const translations: Record<string, Record<Locale, string>> = {
   useAddress: { pl: "Wybierz ten adres", en: "Use this employer", ro: "Alege acest angajator" },
   noResults: { pl: "Nie znaleziono wyników dla tego zapytania.", en: "No employers found for this search.", ro: "Niciun rezultat găsit." },
 
-  // Subscription / Pro
-  proTitle: { pl: "Subskrypcja ask Elon PRO", en: "ask Elon PRO Subscription", ro: "Abonament ask Elon PRO" },
+  // Subscription / Membership
+  proTitle: { pl: "Członkostwo ask Elon", en: "ask Elon Membership", ro: "Abonament ask Elon" },
   proPrice: { pl: "£9.99 / miesiąc", en: "£9.99 / month", ro: "£9.99 / lună" },
   proFeature1: { pl: "Nielimitowane konsultacje AI z Elonem z natychmiastową odpowiedzią", en: "Unlimited AI consultations with Elon with zero wait time", ro: "Consultații nelimitate cu Elon AI" },
   proFeature2: { pl: "Automatyczny audyt odcinków wypłat (Payslip AI Auditor) i zaległego holiday pay", en: "Automated Payslip AI Audits & missing holiday pay calculations", ro: "Audit automat pentru fluturași de salariu și concedii" },
   proFeature3: { pl: "Dostęp do wszystkich oficjalnych pism prawnych ACAS i ERA 1996", en: "Full access to all ACAS & ERA 1996 legal letter generators", ro: "Acces complet la toate scrisorile legale ACAS și ERA" },
   proFeature4: { pl: "Prywatna oś czasu incydentów i przygotowanie dowodów do Trybunału (ET1)", en: "Dispute timeline builder & Employment Tribunal evidence organizer", ro: "Organizare dovezi pentru Tribunalul Muncii (ET1)" },
-  subscribeBtn: { pl: "Aktywuj subskrypcję ask Elon (£9.99/mies.)", en: "Activate ask Elon PRO (£9.99/mo)", ro: "Activează ask Elon PRO (£9.99/lună)" },
-  proActiveBadge: { pl: "KONTO PRO AKTYWNE", en: "PRO ACCOUNT ACTIVE", ro: "CONT PRO ACTIV" },
+  subscribeBtn: { pl: "Aktywuj członkostwo ask Elon (£9.99/mies.)", en: "Activate ask Elon Membership (£9.99/mo)", ro: "Activează abonamentul ask Elon (£9.99/lună)" },
+  proActiveBadge: { pl: "CZŁONKOSTWO AKTYWNE", en: "MEMBERSHIP ACTIVE", ro: "ABONAMENT ACTIV" },
 
   // Menu / Account Drawer
   menuTitle: { pl: "Menu & Konto", en: "Menu & Account", ro: "Meniu & Cont" },
@@ -388,16 +388,16 @@ export const translations: Record<string, Record<Locale, string>> = {
     ro: "A apărut o problemă de conexiune. Mesajul tău a fost păstrat.",
   },
 
-  // Legal Summary Side-Panel
+  // Summary Side-Panel
   legalSummaryBtn: {
-    pl: "Podsumowanie prawne",
-    en: "Legal Summary",
-    ro: "Rezumat Juridic",
+    pl: "Podsumowanie",
+    en: "Summary",
+    ro: "Rezumat",
   },
   legalSummaryTitle: {
-    pl: "Podsumowanie Prawne & Terminy",
-    en: "Legal Summary & Deadlines",
-    ro: "Rezumat Juridic & Termene",
+    pl: "Podsumowanie & Terminy",
+    en: "Summary & Deadlines",
+    ro: "Rezumat & Termene",
   },
   legalSummarySubLive: {
     pl: "Wyodrębniono na żywo z kontekstu rozmowy",
@@ -450,14 +450,14 @@ export const translations: Record<string, Record<Locale, string>> = {
     ro: "Copiază rezumatul",
   },
   legalSummaryCopiedToast: {
-    pl: "Skopiowano podsumowanie prawne i terminy do schowka!",
-    en: "Copied legal summary and deadlines to clipboard!",
-    ro: "Rezumatul juridic și termenele au fost copiate!",
+    pl: "Skopiowano podsumowanie i terminy do schowka!",
+    en: "Copied summary and deadlines to clipboard!",
+    ro: "Rezumatul și termenele au fost copiate!",
   },
   refreshLegalSummary: {
-    pl: "Odśwież analizę prawną",
-    en: "Refresh legal extraction",
-    ro: "Actualizează analiza juridică",
+    pl: "Odśwież podsumowanie",
+    en: "Refresh summary",
+    ro: "Actualizează rezumatul",
   },
   analyzingContextBadge: {
     pl: "Aktualizacja kontekstu...",
@@ -468,6 +468,195 @@ export const translations: Record<string, Record<Locale, string>> = {
     pl: "Oczekiwanie na zakończenie odpowiedzi AI...",
     en: "Awaiting AI stream completion...",
     ro: "Se așteaptă finalizarea răspunsului AI...",
+  },
+
+  // Full-Screen Chat & Options Sheet (Part 1)
+  "chat.legalSummary": {
+    pl: "Podsumowanie",
+    en: "Summary",
+    ro: "Rezumat",
+  },
+  chatBackBtn: {
+    pl: "Wróć",
+    en: "Back",
+    ro: "Înapoi",
+  },
+  chatOptionsBtn: {
+    pl: "Opcje",
+    en: "Options",
+    ro: "Opțiuni",
+  },
+  chatScrollToLatest: {
+    pl: "Przewiń do najnowszej",
+    en: "Scroll to latest",
+    ro: "Derulează la ultimul mesaj",
+  },
+  chatOptionsTitle: {
+    pl: "Opcje rozmowy i sprawy",
+    en: "Chat & Case Options",
+    ro: "Opțiuni conversație și caz",
+  },
+  chatActionsSection: {
+    pl: "Akcje rozmowy",
+    en: "Conversation Actions",
+    ro: "Acțiuni conversație",
+  },
+  chatVoiceSection: {
+    pl: "Głos i prywatność",
+    en: "Voice & Privacy",
+    ro: "Voce și confidențialitate",
+  },
+  chatTopicsSection: {
+    pl: "Tryb AI i kontekst",
+    en: "AI Mode & Context",
+    ro: "Mod AI și context",
+  },
+  chatPathSection: {
+    pl: "Ścieżka sprawy",
+    en: "Case Path",
+    ro: "Parcurs caz",
+  },
+  chatFollowUpsSection: {
+    pl: "Co dalej",
+    en: "What Next",
+    ro: "Pașii următori",
+  },
+  chatClearBtnShort: {
+    pl: "Usuń",
+    en: "Clear",
+    ro: "Șterge",
+  },
+  chatSaveBtnShort: {
+    pl: "Zapisz",
+    en: "Save",
+    ro: "Salvează",
+  },
+  chatDownloadBtnShort: {
+    pl: "Ściągnij",
+    en: "Download",
+    ro: "Descarcă",
+  },
+
+  // Cases Tab Redesign & Quick Preview Sheet (Part 2)
+  casesHeading: {
+    pl: "Moje sprawy",
+    en: "My cases",
+    ro: "Cazurile mele",
+  },
+  newCaseBtn: {
+    pl: "Nowa sprawa",
+    en: "New case",
+    ro: "Caz nou",
+  },
+  statusOpen: {
+    pl: "Otwarte",
+    en: "Open",
+    ro: "Deschis",
+  },
+  statusResolved: {
+    pl: "Zamknięte",
+    en: "Resolved",
+    ro: "Rezolvat",
+  },
+  addCaseNotePlaceholder: {
+    pl: "Wpisz co się wydarzyło (np. rozmowa z HR, otrzymanie pisma)...",
+    en: "Describe what happened (e.g. HR meeting, received letter)...",
+    ro: "Descrie ce s-a întâmplat (ex. întâlnire HR, scrisoare primită)...",
+  },
+  addNoteBtn: {
+    pl: "Dodaj",
+    en: "Add",
+    ro: "Adaugă",
+  },
+  casesSummaryOpenSingular: {
+    pl: "otwarta",
+    en: "open",
+    ro: "deschis",
+  },
+  casesSummaryOpenPlural: {
+    pl: "otwarte",
+    en: "open",
+    ro: "deschise",
+  },
+  casesSummaryDeadlineWeekSingular: {
+    pl: "termin w tym tygodniu",
+    en: "deadline this week",
+    ro: "termen săptămâna aceasta",
+  },
+  casesSummaryDeadlineWeekPlural: {
+    pl: "terminy w tym tygodniu",
+    en: "deadlines this week",
+    ro: "termene săptămâna aceasta",
+  },
+  casesSummaryDocsLabel: {
+    pl: "dokumentów",
+    en: "documents",
+    ro: "documente",
+  },
+  casesFilterDeadlineWeek: {
+    pl: "Termin w tym tygodniu",
+    en: "Deadline this week",
+    ro: "Termen săptămâna aceasta",
+  },
+  casesPreviewAction: {
+    pl: "Podgląd sprawy",
+    en: "Case preview",
+    ro: "Previzualizare caz",
+  },
+  casesPreviewOpenBtn: {
+    pl: "Otwórz sprawę",
+    en: "Open case",
+    ro: "Deschide cazul",
+  },
+  casesPreviewChatBtn: {
+    pl: "Czat o tej sprawie",
+    en: "Chat about this case",
+    ro: "Chat despre acest caz",
+  },
+  casesPreviewAddDocBtn: {
+    pl: "Dodaj dokument",
+    en: "Add document",
+    ro: "Adaugă document",
+  },
+  casesPreviewLastElon: {
+    pl: "Ostatnia wiadomość Elona",
+    en: "Last message from Elon",
+    ro: "Ultimul mesaj de la Elon",
+  },
+  casesPreviewNoElonYet: {
+    pl: "Brak jeszcze wiadomości Elona dla tej sprawy. Otwórz czat, aby rozpocząć analizę.",
+    en: "No Elon message for this case yet. Open chat to start reviewing.",
+    ro: "Încă nu există un mesaj de la Elon pentru acest caz. Deschide chatul pentru analiză.",
+  },
+  casesPreviewBoxesTitle: {
+    pl: "Dokumenty w pudełkach",
+    en: "Document Boxes",
+    ro: "Cutii de documente",
+  },
+  casesPreviewLatestDocs: {
+    pl: "Ostatnie dokumenty",
+    en: "Latest Documents",
+    ro: "Ultimele documente",
+  },
+  casesStep1Label: {
+    pl: "Zgłoszenie problemu",
+    en: "Issue logged",
+    ro: "Problemă raportată",
+  },
+  casesStep2Label: {
+    pl: "Zbieranie dowodów",
+    en: "Gathering evidence",
+    ro: "Strângere dovezi",
+  },
+  casesStep3Label: {
+    pl: "Ugoda i ACAS",
+    en: "Letters & ACAS",
+    ro: "Scrisori și ACAS",
+  },
+  casesStep4Label: {
+    pl: "Sprawa zamknięta",
+    en: "Case resolved",
+    ro: "Caz rezolvat",
   },
 };
 

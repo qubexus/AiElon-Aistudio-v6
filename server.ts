@@ -295,6 +295,47 @@ async function startServer() {
     res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // 0b. Server-side Profile Synchronization Store (persists profile changes beyond browser localStorage)
+  const serverProfileStore = new Map<string, Record<string, unknown>>();
+
+  app.get("/api/profile/:accountId", (req, res) => {
+    const accountId = String(req.params.accountId || "").trim();
+    if (!accountId) {
+      res.status(400).json({ error: "Missing accountId" });
+      return;
+    }
+    const stored = serverProfileStore.get(accountId);
+    if (!stored) {
+      res.status(404).json({ error: "Profile not found on server" });
+      return;
+    }
+    res.json({ ok: true, profile: stored });
+  });
+
+  const handleSaveProfile = (req: express.Request, res: express.Response) => {
+    const payload = req.body;
+    if (!payload || typeof payload !== "object") {
+      res.status(400).json({ error: "Invalid profile payload" });
+      return;
+    }
+    const accountId = String(payload.accountId || payload.id || "").trim();
+    if (!accountId) {
+      res.status(400).json({ error: "Missing accountId or id" });
+      return;
+    }
+    const existing = serverProfileStore.get(accountId) || {};
+    const saved = {
+      ...existing,
+      ...payload,
+      updatedAt: new Date().toISOString(),
+    };
+    serverProfileStore.set(accountId, saved);
+    res.json({ ok: true, profile: saved });
+  };
+
+  app.put("/api/profile", handleSaveProfile);
+  app.post("/api/profile", handleSaveProfile);
+
   // 1. Server-side Gemini Chat Endpoint
   app.post("/api/gemini/chat", async (req, res) => {
     try {

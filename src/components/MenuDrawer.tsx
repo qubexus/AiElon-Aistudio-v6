@@ -10,8 +10,12 @@ import {
 } from "../types";
 import { classifySentLetter, renderTemplateLetter } from "../data/legalTemplates";
 import { AskElonShieldLogo } from "./AskElonShieldLogo";
+import { LegalLetterFooter } from "./LegalLetterFooter";
 import { downloadLetterAsPDF } from "../utils/pdfGenerator";
-import { computeCaseDocumentProgress } from "../utils/caseProgress";
+import {
+  computeCaseDocumentProgress,
+  getCaseProgressWidthClass,
+} from "../utils/caseProgress";
 import {
   X,
   Menu,
@@ -55,6 +59,9 @@ import {
   ArrowUpNarrowWide,
   FileDown,
   Headphones,
+  ShieldCheck,
+  UserPlus,
+  LogOut,
 } from "lucide-react";
 
 type DrawerTabType = "menu" | "chat_history" | "notes" | "elon_letters";
@@ -103,6 +110,9 @@ export const MenuDrawer: React.FC = () => {
     setIsMessagesModalOpen,
     setIsPaywallModalOpen,
     setIsVoicePreferencesModalOpen,
+    setIsTermsPrivacyModalOpen,
+    setIsRegisterModalOpen,
+    logoutAndClearDevice,
     voiceConfig,
     broadcastMessages,
     recentUnsavedChats,
@@ -883,15 +893,15 @@ export const MenuDrawer: React.FC = () => {
                     >
                       {user.isPro
                         ? locale === "pl"
-                          ? "Plan PRO"
+                          ? "Członkostwo (£9.99/mies.)"
                           : locale === "ro"
-                          ? "Plan PRO"
-                          : "PRO Plan"
+                          ? "Abonament (£9.99/lună)"
+                          : "Membership (£9.99/mo)"
                         : locale === "pl"
-                        ? "Plan darmowy"
+                        ? "Brak członkostwa"
                         : locale === "ro"
-                        ? "Plan gratuit"
-                        : "Free plan"}
+                        ? "Fără abonament"
+                        : "No membership"}
                     </span>
                   </div>
                 </div>
@@ -1013,20 +1023,38 @@ export const MenuDrawer: React.FC = () => {
                             </span>
                           </div>
 
-                          {/* Subtle 4-segment document completion bar */}
-                          <div className="grid grid-cols-4 gap-1 mb-1">
-                            {progress.items.map((item) => (
+                          {/* Smooth Width-Animated Document Progress Bar + Step Track */}
+                          <div className="space-y-1 mb-1.5">
+                            <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
                               <div
-                                key={item.id}
-                                className={`h-1.5 rounded-full transition-all duration-300 ${
-                                  item.completed
-                                    ? isReady
-                                      ? "bg-[#38B28B]"
-                                      : "bg-gradient-to-r from-[#D97724] to-[#38B28B]"
-                                    : "bg-white/10"
+                                className={`h-full rounded-full case-progress-bar-fill ${getCaseProgressWidthClass(
+                                  progress.percentage
+                                )} ${
+                                  isReady
+                                    ? "bg-[#38B28B] shadow-[0_0_8px_rgba(56,178,139,0.45)]"
+                                    : "bg-gradient-to-r from-[#D97724] to-[#38B28B]"
                                 }`}
                               />
-                            ))}
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-1 h-1">
+                              {progress.items.map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="h-full rounded-full bg-white/10 overflow-hidden"
+                                >
+                                  <div
+                                    className={`h-full rounded-full case-progress-segment-fill ${
+                                      item.completed
+                                        ? isReady
+                                          ? "w-full bg-[#38B28B]"
+                                          : "w-full bg-gradient-to-r from-[#D97724] to-[#38B28B]"
+                                        : "w-0 bg-transparent"
+                                    }`}
+                                  />
+                                </div>
+                              ))}
+                            </div>
                           </div>
 
                           <div className="flex items-center justify-between gap-2 text-[10px] text-[#8EA4BA]">
@@ -1845,6 +1873,92 @@ export const MenuDrawer: React.FC = () => {
                 </div>
                 <ChevronRight className="w-4 h-4 text-[#8EA4BA] shrink-0" />
               </button>
+
+              {/* Regulamin i Polityka Prywatności / O aplikacji */}
+              <button
+                type="button"
+                onClick={() => {
+                  closeDrawer();
+                  setIsTermsPrivacyModalOpen(true);
+                }}
+                className="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-left hover:bg-white/5 transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <ShieldCheck className="w-5 h-5 text-[#2DD4BF] shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-[#2DD4BF] underline truncate">
+                      {locale === "pl"
+                        ? "Regulamin i Prywatność (UK GDPR)"
+                        : locale === "ro"
+                        ? "Termeni și Confidențialitate"
+                        : "Terms & Privacy Notice"}
+                    </p>
+                    <p className="text-xs text-[#8EA4BA] truncate mt-0.5">
+                      {locale === "pl"
+                        ? "14 punktów, zwroty 14 dni, ICO"
+                        : locale === "ro"
+                        ? "14 secțiuni, retragere 14 zile, ICO"
+                        : "14 sections, 14-day cancellation & ICO"}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#8EA4BA] shrink-0" />
+              </button>
+
+              {/* Rejestracja / Konto */}
+              <button
+                type="button"
+                onClick={() => {
+                  closeDrawer();
+                  setIsRegisterModalOpen(true);
+                }}
+                className="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-left hover:bg-white/5 transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <UserPlus className="w-5 h-5 text-[#2DD4BF] shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">
+                      {locale === "pl"
+                        ? "Rejestracja / Dane konta"
+                        : locale === "ro"
+                        ? "Înregistrare / Date cont"
+                        : "Register / Account"}
+                    </p>
+                    <p className="text-xs text-[#8EA4BA] truncate mt-0.5">
+                      {user.email || (locale === "pl" ? "Utwórz lub zaktualizuj konto" : "Set email & accept Terms")}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#8EA4BA] shrink-0" />
+              </button>
+
+              {/* Wyloguj i wyczyść dane z urządzenia */}
+              <button
+                type="button"
+                onClick={logoutAndClearDevice}
+                className="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-left hover:bg-[#EF4444]/10 transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <LogOut className="w-5 h-5 text-[#F87171] shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-[#F87171] truncate">
+                      {locale === "pl"
+                        ? "Wyloguj i wyczyść urządzenie"
+                        : locale === "ro"
+                        ? "Deconectare și ștergere date"
+                        : "Log out & clear device data"}
+                    </p>
+                    <p className="text-xs text-[#8EA4BA] truncate mt-0.5">
+                      {locale === "pl"
+                        ? "Usuwa czat, sprawy i profil z przeglądarki"
+                        : locale === "ro"
+                        ? "Șterge chatul, cazurile și profilul local"
+                        : "Clears local chats, cases & profile"}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#8EA4BA] shrink-0" />
+              </button>
             </div>
 
             {/* Section 5: JĘZYK APLIKACJI */}
@@ -2530,6 +2644,7 @@ export const MenuDrawer: React.FC = () => {
                 <pre className="font-mono text-xs sm:text-sm text-[#161B22] whitespace-pre-wrap leading-relaxed select-all">
                   {previewItem.content}
                 </pre>
+                <LegalLetterFooter locale={locale} page={1} totalPages={1} paperSurface={true} />
               </div>
             </div>
 

@@ -42,6 +42,9 @@ export const initialUserProfile: UserProfile = {
   formalCasesCount: 3
 };
 
+const daysFromNowIso = (daysOffset: number): string =>
+  new Date(Date.now() + daysOffset * 86_400_000).toISOString();
+
 export const initialCases: WorkplaceCase[] = [
   {
     id: "case_01",
@@ -51,8 +54,10 @@ export const initialCases: WorkplaceCase[] = [
     employer: "Amazon Fulfilment LCY2",
     status: "open",
     priority: "high",
-    createdAt: "2026-10-14T09:30:00Z",
-    updatedAt: "2026-10-21T14:15:00Z",
+    createdAt: daysFromNowIso(-9),
+    updatedAt: daysFromNowIso(-2),
+    deadlineDate: daysFromNowIso(5).slice(0, 10),
+    deadlineLabel: "ACAS Early Conciliation",
     notes: [
       {
         id: "note_101",
@@ -86,8 +91,8 @@ export const initialCases: WorkplaceCase[] = [
     employer: "Single Resource Staffing",
     status: "open",
     priority: "medium",
-    createdAt: "2026-09-28T11:00:00Z",
-    updatedAt: "2026-10-04T10:00:00Z",
+    createdAt: daysFromNowIso(-14),
+    updatedAt: daysFromNowIso(-6),
     notes: [
       {
         id: "note_201",
@@ -105,8 +110,8 @@ export const initialCases: WorkplaceCase[] = [
     employer: "Greencore Group",
     status: "resolved",
     priority: "low",
-    createdAt: "2026-08-10T14:00:00Z",
-    updatedAt: "2026-09-02T16:30:00Z",
+    createdAt: daysFromNowIso(-42),
+    updatedAt: daysFromNowIso(-19),
     notes: [
       {
         id: "note_301",
@@ -132,7 +137,7 @@ export const initialForumPosts: ForumPost[] = [
       "Nad polem tekstowym kliknij pastylkę aktywnego trybu AI, aby wybrać perspektywę: 'Prawo Pracy (Employment Law)' lub 'Związki Zawodowe (Trade Union)'.",
       "Wpisz opis problemu w polu czatu lub zaznacz jedną z gotowych sugestii startowych (np. 'Nie zapłacili mi za nadgodziny i potrącili z payslipu') i kliknij pomarańczowy przycisk 'Wyślij'.",
       "Gdy pod odpowiedzią Elona pojawi się animowana karta koperty, kliknij przycisk 'Otwórz wygenerowane pismo EN' lub 'Kopiuj pismo'.",
-      "Na komputerze lub poprzez przycisk 'Podsumowanie prawne' sprawdź prawy panel boczny z wyodrębnionymi na żywo terminami (Deadlines) i paragrafami."
+      "Na komputerze lub poprzez przycisk 'Podsumowanie' sprawdź prawy panel boczny z wyodrębnionymi na żywo terminami (Deadlines) i paragrafami."
     ],
     whatYouGet: "Otrzymujesz natychmiastową diagnozę prawną po polsku, wykaz ustawowych terminów (np. 3 miesiące mniej 1 dzień do ACAS) oraz spersonalizowane oficjalne pismo po angielsku gotowe do wysłania do HR.",
     actionLink: {
