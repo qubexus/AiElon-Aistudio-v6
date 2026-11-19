@@ -24,6 +24,22 @@ npx expo start --android
 npx expo start --ios
 ```
 
+
+## Gotowy build webowy (bez instalacji)
+W paczce jest katalog `dist/` — zbudowana aplikacja webowa.
+
+```bash
+# Windows
+run-web.bat
+
+# macOS / Linux
+./run-web.sh
+```
+Otwórz http://localhost:8080
+
+Musi być serwowany przez HTTP (nie przez `file://`), bo przeglądarki blokują
+moduły ES z dysku lokalnego.
+
 ## Backend AI (opcjonalnie)
 Folder `server/` zawiera proxy do modelu Gemini.
 
